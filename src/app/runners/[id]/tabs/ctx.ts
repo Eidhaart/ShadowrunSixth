@@ -3,7 +3,8 @@ import type { Derived } from "@/lib/sr6/derive";
 import type { RollResult } from "@/lib/sr6/dice";
 import { SKILL_BY_ID, ATTR_LABEL, type AttrKey } from "@/lib/sr6/data";
 
-export interface RollOpts { noWound?: boolean; noSustain?: boolean; limit?: number }
+/** `adjust` is a flat dice modifier for this roll only (noise, Overclock, speed penalties). */
+export interface RollOpts { noWound?: boolean; noSustain?: boolean; adjust?: number }
 
 /** What the sheet tabs get from the sheet: the runner, edits, and rolls that already know about wounds, sustaining and Edge. */
 export interface SheetCtx {

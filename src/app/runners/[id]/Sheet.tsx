@@ -18,7 +18,7 @@ import {
 } from "@/lib/sr6/data";
 import { runnerToFoundry } from "@/lib/foundry";
 import { getExt, sustainPenalty } from "@/lib/sr6/ext";
-import type { SheetCtx } from "./tabs/ctx";
+import type { RollOpts, SheetCtx } from "./tabs/ctx";
 import { MatrixTab } from "./tabs/MatrixTab";
 import { MagicTab } from "./tabs/MagicTab";
 import { RiggingTab } from "./tabs/RiggingTab";
@@ -114,7 +114,7 @@ function TabBar({ tab, setTab, awakened, sustained }: { tab: string; setTab: (t:
           onClick={() => setTab(x.id)}
           className={clsx("-mb-px whitespace-nowrap border-b-2 px-4 py-2 font-display text-sm font-semibold transition-colors", tab === x.id ? "border-accent text-accent" : "border-transparent text-dim hover:text-fg")}
         >
-          {x.label}{x.id === "magic" && sustained > 0 && <span className="ml-1.5 chip !py-0">−{sustained * 2}</span>}
+          {x.label}{(x.id === "magic" || (x.id === "matrix" && !awakened)) && sustained > 0 && <span className="ml-1.5 chip !py-0">−{sustained * 2}</span>}
         </button>
       ))}
     </div>
@@ -163,13 +163,13 @@ export function Sheet({ id }: { id: string }) {
   const awakened = c.magicType !== "mundane" && c.magicType !== "technomancer";
 
   const sustain = sustainPenalty(getExt(c));
-  const poolOf = (base: number, opts: { noWound?: boolean; noSustain?: boolean } = {}) =>
-    Math.max(0, base - (opts.noWound ? 0 : penalty) - (opts.noSustain ? 0 : sustain) + c.poolMod + mod);
-  const rollPool = (label: string, base: number, opts: { noWound?: boolean; noSustain?: boolean; limit?: number } = {}) => {
+  const poolOf = (base: number, opts: RollOpts = {}) =>
+    Math.max(0, base - (opts.noWound ? 0 : penalty) - (opts.noSustain ? 0 : sustain) + (opts.adjust ?? 0) + c.poolMod + mod);
+  const rollPool = (label: string, base: number, opts: RollOpts = {}) => {
     const pool = poolOf(base, opts);
     const useEdge = edgePre && c.edgeCurrent >= 4;
     if (useEdge) upd((x) => { x.edgeCurrent -= 4; });
-    const r = doRoll({ label, pool, explode: useEdge, glitchOn2: d.glitchOn2, limit: opts.limit }, useEdge ? d.edge : 0, who);
+    const r = doRoll({ label, pool, explode: useEdge, glitchOn2: d.glitchOn2 }, useEdge ? d.edge : 0, who);
     setLastId(r.id);
     if (useEdge) setEdgePre(false);
     return r;
