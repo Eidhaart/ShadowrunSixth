@@ -20,6 +20,7 @@ export interface SkillPool {
   attr: string;
   attrValue: number;
   spec?: string;
+  expert?: boolean;
   /** Base pool without situational modifiers */
   pool: number;
   /** Pool when rolling with the specialization */
@@ -172,8 +173,9 @@ export function derive(c: Character): Derived {
       attr: attrKey,
       attrValue,
       spec: entry.spec,
+      expert: entry.expert,
       pool: base,
-      specPool: entry.spec ? base + 2 : undefined,
+      specPool: entry.spec ? base + (entry.expert ? 3 : 2) : undefined,
     });
   }
 
@@ -185,7 +187,7 @@ export function derive(c: Character): Derived {
       ? Math.max(0, mpr - Math.min(mpr, c.adeptPowers.reduce((s, p) => s + p.cost, 0))) * 2
       : mpr * 2
     : 0;
-  const powerPoints = c.magicType === "adept" || c.magicType === "mystic" ? magic : 0;
+  const powerPoints = (c.magicType === "adept" || c.magicType === "mystic" ? magic : 0) + (c.extraPP ?? 0);
 
   const con = c.damage;
   const unconscious = con.stun >= stunBoxes || con.physical >= physicalBoxes;

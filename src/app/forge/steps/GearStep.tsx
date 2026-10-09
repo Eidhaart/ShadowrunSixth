@@ -6,6 +6,10 @@ import { uid, type GearItem } from "@/lib/sr6/character";
 import { LIFESTYLES } from "@/lib/sr6/data";
 import { budget } from "@/lib/sr6/derive";
 import { Budget, Field, Note, StepHeader, Stepper, type StepProps } from "../ui";
+import clsx from "clsx";
+import { GearBrowser, useGearDrop } from "@/components/compendium/GearBrowser";
+import { addToRunner } from "@/lib/compendium/catalog";
+import type { CompItem } from "@/lib/compendium/types";
 
 const CATS: { id: GearItem["category"]; label: string }[] = [
   { id: "weapon", label: "Weapon" },
@@ -29,6 +33,9 @@ export function GearStep({ c, patch }: StepProps) {
   const [ar, setAr] = useState<string[]>(["", "", "", "", ""]);
   const [lookup, setLookup] = useState("");
   const [contact, setContact] = useState({ name: "", role: "", connection: 1, loyalty: 1 });
+  const [bought, setBought] = useState("");
+  const buy = (i: CompItem, qty: number) => { patch((x) => { addToRunner(x, i, { pay: false, qty }); }); setBought(`${i.name}${qty > 1 ? ` ×${qty}` : ""} added.`); };
+  const { over, props: drop } = useGearDrop((i) => { if ((i.avail ?? 0) > 6) setBought(`${i.name} has Availability ${i.avail}: not allowed at creation.`); else buy(i, 1); });
 
   const names = useMemo(() => (book?.sections ?? []).filter((s) => s.chapter === "Gear" && s.level >= 2 && /^[A-Z0-9]/.test(s.title) && s.title.length < 40).slice(0, 700).map((s) => s.title), [book]);
   const hits = useMemo(() => (lookup.trim().length > 1 ? search(lookup, ["gear"], 5) : []), [lookup, search, book]);
@@ -44,7 +51,7 @@ export function GearStep({ c, patch }: StepProps) {
 
   return (
     <div>
-      <StepHeader title="Gear and lifestyle" lead="Spend your nuyen. Nothing with an Availability of 7 or higher at creation. Look prices up in the library on the left, then enter them here; armor, weapons and augmentations feed straight into your sheet." rule={/^Gear Stats$/i} />
+      <StepHeader title="Gear and lifestyle" lead="Spend your nuyen. Nothing with an Availability of 7 or higher at creation. Shop the compendium below or enter items by hand; armor, weapons and augmentations feed straight into your sheet." rule={/^Gear Stats$/i} />
       <div className="mb-5 grid max-w-2xl gap-4 sm:grid-cols-2">
         <Budget label="Nuyen left" left={b.nuyen.left} total={b.nuyen.total} />
         <div className="text-xs text-dim">Gear <b className="num text-fg">{b.nuyen.gear.toLocaleString("en-US")}¥</b> · Lifestyle <b className="num text-fg">{b.nuyen.lifestyle.toLocaleString("en-US")}¥</b>{b.nuyen.fromKarma > 0 && <> · From Karma <b className="num text-fg">{b.nuyen.fromKarma.toLocaleString("en-US")}¥</b></>}</div>
@@ -53,6 +60,15 @@ export function GearStep({ c, patch }: StepProps) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="space-y-5">
+          <section className="panel p-4">
+            <h3 className="mb-1 text-lg font-semibold">Shop the compendium</h3>
+            <p className="mb-3 text-xs text-dim">Prices come off your nuyen budget automatically. Items with Availability 7 or more are locked at creation.</p>
+            <div className="flex max-h-[34rem] min-h-80 flex-col">
+              <GearBrowser compact creation onAdd={buy} addLabel="Buy" nuyen={b.nuyen.left} />
+            </div>
+            {bought && <p className="mt-2 text-sm text-ok" role="status">{bought}</p>}
+          </section>
+
           <section className="panel quiet p-4">
             <h3 className="mb-2 text-lg font-semibold">Look it up</h3>
             <input className="field" placeholder="Search gear in the rulebook" value={lookup} onChange={(e) => setLookup(e.target.value)} aria-label="Search gear" />
@@ -97,8 +113,8 @@ export function GearStep({ c, patch }: StepProps) {
         </div>
 
         <div className="space-y-5">
-          <section className="panel quiet p-4">
-            <h3 className="mb-3 text-lg font-semibold">Your gear</h3>
+          <section {...drop} className={clsx("panel quiet p-4 transition-colors", over && "drop-over")}>
+            <h3 className="mb-3 text-lg font-semibold">Your gear <span className="text-xs font-normal text-faint max-md:hidden">drop compendium items here</span></h3>
             {c.gear.length === 0 && <p className="text-sm text-dim">Nothing bought yet.</p>}
             <ul className="divide-y divide-line">
               {c.gear.map((g, i) => (

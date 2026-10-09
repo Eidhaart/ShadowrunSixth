@@ -7,6 +7,7 @@ import { Portrait } from "@/components/Portrait";
 import { isPortrait } from "@/lib/portrait";
 import { useRunners } from "@/lib/store/characters";
 import { derive } from "@/lib/sr6/derive";
+import { withAdv } from "@/lib/sr6/advance";
 import { MAGIC_TYPE_LABEL, METATYPES } from "@/lib/sr6/data";
 import type { Character } from "@/lib/sr6/character";
 
@@ -67,7 +68,7 @@ export default function RunnersPage() {
       ) : (
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {runners.map((r) => {
-            const d = derive(r);
+            const d = derive(withAdv(r));
             return (
               <li key={r.id} className="panel flex flex-col p-4">
                 <Link href={`/runners/${r.id}`} className="group block">

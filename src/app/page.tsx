@@ -11,6 +11,7 @@ import { useRulebook } from "@/lib/store/rulebook";
 import { useRunners } from "@/lib/store/characters";
 import { useSettings } from "@/lib/store/settings";
 import { derive } from "@/lib/sr6/derive";
+import { withAdv } from "@/lib/sr6/advance";
 import { METATYPES } from "@/lib/sr6/data";
 
 export default function DeckHome() {
@@ -82,7 +83,7 @@ export default function DeckHome() {
             )}
             <ul className="divide-y divide-line">
               {runners.slice(0, 6).map((r) => {
-                const d = derive(r);
+                const d = derive(withAdv(r));
                 return (
                   <li key={r.id}>
                     <Link href={`/runners/${r.id}`} className="flex items-center justify-between gap-3 py-2.5 hover:text-accent">

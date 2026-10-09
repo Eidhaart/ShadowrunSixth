@@ -53,6 +53,8 @@ export interface SkillEntry {
   kar: number;
   spec?: string;
   specVia?: "points" | "karma";
+  /** Specialization upgraded to expertise: +3 instead of +2. */
+  expert?: boolean;
 }
 
 export interface GearItem {
@@ -139,6 +141,13 @@ export interface Character {
   // play
   damage: Damage;
   edgeCurrent: number;
+  /** Karma spent after creation, layered on top of the build. See advance.ts. */
+  adv?: import("./advance").Advancement;
+  /** Power points bought with Karma (mystic adepts). Filled in by withAdv. */
+  extraPP?: number;
+  /** Initiate or submersion grade. Filled in by withAdv. */
+  initiateGrade?: number;
+  metamagic?: string[];
   karmaEarned: number;
   karmaSpent: number;
   nuyen: number;

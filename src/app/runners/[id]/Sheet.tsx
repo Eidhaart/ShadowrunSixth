@@ -14,7 +14,7 @@ import { damageAfterSoak } from "@/lib/sr6/dice";
 import { derive, type Derived } from "@/lib/sr6/derive";
 import type { Character } from "@/lib/sr6/character";
 import {
-  ATTRIBUTES, ATTR_ABBR, ATTR_LABEL, KARMA, METATYPES, MAGIC_TYPE_LABEL, SKILLS, SKILL_BY_ID, LIFESTYLES,
+  ATTRIBUTES, ATTR_ABBR, ATTR_LABEL, METATYPES, MAGIC_TYPE_LABEL, SKILLS, SKILL_BY_ID, LIFESTYLES,
   type AttrKey,
 } from "@/lib/sr6/data";
 import { runnerToFoundry } from "@/lib/foundry";
@@ -24,6 +24,8 @@ import { MatrixTab } from "./tabs/MatrixTab";
 import { MagicTab } from "./tabs/MagicTab";
 import { RiggingTab } from "./tabs/RiggingTab";
 import { GearTab } from "./tabs/GearTab";
+import { AdvanceTab } from "./tabs/AdvanceTab";
+import { advance, withAdv } from "@/lib/sr6/advance";
 
 const STATUSES = ["Burning", "Chilled", "Corrosive", "Dazed", "Deafened", "Fatigued", "Frightened", "Hazed", "Hobbled", "Immobilized", "Nauseated", "Panicked", "Poisoned", "Prone", "Stilled", "Wet", "Zapped"];
 const RANGES = ["Close", "Near", "Medium", "Far", "Extreme"] as const;
@@ -104,9 +106,10 @@ const TABS = [
   { id: "magic", label: "Magic" },
   { id: "rig", label: "Rigging" },
   { id: "gear", label: "Gear" },
+  { id: "advance", label: "Advance" },
 ] as const;
 
-function TabBar({ tab, setTab, awakened, sustained }: { tab: string; setTab: (t: (typeof TABS)[number]["id"]) => void; awakened: boolean; sustained: number }) {
+function TabBar({ tab, setTab, awakened, sustained, karma }: { tab: string; setTab: (t: (typeof TABS)[number]["id"]) => void; awakened: boolean; sustained: number; karma: number }) {
   return (
     <div className="no-print mb-4 flex gap-1 overflow-x-auto border-b border-line max-md:sticky max-md:top-12 max-md:z-20 max-md:-mx-4 max-md:bg-bg/95 max-md:px-4 max-md:backdrop-blur" role="tablist" aria-label="Sheet sections">
       {TABS.filter((x) => x.id !== "magic" || awakened).map((x) => (
@@ -118,6 +121,7 @@ function TabBar({ tab, setTab, awakened, sustained }: { tab: string; setTab: (t:
           className={clsx("-mb-px min-h-11 whitespace-nowrap border-b-2 px-4 py-2 font-display text-sm font-semibold transition-colors", tab === x.id ? "border-accent text-accent" : "border-transparent text-dim hover:text-fg")}
         >
           {x.label}{(x.id === "magic" || (x.id === "matrix" && !awakened)) && sustained > 0 && <span className="ml-1.5 chip !py-0">−{sustained * 2}</span>}
+          {x.id === "advance" && karma > 0 && <span className="num ml-1.5 chip on !py-0" title={`${karma} Karma to spend`}>{karma}</span>}
         </button>
       ))}
     </div>
@@ -125,20 +129,21 @@ function TabBar({ tab, setTab, awakened, sustained }: { tab: string; setTab: (t:
 }
 
 export function Sheet({ id }: { id: string }) {
-  const c = useRunners((s) => s.runners[id]);
+  const raw = useRunners((s) => s.runners[id]);
+  // The sheet shows the runner with every Karma purchase applied; edits still go to the stored character.
+  const c = useMemo(() => (raw ? withAdv(raw) : raw), [raw]);
   const update = useRunners((s) => s.update);
   const book = useRulebook((s) => s.book);
   const commsStatus = useComms((s) => s.status);
   const send = useComms((s) => s.send);
 
-  const [tab, setTab] = useState<"sheet" | "matrix" | "magic" | "rig" | "gear">("sheet");
+  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("sheet");
   const [mod, setMod] = useState(0);
   const [edgePre, setEdgePre] = useState(false);
   const [lastId, setLastId] = useState<string | null>(null);
   const [soak, setSoak] = useState({ dv: 6, net: 0, type: "P" as "P" | "S", rollId: null as string | null });
   const [builder, setBuilder] = useState<{ skill: string; attr: AttrKey | "magic" | "resonance"; spec: boolean }>({ skill: "firearms", attr: "agility", spec: false });
   const [target, setTarget] = useState({ dr: 4, range: 1 });
-  const [newSpell, setNewSpell] = useState("");
   const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [notes, setNotes] = useState(c?.notes ?? "");
 
@@ -205,13 +210,11 @@ export function Sheet({ id }: { id: string }) {
 
   // Karma advancement
   const karmaAvail = c.karmaEarned - c.karmaSpent;
-  const spend = (cost: number, fn: (x: Character) => void) => upd((x) => { x.karmaSpent += cost; fn(x); });
-  const maxSkill = (sid: string) => (c.qualities.some((q) => q.name.startsWith("Aptitude") && q.note === sid) ? 10 : 9);
 
   const weapons = c.gear.filter((g) => g.category === "weapon");
 
   const exportJson = () => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(c, null, 2)], { type: "application/json" }));
+    const url = URL.createObjectURL(new Blob([JSON.stringify(raw, null, 2)], { type: "application/json" }));
     const a = document.createElement("a");
     a.href = url; a.download = `${who.replace(/\W+/g, "-")}.json`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -272,11 +275,12 @@ export function Sheet({ id }: { id: string }) {
         </div>
       )}
 
-      <TabBar tab={tab} setTab={setTab} awakened={awakened} sustained={getExt(c).sustained.length} />
+      <TabBar tab={tab} setTab={setTab} awakened={awakened} sustained={getExt(c).sustained.length} karma={c.karmaEarned - c.karmaSpent} />
       <div className={clsx(tab !== "matrix" && "hidden print:block")}><MatrixTab ctx={ctx} /></div>
       {awakened && <div className={clsx(tab !== "magic" && "hidden print:block")}><MagicTab ctx={ctx} /></div>}
       <div className={clsx(tab !== "rig" && "hidden print:block")}><RiggingTab ctx={ctx} /></div>
       <div className={clsx(tab !== "gear" && "hidden print:block")}><GearTab ctx={ctx} /></div>
+      {tab === "advance" && <AdvanceTab ctx={ctx} />}
 
       {tab === "sheet" && (
         <nav className="no-print -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1 md:hidden" aria-label="Jump to a section">
@@ -385,7 +389,7 @@ export function Sheet({ id }: { id: string }) {
                   <div className="min-w-0">
                     <span className="font-display font-semibold">{s.name}</span> <span className="num text-sm text-dim">{s.rank}</span>
                     <span className="num ml-2 text-xs text-faint">+{ATTR_ABBR[s.attr as keyof typeof ATTR_ABBR]} {s.attrValue}</span>
-                    {s.spec && <div className="text-xs text-dim">{s.spec} +2</div>}
+                    {s.spec && <div className="text-xs text-dim">{s.spec} +{s.expert ? 3 : 2}{s.expert ? " expertise" : ""}</div>}
                   </div>
                   <div className="no-print flex shrink-0 items-center gap-1.5">
                     <button className="btn small" onClick={() => rollPool(`${s.name} + ${ATTR_LABEL[s.attr as keyof typeof ATTR_LABEL]}`, s.pool)} title={`Pool ${poolOf(s.pool)} after modifiers`}>{poolOf(s.pool)}</button>
@@ -408,9 +412,8 @@ export function Sheet({ id }: { id: string }) {
                 {weapons.map((w) => {
                   const sk = w.skill ?? "firearms";
                   const rank = skillRank(sk);
-                  const melee = sk === "close-combat";
                   const ar0 = w.ar?.[target.range];
-                  const ar = ar0 == null ? null : ar0 + (melee ? d.attrs.strength : 0);
+                  const ar = ar0 ?? null; // Sixth World melee weapons use their listed AR; only unarmed adds Strength
                   const base = (SKILL_BY_ID[sk] ? (rank > 0 ? rank : -1) : 0) + d.attrs[SKILL_BY_ID[sk]?.attr as AttrKey ?? "agility"];
                   const diff = ar == null ? 0 : ar - target.dr;
                   return (
@@ -418,7 +421,7 @@ export function Sheet({ id }: { id: string }) {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="font-display font-semibold">{w.name}</div>
-                          <div className="num text-xs text-dim">DV {w.dv || "?"} · AR {(w.ar ?? []).map((v) => (v == null ? "—" : v + (melee ? d.attrs.strength : 0))).join("/")}</div>
+                          <div className="num text-xs text-dim">DV {w.dv || "?"} · AR {(w.ar ?? []).map((v) => (v == null ? "—" : v)).join("/")}</div>
                           {ar == null ? <div className="text-xs text-danger">Cannot attack at {RANGES[target.range]} range.</div> : diff >= 4 ? <div className="text-xs text-ok">AR beats DR by {diff}: you gain 1 Edge.</div> : diff <= -4 ? <div className="text-xs text-danger">DR beats AR by {-diff}: the target gains 1 Edge.</div> : null}
                         </div>
                         <div className="no-print flex shrink-0 gap-1.5">
@@ -474,53 +477,10 @@ export function Sheet({ id }: { id: string }) {
               <div className="border border-line py-1.5"><div className="text-[11px] text-faint">Nuyen</div><div className="num text-xl font-semibold">{c.nuyen.toLocaleString("en-US")}</div></div>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {[1, 3, 5].map((n) => <button key={n} className="btn small" onClick={() => upd((x) => { x.karmaEarned += n; })}>+{n} Karma</button>)}
+              {[1, 3, 5].map((n) => <button key={n} className="btn small" onClick={() => upd((x) => { advance(x, { k: "award", n }, `Awarded ${n} Karma`, 0); })}>+{n} Karma</button>)}
               <button className="btn small" onClick={() => { const v = Number(prompt("Nuyen change (negative to spend)", "0")); if (v) upd((x) => { x.nuyen = Math.max(0, x.nuyen + v); }); }}>± Nuyen</button>
             </div>
-            <details className="mt-3">
-              <summary className="cursor-pointer font-display text-sm text-dim">Advance the runner</summary>
-              <div className="mt-2 space-y-3 text-sm">
-                <div>
-                  <div className="mb-1 text-xs text-faint">Skills (5 × new rank)</div>
-                  <ul className="space-y-1">
-                    {SKILLS.filter((s) => (c.skills[s.id] || s.untrained)).map((s) => {
-                      const r = skillRank(s.id); const cost = KARMA.skillRank(r + 1);
-                      return <li key={s.id} className="flex items-center justify-between"><span>{s.name} <span className="num text-dim">{r} → {r + 1}</span></span>
-                        <button className="btn small" disabled={karmaAvail < cost || r >= maxSkill(s.id)} onClick={() => spend(cost, (x) => { const e = x.skills[s.id] ?? { pts: 0, kar: 0 }; e.kar += 1; x.skills[s.id] = e; })}>{cost} Karma</button></li>;
-                    })}
-                  </ul>
-                </div>
-                <div>
-                  <div className="mb-1 text-xs text-faint">Attributes (5 × new rank)</div>
-                  <ul className="space-y-1">
-                    {ATTRIBUTES.map((a) => {
-                      const r = d.attrs[a]; const cost = KARMA.attributeRank(r + 1);
-                      return <li key={a} className="flex items-center justify-between"><span>{ATTR_LABEL[a]} <span className="num text-dim">{r} → {r + 1}</span></span>
-                        <button className="btn small" disabled={karmaAvail < cost || r >= d.attrMax[a]} onClick={() => spend(cost, (x) => { x.attrKar[a] = (x.attrKar[a] ?? 0) + 1; })}>{cost} Karma</button></li>;
-                    })}
-                    <li className="flex items-center justify-between"><span>Edge <span className="num text-dim">{d.edge} → {d.edge + 1}</span></span>
-                      <button className="btn small" disabled={karmaAvail < KARMA.attributeRank(d.edge + 1) || d.edge >= meta.ranges.edge[1]} onClick={() => spend(KARMA.attributeRank(d.edge + 1), (x) => { x.karEdge += 1; })}>{KARMA.attributeRank(d.edge + 1)} Karma</button></li>
-                  </ul>
-                </div>
-                <div>
-                  <div className="mb-1 text-xs text-faint">Specializations ({KARMA.specialization} Karma each)</div>
-                  <ul className="space-y-1">
-                    {Object.entries(c.skills).filter(([, e]) => e.pts + e.kar > 0 && !e.spec).map(([sid]) => {
-                      const def = SKILL_BY_ID[sid];
-                      return def?.specs.length ? (
-                        <li key={sid}><select className="field" aria-label={`${def.name} specialization`} value="" disabled={karmaAvail < KARMA.specialization} onChange={(e) => e.target.value && spend(KARMA.specialization, (x) => { x.skills[sid].spec = e.target.value; x.skills[sid].specVia = "karma"; })}><option value="">{def.name}: choose</option>{def.specs.map((sp) => <option key={sp}>{sp}</option>)}</select></li>
-                      ) : null;
-                    })}
-                  </ul>
-                </div>
-                {awakened && (
-                  <div className="flex gap-2">
-                    <input className="field" placeholder="New spell (5 Karma)" value={newSpell} onChange={(e) => setNewSpell(e.target.value)} aria-label="New spell name" />
-                    <button className="btn" disabled={!newSpell.trim() || karmaAvail < KARMA.spell} onClick={() => { spend(KARMA.spell, (x) => { x.spells.push(newSpell.trim()); }); setNewSpell(""); }}>Learn</button>
-                  </div>
-                )}
-              </div>
-            </details>
+            <button className="btn small primary mt-3 w-full" onClick={() => { setTab("advance"); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Icon name="up" size={14} /> Spend Karma</button>
           </Box>
 
           <Box title="Qualities and gear">

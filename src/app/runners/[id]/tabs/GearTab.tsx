@@ -1,5 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { GearBrowser, useGearDrop } from "@/components/compendium/GearBrowser";
+import { addToRunner, type AddResult } from "@/lib/compendium/catalog";
+import type { CompItem } from "@/lib/compendium/types";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
 import { uid, type GearItem } from "@/lib/sr6/character";
@@ -71,6 +74,21 @@ export function GearTab({ ctx }: { ctx: SheetCtx }) {
   const [name, setName] = useState("");
   const [kind, setKind] = useState<GearItem["category"]>("misc");
   const [contact, setContact] = useState({ name: "", role: "" });
+  const [shop, setShop] = useState(false);
+  const [pay, setPay] = useState(true);
+  const [last, setLast] = useState<AddResult | null>(null);
+  const take = (i: CompItem, qty: number) => {
+    const res = addToRunner(JSON.parse(JSON.stringify(c)), i, { pay, qty }); // dry run first: refuses if they cannot pay
+    if (res.ok) upd((x) => { addToRunner(x, i, { pay, qty }); });
+    setLast(res);
+  };
+  const { over, props: drop } = useGearDrop((i) => take(i, 1));
+  useEffect(() => {
+    if (!shop) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setShop(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [shop]);
   const items = c.gear.filter((g) => cat === "all" || g.category === cat);
   const total = c.gear.reduce((s, g) => s + g.cost * (g.qty || 1), 0);
   const addItem = () => {
@@ -83,7 +101,13 @@ export function GearTab({ ctx }: { ctx: SheetCtx }) {
   };
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div {...drop} className={clsx("transition-colors", over && "drop-over")}>
       <Box title="Inventory" right={<span className="num text-xs text-dim">{c.gear.length} items · {total.toLocaleString()}¥ · essence {d.essence}</span>}>
+        <div className="no-print mb-3 flex flex-wrap items-center gap-2">
+          <button className="btn small primary" onClick={() => setShop(true)} aria-expanded={shop}><Icon name="crate" size={15} /> Browse the compendium</button>
+          <span className="text-xs text-faint max-md:hidden">Drag items from it straight onto this list.</span>
+        </div>
+        {last && !shop && <p className={clsx("mb-2 text-sm", last.ok ? "text-ok" : "text-danger")} role="status">{last.msg}</p>}
         <div className="no-print mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Filter by category">
           <button className={clsx("chip cursor-pointer", cat === "all" && "!border-accent !text-accent")} onClick={() => setCat("all")}>All</button>
           {CATS.filter((k) => c.gear.some((g) => g.category === k.id)).map((k) => <button key={k.id} className={clsx("chip cursor-pointer", cat === k.id && "!border-accent !text-accent")} onClick={() => setCat(k.id)}>{k.label}</button>)}
@@ -99,6 +123,7 @@ export function GearTab({ ctx }: { ctx: SheetCtx }) {
         </form>
         <p className="mt-2 text-xs text-faint">Armor you wear adds to Defense Rating, cyberware essence lowers Essence and Magic, and weapons show up under Attacks on the main sheet. All of it updates as you edit.</p>
       </Box>
+      </div>
 
       <div className="space-y-4">
         <Box title="Money and lifestyle">
@@ -134,6 +159,24 @@ export function GearTab({ ctx }: { ctx: SheetCtx }) {
           </form>
         </Box>
       </div>
+      {shop && (
+        <div className="no-print fixed inset-0 z-[60] flex justify-end bg-bg/40 md:pointer-events-none md:bg-transparent" onClick={() => setShop(false)}>
+          <div role="dialog" aria-label="Compendium" className="pointer-events-auto flex h-full w-full flex-col border-l border-accent/40 bg-bg/95 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl backdrop-blur md:w-[30rem]" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl font-semibold">Compendium</h2>
+                <p className="num text-sm text-dim">{c.nuyen.toLocaleString("en-US")}¥ on hand</p>
+              </div>
+              <button className="btn small ghost" onClick={() => setShop(false)} aria-label="Close the compendium"><Icon name="x" size={16} /></button>
+            </div>
+            <label className="mb-2 flex items-center gap-2 text-sm"><input type="checkbox" className="accent-[var(--accent)]" checked={pay} onChange={(e) => setPay(e.target.checked)} /> Pay from {ctx.who}&apos;s nuyen</label>
+            {last && <p className={clsx("mb-2 text-sm", last.ok ? "text-ok" : "text-danger")} role="status">{last.msg}</p>}
+            <div className="flex min-h-0 flex-1 flex-col">
+              <GearBrowser compact onAdd={take} addLabel={`Add to ${ctx.who}`} nuyen={pay ? c.nuyen : undefined} hint="Tap + to add, or drag an item onto the inventory." />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

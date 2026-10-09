@@ -553,3 +553,10 @@ mark.hl { background: color-mix(in oklab, var(--accent) 35%, transparent); color
 :root[data-theme="zaibatsu"] .panel::before, :root[data-theme="zaibatsu"] .panel::after { opacity: .6; width: 10px; height: 10px; }
 :root[data-theme="zaibatsu"] .glow { text-shadow: 0 0 calc(5px * var(--glow, 1)) color-mix(in oklab, var(--accent) 35%, transparent); }
 :root[data-theme="zaibatsu"] .die.hit { box-shadow: 0 0 calc(8px * var(--glow, 1)) color-mix(in oklab, var(--accent) 35%, transparent); }
+
+/* Compendium drag and drop */
+.drag-ghost { position: fixed; top: -100px; left: -100px; padding: .35rem .7rem; background: var(--panel-hi); color: var(--accent); border: 1px solid var(--accent); font: 600 .85rem var(--font-display); white-space: nowrap; box-shadow: 0 0 calc(14px * var(--glow, 1)) color-mix(in oklab, var(--accent) 40%, transparent); }
+:root[data-dragging="gear"] [data-gear-drop] { outline: 1px dashed color-mix(in oklab, var(--accent) 70%, transparent); outline-offset: 4px; }
+[data-gear-drop].drop-over { outline: 2px solid var(--accent) !important; outline-offset: 4px; background-color: color-mix(in oklab, var(--accent) 7%, transparent); }
+@keyframes adv-pop { 0% { transform: translateY(-.35em); opacity: 0; color: var(--accent); } 60% { opacity: 1; } 100% { transform: none; } }
+.adv-pop { animation: adv-pop .35s ease-out; }

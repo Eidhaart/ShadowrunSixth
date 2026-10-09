@@ -14,10 +14,12 @@ import { useComms } from "@/lib/store/comms";
 import { MODULE_LIST } from "@/lib/academy/modules";
 import { useAcademy } from "@/lib/academy/progress";
 import { doRoll } from "@/lib/actions";
+import { useCatalog } from "@/lib/compendium/catalog";
 
 const NAV = [
   { href: "/", label: "Deck", icon: "deck" },
   { href: "/rules", label: "Library", icon: "library" },
+  { href: "/compendium", label: "Compendium", icon: "crate" },
   { href: "/dice", label: "Dice", icon: "dice" },
   { href: "/forge", label: "Forge", icon: "forge" },
   { href: "/learn", label: "Academy", icon: "learn" },
@@ -180,6 +182,7 @@ function Palette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const search = useRulebook((s) => s.search);
   const status = useRulebook((s) => s.status);
+  const gear = useCatalog();
   const lenses = useSettings((s) => s.lenses);
   const runners = useRunners((s) => s.runners);
 
@@ -238,6 +241,11 @@ function Palette() {
       const nm = r.alias || r.name || "Unnamed runner";
       if (ql && nm.toLowerCase().includes(ql)) out.push({ id: `run-${r.id}`, label: `Open sheet: ${nm}`, group: "Runners", run: go(`/runners/${r.id}`) });
     }
+    if (ql.length >= 2) {
+      for (const g of gear.filter((g) => g.name.toLowerCase().includes(ql)).slice(0, 5)) {
+        out.push({ id: `gear-${g.id}`, group: "Gear", label: g.name, hint: `${g.group}${g.cost != null ? ` · ${g.cost.toLocaleString("en-US")}¥` : ""}`, run: go(`/compendium?q=${encodeURIComponent(g.name)}`) });
+      }
+    }
     if (ql.length >= 2 && status === "ready") {
       for (const h of search(q, lenses, 8)) {
         out.push({
@@ -249,7 +257,7 @@ function Palette() {
       }
     }
     return out.slice(0, 18);
-  }, [q, runners, router, setOpen, search, status, lenses]);
+  }, [q, runners, router, setOpen, search, status, lenses, gear]);
 
   if (!open) return null;
   return (

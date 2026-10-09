@@ -28,6 +28,11 @@ const P: Record<string, string> = {
   learn: "M2 9l10-5 10 5-10 5zM6 11.500V16c0 1.500 2.700 3 6 3s6-1.500 6-3v-4.500M22 9v6",
   copy: "M9 9h11v11H9zM5 15V4h11",
   print: "M7 9V3h10v6M6 17H4V9h16v8h-2M7 14h10v7H7z",
+  crate: "M3 7.5L12 3l9 4.5v9L12 21l-9-4.5zM3 7.5l9 4.5 9-4.5M12 12v9",
+  grip: "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01",
+  up: "M12 19V5M6 11l6-6 6 6",
+  undo: "M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3",
+  wifi: "M2 9a15 15 0 0120 0M5.5 12.5a10 10 0 0113 0M9 16a5 5 0 016 0M12 19.5h.01",
 };
 
 export function Icon({ name, size = 20, className = "" }: { name: keyof typeof P | string; size?: number; className?: string }) {

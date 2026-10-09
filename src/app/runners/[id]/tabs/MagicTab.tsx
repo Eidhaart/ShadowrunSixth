@@ -1,4 +1,5 @@
 "use client";
+import { ADV_COST, advance } from "@/lib/sr6/advance";
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
@@ -147,7 +148,7 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
                     <div className="no-print flex gap-1.5">
                       <button className="btn small primary" disabled={sorcery.blocked} onClick={() => doCast(sp)}><Icon name="spark" size={13} /> Cast {ctx.poolOf(sorcery.base)}</button>
                       {(!def || def.dur !== "I") && <button className={clsx("btn small", on && "primary")} aria-pressed={on} title={`Sustaining costs ${SUSTAIN_PENALTY} dice on every test`} onClick={() => toggleSustain(sp)}>{on ? "Sustained" : "Sustain"}</button>}
-                      <button className="btn small ghost" aria-label={`Forget ${sp}`} onClick={() => upd((x) => { x.spells = x.spells.filter((s) => s !== sp); editExt(x, (ex) => { ex.sustained = ex.sustained.filter((s) => s !== sp); }); })}>×</button>
+                      <button className="btn small ghost" aria-label={`Forget ${sp}`} onClick={() => upd((x) => { x.spells = x.spells.filter((s) => s !== sp); if (x.adv) x.adv.spells = x.adv.spells.filter((s) => s !== sp); editExt(x, (ex) => { ex.sustained = ex.sustained.filter((s) => s !== sp); }); })}>×</button>
                     </div>
                   </div>
                 </li>
@@ -155,7 +156,7 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
             })}
             {c.spells.length === 0 && <li className="py-2"><Empty>No spells yet. Learn one below.</Empty></li>}
           </ul>
-          <form className="no-print mt-3 flex gap-2" onSubmit={(ev) => { ev.preventDefault(); const n = newSpell.trim(); if (!n || karmaAvail < KARMA.spell) return; upd((x) => { x.karmaSpent += KARMA.spell; x.spells.push(n); }); setNewSpell(""); }}>
+          <form className="no-print mt-3 flex gap-2" onSubmit={(ev) => { ev.preventDefault(); const n = newSpell.trim(); if (!n || karmaAvail < KARMA.spell) return; upd((x) => { advance(x, { k: "spell", name: n }, `Learned ${n}`, ADV_COST.spell); }); setNewSpell(""); }}>
             <input className="field flex-1" list="spell-names" value={newSpell} onChange={(ev) => setNewSpell(ev.target.value)} placeholder={`Learn a spell (${KARMA.spell} Karma)`} aria-label="New spell name" />
             <datalist id="spell-names">{suggestions.slice(0, 250).map((n) => <option key={n} value={n} />)}</datalist>
             <button className="btn small" disabled={!newSpell.trim() || karmaAvail < KARMA.spell}>Learn</button>
