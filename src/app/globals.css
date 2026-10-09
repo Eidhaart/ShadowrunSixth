@@ -878,3 +878,20 @@ h1 { color: var(--title, var(--fg)); background-image: var(--title-paint, none);
 [data-theme="dojo"] .motif, [data-theme="corp"] .motif, [data-theme="ice"] .motif { --motif-c: var(--fg); }
 :root:not([data-backdrop="grid"]) body { background: radial-gradient(1100px 600px at 12% -10%, var(--halo-a), transparent 60%), radial-gradient(900px 600px at 100% 110%, var(--halo-b), transparent 60%), var(--bg); }
 :root[data-backdrop="flat"] body { background: var(--bg); }
+
+/* ───────────────────────── Forge: choose your path ───────────────────────── */
+.path-card {
+  --cut: 22px;
+  background: var(--bg-2);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
+  transition: box-shadow .25s, transform .25s;
+}
+.path-card::before, .path-card::after { content: ""; position: absolute; width: var(--cut); height: var(--cut); pointer-events: none; z-index: 2; }
+.path-card::before { top: 0; right: 0; background: linear-gradient(225deg, transparent calc(50% - 1px), var(--accent) calc(50% - 1px) calc(50% + .5px), transparent calc(50% + .5px)); }
+.path-card::after { bottom: 0; left: 0; background: linear-gradient(45deg, transparent calc(50% - 1px), var(--accent) calc(50% - 1px) calc(50% + .5px), transparent calc(50% + .5px)); }
+.path-card:hover, .path-card:focus-visible { transform: translateY(-4px); box-shadow: inset 0 0 0 2px var(--accent), inset 0 -60px 80px -40px color-mix(in oklab, var(--accent) 35%, transparent); outline: none; }
+.path-ticks { position: absolute; left: 50%; bottom: 0; width: 36%; height: 10px; transform: translateX(-50%); z-index: 2;
+  background: linear-gradient(var(--accent), var(--accent)) left bottom / 1px 10px no-repeat, linear-gradient(var(--accent), var(--accent)) right bottom / 1px 10px no-repeat, linear-gradient(var(--accent), var(--accent)) center bottom / 100% 1px no-repeat; opacity: .8; }
+@keyframes path-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.path-in { animation: path-in .55s cubic-bezier(.2,.8,.2,1) backwards; }

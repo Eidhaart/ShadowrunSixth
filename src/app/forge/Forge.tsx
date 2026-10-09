@@ -7,6 +7,7 @@ import { useRunners } from "@/lib/store/characters";
 import { budget, validate } from "@/lib/sr6/derive";
 import type { Character } from "@/lib/sr6/character";
 import { Readout } from "./Readout";
+import { Paths } from "./Paths";
 import { Concept } from "./steps/Concept";
 import { Priorities } from "./steps/Priorities";
 import { Origin } from "./steps/Origin";
@@ -71,15 +72,7 @@ export function Forge() {
   if (!hydrated) return <div className="p-8 text-dim">Warming up the forge</div>;
 
   if (!draft) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-10 md:px-8">
-        <h1 className="text-4xl font-bold">The Forge</h1>
-        <p className="mt-3 max-w-xl text-dim">Build a runner step by step. The Forge applies the Priority System, checks every limit as you go, and leaves you with a fully automated sheet.</p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button className="btn primary" onClick={() => { startDraft(); setStepId("concept"); }}><Icon name="forge" size={18} /> Start a new runner</button>
-        </div>
-      </div>
-    );
+    return <Paths onStarted={() => { setStepId("concept"); window.scrollTo({ top: 0 }); }} onTaken={(id) => router.push(`/runners/${id}`)} />;
   }
 
   const bud = budget(draft);
