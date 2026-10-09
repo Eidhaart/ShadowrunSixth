@@ -144,3 +144,25 @@ test("essence loss drops Magic by whole points", () => {
   c.essenceLoss = 1.1;
   assert.equal(derive(c).magic, 2);
 });
+
+import { atLeast, opposedOdds, bruteRun, probeRun, sampleHits } from "../src/lib/academy/stats";
+
+test("academy odds: pools of d6 with 5+6 as hits", () => {
+  const o = opposedOdds(6, 6);
+  assert.ok(Math.abs(o.win + o.tie + o.lose - 1) < 1e-9);
+  assert.ok(Math.abs(o.win - o.lose) < 1e-9); // symmetric pools
+  assert.ok(Math.abs(o.hitsYou - 2) < 1e-9);
+  assert.ok(Math.abs(atLeast(1, 1) - 1 / 3) < 1e-9);
+  assert.equal(atLeast(0, 1), 0);
+  assert.equal(atLeast(5, 0), 1);
+});
+
+test("academy entry sims: a seeded run is deterministic and Probe avoids illegal Admin upkeep", () => {
+  let s = 12345;
+  const rng = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
+  assert.ok(sampleHits(30, rng) > 0);
+  const p = { pool: 11, attack: 3, sleaze: 5, firewall: 4, willpower: 4, stay: 10 };
+  let brute = 0, probe = 0;
+  for (let i = 0; i < 400; i++) { brute += bruteRun(p, rng).os; probe += probeRun(p, rng).os; }
+  assert.ok(brute / 400 > probe / 400, `brute ${brute / 400} should cost more OS than probe ${probe / 400} on a 10-round job`);
+});

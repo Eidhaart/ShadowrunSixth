@@ -11,6 +11,8 @@ import { useRunners } from "@/lib/store/characters";
 import { useRolls } from "@/lib/store/rolls";
 import { useUi } from "@/lib/store/ui";
 import { useComms } from "@/lib/store/comms";
+import { MODULE_LIST } from "@/lib/academy/modules";
+import { useAcademy } from "@/lib/academy/progress";
 import { doRoll } from "@/lib/actions";
 
 const NAV = [
@@ -18,6 +20,7 @@ const NAV = [
   { href: "/rules", label: "Library", icon: "library" },
   { href: "/dice", label: "Dice", icon: "dice" },
   { href: "/forge", label: "Forge", icon: "forge" },
+  { href: "/learn", label: "Academy", icon: "learn" },
   { href: "/runners", label: "Runners", icon: "runners" },
   { href: "/comms", label: "Comms", icon: "comms" },
   { href: "/link", label: "Foundry", icon: "link" },
@@ -215,6 +218,14 @@ function Palette() {
     for (const n of NAV) {
       if (!ql || n.label.toLowerCase().includes(ql)) out.push({ id: `nav-${n.href}`, label: `Go to ${n.label}`, group: "Navigate", run: go(n.href) });
     }
+    if (ql.length >= 2) {
+      for (const m of MODULE_LIST) {
+        for (const l of m.lessons) {
+          if (`${m.title} ${l.title} ${l.blurb}`.toLowerCase().includes(ql))
+            out.push({ id: `learn-${m.id}-${l.id}`, label: l.title, hint: m.title, group: "Academy", run: go(`/learn/${m.id}/${l.id}`) });
+        }
+      }
+    }
     for (const r of Object.values(runners)) {
       const nm = r.alias || r.name || "Unnamed runner";
       if (ql && nm.toLowerCase().includes(ql)) out.push({ id: `run-${r.id}`, label: `Open sheet: ${nm}`, group: "Runners", run: go(`/runners/${r.id}`) });
@@ -286,6 +297,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const comms = useComms();
 
   useEffect(() => { void init(); }, [init]);
+  useEffect(() => { void useAcademy.persist.rehydrate(); }, []);
   // Hydrate persisted stores after mount.
   useEffect(() => {
     useSettings.persist.rehydrate();

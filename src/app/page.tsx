@@ -55,6 +55,18 @@ export default function DeckHome() {
 
           <section className="panel p-5">
             <div className="mb-3 flex items-baseline justify-between gap-3">
+              <h2 className="text-xl font-semibold">Academy</h2>
+              <Link href="/learn" className="btn small"><Icon name="learn" size={14} /> Open</Link>
+            </div>
+            <p className="mb-3 text-sm text-dim">Hacking and magic are the hard parts. Learn them in plain words, then run a mission.</p>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/learn/matrix" className="btn">Hacking for Dummies</Link>
+              <Link href="/learn/magic" className="btn">Magic for Dummies</Link>
+            </div>
+          </section>
+
+          <section className="panel p-5">
+            <div className="mb-3 flex items-baseline justify-between gap-3">
               <h2 className="text-xl font-semibold">Runners</h2>
               <Link href="/forge" className="btn small primary"><Icon name="plus" size={14} /> New runner</Link>
             </div>

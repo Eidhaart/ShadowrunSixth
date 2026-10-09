@@ -35,6 +35,15 @@ Quality and spell/power lists in the Forge are read from the imported book.
 
 `npm test` (rules engine against the book's worked examples), `npm run lint`, `npm run build`.
 
+## Academy (Hacking and Magic for Dummies)
+
+`/learn` has two self-contained modules, written in original wording so no book text is bundled:
+
+- **Hacking for Dummies**: 11 short lessons, interactive widgets (deck builder, OS counter, access ladder, IC, damage), a final exam and a live mission, "Ledger Lift at Corvid Freight".
+- **Magic for Dummies**: 11 lessons (casting, drain, direct/indirect spells, sustaining, summoning, banishing, the astral plane), widgets that roll real dice, an exam and a live mission, "Night Job at Halcyon Biolab".
+
+Progress is stored in the browser. Both missions use the real dice engine with Edge boosts. Simplifications: Probe is a single roll, hosts and guards use one fixed set of numbers, spirits are generic, a failed summoning costs no drain, and a link-lock also ends when the Tar Baby is destroyed.
+
 ## Known gaps
 
 - Edge starts at rank 1; Edge, Magic and racial attribute increases cost 1 adjustment point each. Check against your book.

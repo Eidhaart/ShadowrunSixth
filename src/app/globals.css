@@ -299,3 +299,14 @@ mark.hl { background: color-mix(in oklab, var(--accent) 35%, transparent); color
   .fx, .no-print { display: none !important; }
   body { background: #fff !important; color: #000 !important; }
 }
+
+/* Academy */
+.term { cursor: help; border: 0; background: none; padding: 0; font: inherit; color: var(--cyan); text-decoration: underline dotted; text-underline-offset: 3px; }
+.term:hover, .term:focus-visible { color: var(--accent); }
+.term-pop { position: absolute; z-index: 30; left: 0; top: 1.5em; width: min(20rem, 80vw); padding: .55rem .7rem; font-size: .82rem; line-height: 1.4; color: var(--fg); background: var(--panel-hi); border: 1px solid var(--accent); box-shadow: 0 8px 28px rgba(0,0,0,.45); }
+.meter { position: relative; height: .7rem; background: var(--bg-2); border: 1px solid var(--line-hi); overflow: hidden; }
+.meter > i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--cyan), var(--accent)); transition: width .5s cubic-bezier(.2,.8,.2,1); }
+.meter.hot > i { background: linear-gradient(90deg, var(--accent), var(--danger)); }
+.log-line { animation: logIn .25s ease-out; }
+@keyframes logIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+[data-motion="reduced"] .log-line { animation: none; }
