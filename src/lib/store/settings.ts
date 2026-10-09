@@ -36,6 +36,8 @@ interface SettingsState {
   reset: () => void;
 }
 
+export const DEFAULT_CHAT_URL = "wss://sixthdeck-relay.onrender.com";
+
 const defaults = {
   theme: "sodium" as ThemeId,
   customAccent: null as string | null,
@@ -48,7 +50,7 @@ const defaults = {
   motion: "full" as const,
   sound: false,
   handle: "",
-  chatUrl: "",
+  chatUrl: DEFAULT_CHAT_URL,
   room: "table-1",
   lenses: [] as RuleCategory[],
   pins: [] as string[],
@@ -70,6 +72,15 @@ export const useSettings = create<SettingsState>()(
       },
       reset: () => set({ ...defaults }),
     }),
-    { name: "sixthdeck.settings", version: 1 },
+    {
+      name: "sixthdeck.settings",
+      version: 2,
+      // v1 saved an empty chat URL by default; fill it with the hosted relay.
+      migrate: (state, version) => {
+        const s = state as Partial<SettingsState>;
+        if (version < 2 && !s.chatUrl) s.chatUrl = DEFAULT_CHAT_URL;
+        return s as SettingsState;
+      },
+    },
   ),
 );

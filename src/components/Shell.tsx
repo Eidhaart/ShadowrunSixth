@@ -307,7 +307,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const t = setTimeout(() => {
       const st = useSettings.getState();
-      if (st.chatUrl || st.handle) useComms.getState().connect({ url: st.chatUrl, room: st.room, handle: st.handle });
+      if (st.chatUrl && st.handle) useComms.getState().connect({ url: st.chatUrl, room: st.room, handle: st.handle });
     }, 250);
     return () => clearTimeout(t);
   }, [chatUrl, room, handle]);

@@ -102,7 +102,7 @@ export default function CommsPage() {
             </div>
             <div>
               <label className="mb-1 block text-sm" htmlFor="u">Relay address</label>
-              <input id="u" className="field font-mono" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="ws://192.168.1.20:8787" />
+              <input id="u" className="field font-mono" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="wss://sixthdeck-relay.onrender.com" />
               <p className="mt-1 text-xs text-dim">Leave empty to chat between tabs on this device. Run <code>npm run chat</code> on the GM&apos;s machine for a shared table.</p>
             </div>
             <div className="flex gap-2">
