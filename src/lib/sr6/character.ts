@@ -6,6 +6,7 @@ import {
   type PriorityColumn,
   type PriorityLevel,
 } from "./data";
+import type { SheetExt } from "./ext";
 
 export type ExtraKey = "edge" | "magic" | "resonance";
 
@@ -149,6 +150,8 @@ export interface Character {
   statuses: string[];
   /** Free-form on-sheet modifier applied to every dice pool (temporary buffs). */
   poolMod: number;
+  /** Deck, spirits, vehicles and other extras kept by the sheet tabs. */
+  ext?: SheetExt;
 }
 
 const zeroAttrs = (): Record<AttrKey, number> =>

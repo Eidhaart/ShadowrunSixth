@@ -24,6 +24,11 @@ export const PRESETS: { id: string; label: string; spec: Omit<CheckSpec, "thresh
   { id: "composure", label: "Composure", spec: { label: "Composure", attr: "willpower", attr2: "charisma" } },
   { id: "judge", label: "Judge intentions", spec: { label: "Judge intentions", attr: "willpower", attr2: "intuition" } },
   { id: "memory", label: "Memory", spec: { label: "Recall", attr: "logic", attr2: "intuition" } },
+  { id: "hack", label: "Hack on the fly", spec: { label: "Hack on the fly", skill: "cracking", attr: "logic" } },
+  { id: "mperc", label: "Matrix perception", spec: { label: "Matrix perception", skill: "electronics", attr: "intuition" } },
+  { id: "cast", label: "Spellcasting", spec: { label: "Spellcasting", skill: "sorcery", attr: "magic" } },
+  { id: "astralp", label: "Astral perception", spec: { label: "Astral perception", skill: "astral", attr: "intuition" } },
+  { id: "pilot", label: "Pilot", spec: { label: "Pilot", skill: "piloting", attr: "reaction" } },
   { id: "lift", label: "Lift and carry", spec: { label: "Lift and carry", attr: "body", attr2: "willpower" } },
 ];
 

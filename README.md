@@ -27,7 +27,7 @@ Quality and spell/power lists in the Forge are read from the imported book.
 | Library | Full-text search, lenses (combat, magic, hacking, GM, ...), pins, share to chat |
 | Dice | Pool roller, Edge boosts, odds, history |
 | Forge | Guided priority-system character creation with live budget checks |
-| Runners | Saved characters (this browser), JSON import/export, automated sheet |
+| Runners | Saved characters (this browser), JSON import/export, automated sheet with tabs: **Sheet** (condition, attributes, skills, attacks), **Matrix** (arrangeable deck, Matrix stats, actions with limits, Overwatch, technomancer forms and sprites), **Magic** (casting with automatic drain, sustaining, spirits, foci), **Rigging** (vehicles and drones) and **Gear** (inventory, contacts, money) |
 | Comms | Rooms, in-character chat as your runner, GM-called checks (players accept, the dice roll in the chat), shared rolls |
 | Foundry | Setup for the bridge module in `foundry/sixthdeck-bridge` |
 

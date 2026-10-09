@@ -165,6 +165,7 @@ export function RollView({
           <span className="num">{rolling ? "··" : result.totalHits}</span>
           <span className="ml-2 text-base text-dim">{result.totalHits === 1 ? "hit" : "hits"}</span>
         </div>
+        {!rolling && result.limited !== undefined && <span className="chip" title="Hits above the limit are lost">limit {result.spec.limit} (rolled {result.limited})</span>}
         {!rolling && <Cheer r={result} />}
         {!rolling && result.edgeSpent > 0 && <span className="chip">Edge spent: {result.edgeSpent}</span>}
       </div>

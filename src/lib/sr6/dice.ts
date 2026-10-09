@@ -29,6 +29,8 @@ export interface RollSpec {
   threshold?: number;
   /** Flat extra hits (e.g. 3 Edge automatic hit). */
   autoHits?: number;
+  /** Hits above this are lost (Matrix attribute, Force). */
+  limit?: number;
   /** Free-text note shown in logs. */
   note?: string;
 }
@@ -43,6 +45,8 @@ export interface RollResult {
   hits: number;
   autoHits: number;
   totalHits: number;
+  /** Hits rolled before the limit cut them down. */
+  limited?: number;
   glitchDice: number;
   glitch: boolean;
   critGlitch: boolean;
@@ -87,7 +91,8 @@ export function tally(
     (d) => !d.exploded && (d.value === 1 || (spec.glitchOn2 && d.value === 2)),
   ).length;
   const glitch = glitchDice > baseCount / 2;
-  const totalHits = hits + autoHits;
+  const rawHits = hits + autoHits;
+  const totalHits = spec.limit !== undefined ? Math.min(rawHits, Math.max(0, spec.limit)) : rawHits;
   const critGlitch = glitch && totalHits === 0;
   return {
     id: keep?.id ?? nextId(),
@@ -98,6 +103,7 @@ export function tally(
     hits,
     autoHits,
     totalHits,
+    limited: totalHits < rawHits ? rawHits : undefined,
     glitchDice,
     glitch,
     critGlitch,

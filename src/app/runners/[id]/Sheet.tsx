@@ -17,6 +17,12 @@ import {
   type AttrKey,
 } from "@/lib/sr6/data";
 import { runnerToFoundry } from "@/lib/foundry";
+import { getExt, sustainPenalty } from "@/lib/sr6/ext";
+import type { SheetCtx } from "./tabs/ctx";
+import { MatrixTab } from "./tabs/MatrixTab";
+import { MagicTab } from "./tabs/MagicTab";
+import { RiggingTab } from "./tabs/RiggingTab";
+import { GearTab } from "./tabs/GearTab";
 
 const STATUSES = ["Burning", "Chilled", "Corrosive", "Dazed", "Deafened", "Fatigued", "Frightened", "Hazed", "Hobbled", "Immobilized", "Nauseated", "Panicked", "Poisoned", "Prone", "Stilled", "Wet", "Zapped"];
 const RANGES = ["Close", "Near", "Medium", "Far", "Extreme"] as const;
@@ -89,6 +95,32 @@ function EdgeTracker({ c, d, upd }: { c: Character; d: Derived; upd: (fn: (x: Ch
   );
 }
 
+const TABS = [
+  { id: "sheet", label: "Sheet" },
+  { id: "matrix", label: "Matrix" },
+  { id: "magic", label: "Magic" },
+  { id: "rig", label: "Rigging" },
+  { id: "gear", label: "Gear" },
+] as const;
+
+function TabBar({ tab, setTab, awakened, sustained }: { tab: string; setTab: (t: (typeof TABS)[number]["id"]) => void; awakened: boolean; sustained: number }) {
+  return (
+    <div className="no-print mb-4 flex gap-1 overflow-x-auto border-b border-line" role="tablist" aria-label="Sheet sections">
+      {TABS.filter((x) => x.id !== "magic" || awakened).map((x) => (
+        <button
+          key={x.id}
+          role="tab"
+          aria-selected={tab === x.id}
+          onClick={() => setTab(x.id)}
+          className={clsx("-mb-px whitespace-nowrap border-b-2 px-4 py-2 font-display text-sm font-semibold transition-colors", tab === x.id ? "border-accent text-accent" : "border-transparent text-dim hover:text-fg")}
+        >
+          {x.label}{x.id === "magic" && sustained > 0 && <span className="ml-1.5 chip !py-0">−{sustained * 2}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function Sheet({ id }: { id: string }) {
   const c = useRunners((s) => s.runners[id]);
   const update = useRunners((s) => s.update);
@@ -96,6 +128,7 @@ export function Sheet({ id }: { id: string }) {
   const commsStatus = useComms((s) => s.status);
   const send = useComms((s) => s.send);
 
+  const [tab, setTab] = useState<"sheet" | "matrix" | "magic" | "rig" | "gear">("sheet");
   const [mod, setMod] = useState(0);
   const [edgePre, setEdgePre] = useState(false);
   const [lastId, setLastId] = useState<string | null>(null);
@@ -129,12 +162,14 @@ export function Sheet({ id }: { id: string }) {
   const penalty = d.woundPenalty;
   const awakened = c.magicType !== "mundane" && c.magicType !== "technomancer";
 
-  const rollPool = (label: string, base: number, opts: { noWound?: boolean } = {}) => {
-    const wound = opts.noWound ? 0 : penalty;
-    const pool = Math.max(0, base - wound + c.poolMod + mod);
+  const sustain = sustainPenalty(getExt(c));
+  const poolOf = (base: number, opts: { noWound?: boolean; noSustain?: boolean } = {}) =>
+    Math.max(0, base - (opts.noWound ? 0 : penalty) - (opts.noSustain ? 0 : sustain) + c.poolMod + mod);
+  const rollPool = (label: string, base: number, opts: { noWound?: boolean; noSustain?: boolean; limit?: number } = {}) => {
+    const pool = poolOf(base, opts);
     const useEdge = edgePre && c.edgeCurrent >= 4;
     if (useEdge) upd((x) => { x.edgeCurrent -= 4; });
-    const r = doRoll({ label, pool, explode: useEdge, glitchOn2: d.glitchOn2 }, useEdge ? d.edge : 0, who);
+    const r = doRoll({ label, pool, explode: useEdge, glitchOn2: d.glitchOn2, limit: opts.limit }, useEdge ? d.edge : 0, who);
     setLastId(r.id);
     if (useEdge) setEdgePre(false);
     return r;
@@ -161,6 +196,8 @@ export function Sheet({ id }: { id: string }) {
       x.damage = { physical: phys, stun, overflow: Math.min(over, d.condition.overflow) };
     });
 
+  const ctx: SheetCtx = { c, d, who, upd, rollPool, poolOf, applyDamage: (b, k) => applyDamage(b, k), awakened };
+
   const soakResult = soakEntry && soakEntry.kind === "roll" ? damageAfterSoak(soak.dv, soak.net, soakEntry.result.totalHits) : null;
 
   // Karma advancement
@@ -169,7 +206,6 @@ export function Sheet({ id }: { id: string }) {
   const maxSkill = (sid: string) => (c.qualities.some((q) => q.name.startsWith("Aptitude") && q.note === sid) ? 10 : 9);
 
   const weapons = c.gear.filter((g) => g.category === "weapon");
-  const castSkillRank = skillRank("sorcery");
 
   const exportJson = () => {
     const url = URL.createObjectURL(new Blob([JSON.stringify(c, null, 2)], { type: "application/json" }));
@@ -230,7 +266,13 @@ export function Sheet({ id }: { id: string }) {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <TabBar tab={tab} setTab={setTab} awakened={awakened} sustained={getExt(c).sustained.length} />
+      <div className={clsx(tab !== "matrix" && "hidden print:block")}><MatrixTab ctx={ctx} /></div>
+      {awakened && <div className={clsx(tab !== "magic" && "hidden print:block")}><MagicTab ctx={ctx} /></div>}
+      <div className={clsx(tab !== "rig" && "hidden print:block")}><RiggingTab ctx={ctx} /></div>
+      <div className={clsx(tab !== "gear" && "hidden print:block")}><GearTab ctx={ctx} /></div>
+
+      <div className={clsx("grid gap-4 lg:grid-cols-3", tab !== "sheet" && "hidden print:grid")}>
         {/* left column */}
         <div className="space-y-4">
           <Box title="Condition" right={<button className="no-print btn small ghost" onClick={() => upd((x) => { x.damage = { physical: 0, stun: 0, overflow: 0 }; })}>Heal all</button>}>
@@ -333,8 +375,8 @@ export function Sheet({ id }: { id: string }) {
                     {s.spec && <div className="text-xs text-dim">{s.spec} +2</div>}
                   </div>
                   <div className="no-print flex shrink-0 items-center gap-1.5">
-                    <button className="btn small" onClick={() => rollPool(`${s.name} + ${ATTR_LABEL[s.attr as keyof typeof ATTR_LABEL]}`, s.pool)} title={`Pool ${Math.max(0, s.pool - penalty + c.poolMod + mod)} after modifiers`}>{Math.max(0, s.pool - penalty + c.poolMod + mod)}</button>
-                    {s.specPool !== undefined && <button className="btn small" onClick={() => rollPool(`${s.name} + ${ATTR_LABEL[s.attr as keyof typeof ATTR_LABEL]} (${s.spec})`, s.specPool!)} title="With specialization">{Math.max(0, s.specPool - penalty + c.poolMod + mod)}*</button>}
+                    <button className="btn small" onClick={() => rollPool(`${s.name} + ${ATTR_LABEL[s.attr as keyof typeof ATTR_LABEL]}`, s.pool)} title={`Pool ${poolOf(s.pool)} after modifiers`}>{poolOf(s.pool)}</button>
+                    {s.specPool !== undefined && <button className="btn small" onClick={() => rollPool(`${s.name} + ${ATTR_LABEL[s.attr as keyof typeof ATTR_LABEL]} (${s.spec})`, s.specPool!)} title="With specialization">{poolOf(s.specPool)}*</button>}
                     <button className="btn small ghost" aria-label={`Load ${s.name} into the test builder`} onClick={() => setBuilder({ skill: s.id, attr: SKILL_BY_ID[s.id].attr, spec: false })}>…</button>
                   </div>
                 </li>
@@ -368,7 +410,7 @@ export function Sheet({ id }: { id: string }) {
                         </div>
                         <div className="no-print flex shrink-0 gap-1.5">
                           {diff >= 4 && <button className="btn small ghost" onClick={() => upd((x) => { x.edgeCurrent = Math.min(7, x.edgeCurrent + 1); })}>+1 Edge</button>}
-                          <button className="btn small primary" disabled={ar == null} onClick={() => rollPool(`${w.name} (${SKILL_BY_ID[sk]?.name ?? "Attack"})`, Math.max(0, base))}>Attack {Math.max(0, base - penalty + c.poolMod + mod)}</button>
+                          <button className="btn small primary" disabled={ar == null} onClick={() => rollPool(`${w.name} (${SKILL_BY_ID[sk]?.name ?? "Attack"})`, Math.max(0, base))}>Attack {poolOf(base)}</button>
                         </div>
                       </div>
                     </li>
@@ -378,34 +420,6 @@ export function Sheet({ id }: { id: string }) {
             </Box>
           )}
 
-          {awakened && (
-            <Box title="Spellcasting">
-              <div className="no-print mb-3 flex flex-wrap items-center gap-3 text-sm">
-                <label className="flex items-center gap-1.5">Drain attribute
-                  <select className="field w-32" value={c.tradition} onChange={(e) => upd((x) => { x.tradition = e.target.value; })}>
-                    {(["logic", "charisma", "intuition", "willpower"] as AttrKey[]).map((a) => <option key={a} value={a}>{ATTR_LABEL[a]}</option>)}
-                  </select>
-                </label>
-                <button className="btn small" onClick={() => rollPool("Drain resistance", d.attrs.willpower + d.attrs[(c.tradition as AttrKey) || "logic"], { noWound: false })}>Resist drain {d.attrs.willpower + d.attrs[(c.tradition as AttrKey) || "logic"]}</button>
-              </div>
-              <ul className="divide-y divide-line">
-                {c.spells.map((sp) => (
-                  <li key={sp} className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="font-display">{sp}</span>
-                    <div className="no-print flex gap-1.5">
-                      <button className="btn small" onClick={() => rollPool(`Cast ${sp} (Sorcery + Magic)`, castSkillRank + d.magic)}>Cast {Math.max(0, castSkillRank + d.magic - penalty + c.poolMod + mod)}</button>
-                      <button className="btn small ghost" aria-label={`Remove ${sp}`} onClick={() => upd((x) => { x.spells = x.spells.filter((s) => s !== sp); })}>×</button>
-                    </div>
-                  </li>
-                ))}
-                {c.spells.length === 0 && <li className="py-1.5 text-sm text-dim">No spells yet.</li>}
-              </ul>
-              {c.adeptPowers.length > 0 && <p className="mt-2 text-sm text-dim">Adept powers: {c.adeptPowers.map((p) => `${p.name}${p.level && p.level > 1 ? ` ${p.level}` : ""}`).join(", ")}</p>}
-            </Box>
-          )}
-          {c.magicType === "technomancer" && c.complexForms.length > 0 && (
-            <Box title="Complex forms"><p className="text-sm">{c.complexForms.join(", ")}</p></Box>
-          )}
         </div>
 
         {/* right */}
