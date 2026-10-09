@@ -15,7 +15,7 @@ function Stat({ label, value, sub }: { label: string; value: React.ReactNode; su
   );
 }
 
-export function Readout({ c }: { c: Character }) {
+export function Readout({ c, onGo }: { c: Character; onGo?: (where: string) => void }) {
   const d = derive(c);
   const b = budget(c);
   const issues = validate(c);
@@ -58,8 +58,21 @@ export function Readout({ c }: { c: Character }) {
       </div>
 
       <div className={clsx("mt-4 border-l-2 px-3 py-2 text-sm", errors ? "border-danger bg-danger/10" : "border-ok bg-ok/10")}>
-        {errors ? `${errors} rule problem${errors === 1 ? "" : "s"} to fix` : "Every rule check passes"}
+        {errors ? `${errors} rule problem${errors === 1 ? "" : "s"} to fix` : "Every rule check passes"}{issues.length > errors ? `, ${issues.length - errors} warning${issues.length - errors === 1 ? "" : "s"}` : ""}
       </div>
+      {issues.length > 0 && (
+        <ul className="mt-2 space-y-1.5" aria-label="Rule problems">
+          {issues.map((i, n) => (
+            <li key={n}>
+              <button type="button" disabled={!onGo} onClick={() => onGo?.(i.where)}
+                className={clsx("block w-full border-l-2 px-3 py-1.5 text-left text-sm", i.level === "error" ? "border-danger" : "border-accent", onGo && "hover:bg-panelhi")}>
+                <span className={clsx("text-xs font-semibold", i.level === "error" ? "text-danger" : "text-accent")}>{i.where}{i.level === "warn" ? " (warning)" : ""}</span>
+                <span className="block text-dim">{i.text}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </aside>
   );
 }

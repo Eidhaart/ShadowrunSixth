@@ -85,6 +85,11 @@ export function Forge() {
   const bud = budget(draft);
   const issues = validate(draft);
   const blockers = issues.filter((i) => i.level === "error");
+  const goTo = (where: string) => {
+    const map: Record<string, string> = { Concept: "concept", Priorities: "priorities", Metatype: "origin", Adjustment: "origin", Attributes: "attributes", Skills: "skills", Magic: "magic", Qualities: "qualities", Karma: "karma", Gear: "gear" };
+    const id = map[where];
+    if (id && steps.some((x) => x.id === id)) { setStepId(id); setSheet(false); window.scrollTo({ top: 0 }); }
+  };
   const isLast = idx === steps.length - 1;
   const Comp = step.Comp;
 
@@ -135,7 +140,7 @@ export function Forge() {
         <div className="no-print fixed inset-0 z-[60] bg-black/60 md:hidden" onClick={() => setSheet(false)} role="presentation">
           <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto border-t border-accent bg-bg p-3 pb-[calc(1rem+env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Runner summary">
             <div className="mb-2 flex items-center justify-between"><span className="font-display font-semibold">Your runner so far</span><button className="btn small ghost" onClick={() => setSheet(false)} aria-label="Close"><Icon name="x" size={16} /></button></div>
-            <Readout c={draft} />
+            <Readout c={draft} onGo={goTo} />
           </div>
         </div>
       )}
@@ -186,7 +191,7 @@ export function Forge() {
         </div>
       </div>
 
-      <div className="hidden min-w-0 md:block lg:sticky lg:top-16 lg:h-fit"><Readout c={draft} /></div>
+      <div className="hidden min-w-0 md:block lg:sticky lg:top-16 lg:h-fit"><Readout c={draft} onGo={goTo} /></div>
     </div>
   );
 }
