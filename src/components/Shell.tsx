@@ -293,7 +293,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const init = useRulebook((s) => s.init);
   const rb = useRulebook((s) => s.status);
   const setPalette = useUi((s) => s.setPalette);
-  const { flicker, handle, chatUrl, room } = useSettings();
+  const { flicker, handle, chatUrl, room, role } = useSettings();
   const comms = useComms();
 
   useEffect(() => { void init(); }, [init]);
@@ -307,10 +307,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const t = setTimeout(() => {
       const st = useSettings.getState();
-      if (st.chatUrl && st.handle) useComms.getState().connect({ url: st.chatUrl, room: st.room, handle: st.handle });
+      if (st.chatUrl && st.handle) useComms.getState().connect({ url: st.chatUrl, room: st.room, handle: st.handle, role: st.role });
     }, 250);
     return () => clearTimeout(t);
-  }, [chatUrl, room, handle]);
+  }, [chatUrl, room, handle, role]);
 
   const active = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 

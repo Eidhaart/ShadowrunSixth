@@ -10,9 +10,12 @@ interface CommsState {
   room: string;
   handle: string;
   messages: WireMsg[];
-  users: { handle: string; source: string }[];
+  users: { handle: string; source: string; role?: "gm" | "player" }[];
+  /** Messages that arrived live (not from history), so the UI can tumble their dice once. */
+  fresh: Record<string, true>;
+  role: "gm" | "player";
   unread: number;
-  connect: (o: { url: string; room: string; handle: string }) => void;
+  connect: (o: { url: string; room: string; handle: string; role?: "gm" | "player" }) => void;
   disconnect: () => void;
   send: (m: WireMsg) => void;
   markRead: () => void;
@@ -28,10 +31,14 @@ const seen = new Set<string>();
 const cap = (arr: WireMsg[]) => arr.slice(-300);
 
 export const useComms = create<CommsState>((set, get) => {
-  const ingest = (m: WireMsg, fromSelf = false) => {
+  const ingest = (m: WireMsg, fromSelf = false, live = true) => {
     if (seen.has(m.id)) return;
     seen.add(m.id);
-    set((s) => ({ messages: cap([...s.messages, m]), unread: fromSelf ? s.unread : s.unread + 1 }));
+    set((s) => ({
+      messages: cap([...s.messages, m]),
+      unread: fromSelf ? s.unread : s.unread + 1,
+      fresh: live ? { ...s.fresh, [m.id]: true } : s.fresh,
+    }));
   };
 
   const closeAll = () => {
@@ -49,21 +56,21 @@ export const useComms = create<CommsState>((set, get) => {
     set({ status: "local", users: [{ handle: get().handle || "you", source: "this device" }] });
   };
 
-  const openSocket = (url: string, room: string, handle: string) => {
+  const openSocket = (url: string, room: string, handle: string, role: "gm" | "player") => {
     set({ status: "connecting" });
     let sock: WebSocket;
     try { sock = new WebSocket(url); } catch { set({ status: "off" }); return; }
     ws = sock;
     sock.onopen = () => {
       retry = 0;
-      const hello: ClientHello = { type: "hello", room, handle, source: "deck" };
+      const hello: ClientHello = { type: "hello", room, handle, source: "deck", role };
       sock.send(JSON.stringify(hello));
       set({ status: "online" });
     };
     sock.onmessage = (e) => {
       let m: ServerMsg;
       try { m = JSON.parse(String(e.data)); } catch { return; }
-      if (m.type === "history") m.messages.forEach((x) => ingest(x, true));
+      if (m.type === "history") m.messages.forEach((x) => ingest(x, true, false));
       else if (m.type === "presence") set({ users: m.users });
       else ingest(m);
     };
@@ -72,7 +79,7 @@ export const useComms = create<CommsState>((set, get) => {
       if (!wanted) return;
       set({ status: "connecting" });
       retry = Math.min(retry + 1, 6);
-      retryTimer = setTimeout(() => wanted && openSocket(url, room, handle), 800 * 2 ** retry);
+      retryTimer = setTimeout(() => wanted && openSocket(url, room, handle, role), 800 * 2 ** retry);
     };
     sock.onerror = () => sock.close();
   };
@@ -84,13 +91,15 @@ export const useComms = create<CommsState>((set, get) => {
     handle: "",
     messages: [],
     users: [],
+    fresh: {},
+    role: "player",
     unread: 0,
-    connect: ({ url, room, handle }) => {
+    connect: ({ url, room, handle, role = "player" }) => {
       closeAll();
       seen.clear();
       wanted = true;
-      set({ url, room, handle, messages: [], users: [], unread: 0 });
-      if (url.trim()) openSocket(url.trim(), room, handle || "runner");
+      set({ url, room, handle, role, messages: [], users: [], fresh: {}, unread: 0 });
+      if (url.trim()) openSocket(url.trim(), room, handle || "runner", role);
       else openLocal(room);
     },
     disconnect: () => {

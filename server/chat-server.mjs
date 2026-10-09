@@ -39,7 +39,7 @@ const room = (name) => {
 };
 const send = (ws, m) => ws.readyState === 1 && ws.send(JSON.stringify(m));
 const presence = (r) => {
-  const users = [...r.clients].map((c) => ({ handle: c.handle, source: c.source }));
+  const users = [...r.clients].map((c) => ({ handle: c.handle, source: c.source, role: c.role }));
   for (const c of r.clients) send(c, { type: "presence", users });
 };
 const sys = (r, text) => {
@@ -63,6 +63,10 @@ wss.on("connection", (ws) => {
       ws.handle = clean(m.handle, 32).trim() || "runner";
       ws.source = m.source === "foundry" ? "foundry" : "deck";
       joined = room(name);
+      // One GM seat per room. A second claimant (other than a reconnect under the same handle) plays instead.
+      const seated = [...joined.clients].find((c) => c.role === "gm" && c.handle !== ws.handle);
+      ws.role = m.role === "gm" && !seated ? "gm" : "player";
+      if (m.role === "gm" && seated) send(ws, { type: "system", id: `s${Date.now().toString(36)}g`, at: Date.now(), text: `${seated.handle} already holds the GM seat, so you joined as a player` });
       clearTimeout(timer);
       joined.clients.add(ws);
       send(ws, { type: "history", messages: joined.log });
@@ -70,8 +74,17 @@ wss.on("connection", (ws) => {
       presence(joined);
       return;
     }
-    if (!["chat", "roll", "init"].includes(m?.type) || typeof m.id !== "string") return;
-    if (m.type === "chat") m.text = clean(m.text, MAX_LEN);
+    if (!["chat", "roll", "init", "call", "decline", "withdraw"].includes(m?.type) || typeof m.id !== "string") return;
+    if ((m.type === "call" || m.type === "withdraw") && ws.role !== "gm") return;
+    if (m.type === "chat") { m.text = clean(m.text, MAX_LEN); m.as = m.as ? clean(m.as, 40) : undefined; }
+    if (m.type === "roll" || m.type === "decline") m.as = m.as ? clean(m.as, 40) : undefined;
+    if (m.type === "call") {
+      if (!m.check || typeof m.check !== "object") return;
+      m.to = Array.isArray(m.to) ? m.to.slice(0, 16).map((x) => clean(x, 32)) : [];
+      m.check.label = clean(m.check.label, 60);
+      m.check.note = m.check.note ? clean(m.check.note, 240) : undefined;
+    }
+    if (m.type === "chat" || m.type === "roll" || m.type === "call") m.gm = ws.role === "gm";
     m.from = ws.handle;
     m.at = Date.now();
     if (joined.log.some((x) => x.id === m.id)) return;

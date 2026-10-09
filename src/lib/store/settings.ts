@@ -26,6 +26,11 @@ interface SettingsState {
   handle: string;
   chatUrl: string;
   room: string;
+  /** GM claims the room's GM seat and can call for checks. */
+  role: "player" | "gm";
+  /** Runner id the chat speaks as, "npc" for a GM voice, or "" for yourself. */
+  speakAs: string;
+  npcName: string;
   /** Rule categories the library is filtered to; empty = everything. */
   lenses: RuleCategory[];
   pins: string[];
@@ -52,6 +57,9 @@ const defaults = {
   handle: "",
   chatUrl: DEFAULT_CHAT_URL,
   room: "table-1",
+  role: "player" as "player" | "gm",
+  speakAs: "",
+  npcName: "",
   lenses: [] as RuleCategory[],
   pins: [] as string[],
   skipBoot: false,
@@ -74,11 +82,12 @@ export const useSettings = create<SettingsState>()(
     }),
     {
       name: "sixthdeck.settings",
-      version: 2,
+      version: 3,
       // v1 saved an empty chat URL by default; fill it with the hosted relay.
       migrate: (state, version) => {
         const s = state as Partial<SettingsState>;
         if (version < 2 && !s.chatUrl) s.chatUrl = DEFAULT_CHAT_URL;
+        if (version < 3) { s.role = "player"; s.speakAs = ""; s.npcName = ""; }
         return s as SettingsState;
       },
     },
