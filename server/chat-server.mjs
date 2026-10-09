@@ -6,6 +6,7 @@
  * first, then chat / roll / init messages. The last 200 messages per room are replayed
  * to newcomers and kept in data/chat-history.json across restarts.
  */
+import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
@@ -47,7 +48,9 @@ const sys = (r, text) => {
 };
 const clean = (s, n) => String(s ?? "").slice(0, n);
 
-const wss = new WebSocketServer({ port: PORT, maxPayload: 64 * 1024 });
+const http = createServer((_req, res) => { res.writeHead(200, { "content-type": "text/plain" }); res.end("sixthdeck relay ok\n"); });
+const wss = new WebSocketServer({ server: http, maxPayload: 64 * 1024 });
+http.listen(PORT, () => console.log(`SixthDeck chat relay listening on :${PORT}`));
 wss.on("connection", (ws) => {
   let joined = null;
   const timer = setTimeout(() => !joined && ws.close(), 10000);
@@ -86,4 +89,3 @@ wss.on("connection", (ws) => {
   });
   ws.on("error", () => ws.close());
 });
-console.log(`SixthDeck chat relay listening on ws://0.0.0.0:${PORT}`);
