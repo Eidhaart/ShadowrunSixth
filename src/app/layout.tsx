@@ -19,6 +19,7 @@ export const viewport: Viewport = {
   themeColor: "#080a0e",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 // Apply the saved theme before first paint so the page never flashes the wrong skin.

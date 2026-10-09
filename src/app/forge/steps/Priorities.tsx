@@ -59,7 +59,37 @@ export function Priorities({ c, patch }: StepProps) {
         <button className="chip" onClick={clear}>Clear</button>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* phone: one card per category, five letters to pick from */}
+      <div className="space-y-3 md:hidden">
+        {PRIORITY_COLUMNS.map((col) => (
+          <section key={col.key} className="panel quiet p-3" aria-label={col.label}>
+            <div className="flex items-baseline justify-between gap-2">
+              <h3 className="font-display text-lg font-semibold">{col.label}</h3>
+              <span className="text-xs text-dim">Chosen <b className={clsx("num text-base", c.priorities[col.key] ? "text-accent" : "text-faint")}>{c.priorities[col.key] ?? "none"}</b></span>
+            </div>
+            <p className="mb-2 text-xs text-faint">{col.blurb}</p>
+            <div className="space-y-1.5">
+              {PRIORITY_LEVELS.map((lvl) => {
+                const on = c.priorities[col.key] === lvl;
+                const holder = !on && (Object.keys(c.priorities) as PriorityColumn[]).find((k) => c.priorities[k] === lvl);
+                const t = cellText(col.key, lvl);
+                return (
+                  <button key={lvl} type="button" aria-pressed={on} onClick={() => assign(col.key, lvl)}
+                    className={clsx("flex min-h-12 w-full items-center gap-3 border px-3 py-2 text-left", on ? "border-accent bg-accent/15" : "border-line bg-panel", holder && "opacity-60")}>
+                    <span className={clsx("font-display text-2xl", on ? "text-accent" : "text-dim")}>{lvl}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className={clsx("block font-display font-semibold", on && "text-accent")}>{t.main}</span>
+                      {t.sub && <span className="block text-xs text-dim">{t.sub}</span>}
+                    </span>
+                    {holder && <span className="chip shrink-0 !py-0 text-[11px]">{PRIORITY_COLUMNS.find((x) => x.key === holder)?.label}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[760px] border-separate border-spacing-1.5" aria-label="Priority table">
           <thead>
             <tr>

@@ -64,7 +64,7 @@ export default function CommsPage() {
   return (
     <Page wide title="Comms" kicker="Table chat. Speak as your runner, answer the GM's checks, and share rolls from anywhere in the deck. The Foundry bridge relays chat and rolls both ways.">
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <aside className="order-2 space-y-4 lg:order-1">
+        <aside className={clsx("space-y-4 lg:order-1", live ? "order-2" : "order-1")}>
           <section className="panel space-y-3 p-4">
             <div>
               <label className="mb-1 block text-sm" htmlFor="h">Handle</label>
@@ -110,7 +110,7 @@ export default function CommsPage() {
           </section>
         </aside>
 
-        <section className="panel order-1 flex h-[80vh] lg:order-2 lg:h-[75vh] min-h-[30rem] flex-col">
+        <section className={clsx("panel flex h-[80vh] min-h-[30rem] flex-col lg:order-2 lg:h-[75vh] max-md:h-[calc(100dvh-19rem)] max-md:min-h-[22rem]", live ? "order-1" : "order-2")}>
           <div className="flex-1 space-y-3 overflow-y-auto p-3 md:p-4" aria-live="polite">
             {c.messages.length === 0 && (
               <p className="m-auto max-w-sm text-center text-dim">{live ? "Quiet line. Say something or roll some dice." : "You are offline. Pick a handle and room, then jack in."}</p>
@@ -135,7 +135,7 @@ export default function CommsPage() {
 
           {isGm && composer && <div className="border-t border-line p-3"><CallComposer onClose={() => setComposer(false)} /></div>}
 
-          <form className="space-y-2 border-t border-line p-3 pb-16 lg:pb-14" onSubmit={(e) => { e.preventDefault(); send(); }}>
+          <form className="space-y-2 border-t border-line p-3 pb-3 lg:pb-14" onSubmit={(e) => { e.preventDefault(); send(); }}>
             <div className="flex flex-wrap items-center gap-2">
               <label className="sr-only" htmlFor="voice">Speak as</label>
               <select id="voice" className="field !w-auto max-w-[14rem] flex-1 sm:flex-none" value={s.speakAs} onChange={(e) => s.set({ speakAs: e.target.value })}>

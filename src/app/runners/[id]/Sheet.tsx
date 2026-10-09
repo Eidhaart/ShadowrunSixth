@@ -27,9 +27,11 @@ import { GearTab } from "./tabs/GearTab";
 const STATUSES = ["Burning", "Chilled", "Corrosive", "Dazed", "Deafened", "Fatigued", "Frightened", "Hazed", "Hobbled", "Immobilized", "Nauseated", "Panicked", "Poisoned", "Prone", "Stilled", "Wet", "Zapped"];
 const RANGES = ["Close", "Near", "Medium", "Far", "Extreme"] as const;
 
+const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
 function Box({ title, children, className, right }: { title: string; children: React.ReactNode; className?: string; right?: React.ReactNode }) {
   return (
-    <section className={clsx("panel", className)}>
+    <section id={`sec-${slug(title)}`} className={clsx("panel scroll-mt-28", className)}>
       <div className="panel-head text-sm"><span className="flex-1">{title}</span>{right}</div>
       <div className="p-3.5">{children}</div>
     </section>
@@ -57,7 +59,7 @@ function Track({ label, boxes, filled, onSet, tone }: { label: string; boxes: nu
                   onClick={() => onSet(filled === n ? n - 1 : n)}
                   aria-label={`${label} box ${n}${on ? ", damaged" : ""}`}
                   aria-pressed={on}
-                  className={clsx("h-7 w-7 border transition-colors", on ? (tone === "phys" ? "border-danger bg-danger/80" : tone === "stun" ? "border-cyan bg-cyan/70" : "border-faint bg-faint") : "border-linehi hover:border-accent")}
+                  className={clsx("h-10 w-10 border transition-colors md:h-7 md:w-7", on ? (tone === "phys" ? "border-danger bg-danger/80" : tone === "stun" ? "border-cyan bg-cyan/70" : "border-faint bg-faint") : "border-linehi hover:border-accent")}
                 />
               );
             })}
@@ -105,14 +107,14 @@ const TABS = [
 
 function TabBar({ tab, setTab, awakened, sustained }: { tab: string; setTab: (t: (typeof TABS)[number]["id"]) => void; awakened: boolean; sustained: number }) {
   return (
-    <div className="no-print mb-4 flex gap-1 overflow-x-auto border-b border-line" role="tablist" aria-label="Sheet sections">
+    <div className="no-print mb-4 flex gap-1 overflow-x-auto border-b border-line max-md:sticky max-md:top-12 max-md:z-20 max-md:-mx-4 max-md:bg-bg/95 max-md:px-4 max-md:backdrop-blur" role="tablist" aria-label="Sheet sections">
       {TABS.filter((x) => x.id !== "magic" || awakened).map((x) => (
         <button
           key={x.id}
           role="tab"
           aria-selected={tab === x.id}
           onClick={() => setTab(x.id)}
-          className={clsx("-mb-px whitespace-nowrap border-b-2 px-4 py-2 font-display text-sm font-semibold transition-colors", tab === x.id ? "border-accent text-accent" : "border-transparent text-dim hover:text-fg")}
+          className={clsx("-mb-px min-h-11 whitespace-nowrap border-b-2 px-4 py-2 font-display text-sm font-semibold transition-colors", tab === x.id ? "border-accent text-accent" : "border-transparent text-dim hover:text-fg")}
         >
           {x.label}{(x.id === "magic" || (x.id === "matrix" && !awakened)) && sustained > 0 && <span className="ml-1.5 chip !py-0">−{sustained * 2}</span>}
         </button>
@@ -245,13 +247,13 @@ export function Sheet({ id }: { id: string }) {
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-6 md:px-8">
       {/* header */}
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3 md:mb-5 md:gap-4">
         <div>
           <h1 className="text-3xl font-bold md:text-4xl">{who}</h1>
           <p className="mt-1 text-dim">{c.alias && c.name ? `${c.name} · ` : ""}{meta.name}{c.magicType !== "mundane" ? ` · ${MAGIC_TYPE_LABEL[c.magicType]}` : ""}{c.archetype ? ` · ${c.archetype}` : ""}</p>
           {c.concept && <p className="mt-1 max-w-2xl text-sm text-faint">{c.concept}</p>}
         </div>
-        <div className="no-print flex flex-wrap gap-2">
+        <div className="no-print grid w-full grid-cols-3 gap-2 max-md:[&_.btn]:px-2 max-md:[&_.btn]:text-xs md:flex md:w-auto md:flex-wrap">
           <Link href={`/forge?edit=${c.id}`} className="btn small"><Icon name="forge" size={14} /> Edit build</Link>
           <button className="btn small" onClick={() => window.print()}><Icon name="print" size={14} /> Print</button>
           <button className="btn small" onClick={exportJson}><Icon name="download" size={14} /> Export</button>
@@ -272,6 +274,13 @@ export function Sheet({ id }: { id: string }) {
       <div className={clsx(tab !== "rig" && "hidden print:block")}><RiggingTab ctx={ctx} /></div>
       <div className={clsx(tab !== "gear" && "hidden print:block")}><GearTab ctx={ctx} /></div>
 
+      {tab === "sheet" && (
+        <nav className="no-print -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1 md:hidden" aria-label="Jump to a section">
+          {["Condition", "Edge", "Attributes", "Skills", "Weapons", "Initiative", "Statuses", "Karma and nuyen", "Notes"].map((t) => (
+            <button key={t} className="chip shrink-0" onClick={() => document.getElementById(`sec-${slug(t)}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}>{t}</button>
+          ))}
+        </nav>
+      )}
       <div className={clsx("grid gap-4 lg:grid-cols-3", tab !== "sheet" && "hidden print:grid")}>
         {/* left column */}
         <div className="space-y-4">

@@ -110,8 +110,8 @@ export function MatrixTab({ ctx }: { ctx: SheetCtx }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-      <div className="space-y-4">
-        <Box title={technomancer ? "Persona" : "Deck and persona"} right={<span className="text-xs text-dim">{m.name}</span>}>
+      <div className="flex flex-col gap-4">
+        <Box className="max-md:order-last" title={technomancer ? "Persona" : "Deck and persona"} right={<span className="text-xs text-dim">{m.name}</span>}>
           {technomancer ? <PersonaBonus ctx={ctx} m={m} /> : <MatrixGearEditor ctx={ctx} />}
         </Box>
 

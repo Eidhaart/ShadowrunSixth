@@ -49,6 +49,8 @@ export function Forge() {
   const [stepId, setStepId] = useState("concept");
   const [hydrated, setHydrated] = useState(false);
   const [saveAnyway, setSaveAnyway] = useState(false);
+  const [stepsOpen, setStepsOpen] = useState(false);
+  const [sheet, setSheet] = useState(false);
 
   useEffect(() => {
     useRunners.persist.rehydrate();
@@ -80,6 +82,7 @@ export function Forge() {
     );
   }
 
+  const bud = budget(draft);
   const issues = validate(draft);
   const blockers = issues.filter((i) => i.level === "error");
   const isLast = idx === steps.length - 1;
@@ -91,9 +94,54 @@ export function Forge() {
   };
 
   return (
-    <div className="mx-auto grid max-w-[1500px] gap-6 px-4 py-6 md:px-8 lg:grid-cols-[210px_minmax(0,1fr)_300px]">
+    <div className="mx-auto grid max-w-[1500px] grid-cols-1 gap-6 px-4 py-4 md:px-8 md:py-6 lg:grid-cols-[210px_minmax(0,1fr)_300px]">
+      {/* phone header: where you are, what is left, and a step list */}
+      <div className="no-print sticky top-12 z-20 -mx-4 border-b border-line bg-bg/95 px-4 pb-2 pt-2 backdrop-blur md:hidden">
+        <div className="flex items-center gap-2">
+          <button className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-left" aria-expanded={stepsOpen} onClick={() => { setStepsOpen(!stepsOpen); setSheet(false); }}>
+            <span className="num shrink-0 text-xs text-dim">{idx + 1}/{steps.length}</span>
+            <span className="truncate font-display font-semibold text-accent">{step.label}</span>
+            <Icon name="chev" size={14} />
+          </button>
+          <button className="btn small" onClick={() => { setSheet(true); setStepsOpen(false); }}>Runner</button>
+        </div>
+        <div className="mt-1 h-1 bg-line" aria-hidden><div className="h-full bg-accent transition-[width]" style={{ width: `${((idx + 1) / steps.length) * 100}%` }} /></div>
+        <button className="mt-1.5 flex w-full gap-1.5 overflow-x-auto text-left" onClick={() => { setSheet(true); setStepsOpen(false); }} aria-label="Open the runner summary">
+          {[["Attr", bud.attributes.left], ["Adj", bud.adjustment.left], ["Skills", bud.skills.left], ["Karma", bud.karma.left]].map(([l, v]) => (
+            <span key={l as string} className={clsx("chip shrink-0 !py-0.5 text-xs", (v as number) < 0 && "!border-danger text-danger", v === 0 && "!border-ok text-ok")}>{l} <b className="num">{v}</b></span>
+          ))}
+          <span className={clsx("chip shrink-0 !py-0.5 text-xs", bud.nuyen.left < 0 && "!border-danger text-danger")}>¥ <b className="num">{bud.nuyen.left.toLocaleString("en-US")}</b></span>
+          {blockers.length > 0 && <span className="chip shrink-0 !border-danger !py-0.5 text-xs text-danger">{blockers.length} issue{blockers.length === 1 ? "" : "s"}</span>}
+        </button>
+        {stepsOpen && (
+          <ol className="absolute inset-x-0 top-full max-h-[60dvh] overflow-y-auto border-b border-line bg-bg2 shadow-2xl">
+            {steps.map((x, i) => {
+              const done = x.done(draft);
+              return (
+                <li key={x.id}>
+                  <button onClick={() => { setStepId(x.id); setStepsOpen(false); window.scrollTo({ top: 0 }); }} aria-current={x.id === step.id ? "step" : undefined}
+                    className={clsx("flex min-h-12 w-full items-center gap-3 border-l-2 px-4 text-left font-display", x.id === step.id ? "border-accent bg-panelhi text-accent" : "border-transparent text-dim")}>
+                    <span className={clsx("grid h-6 w-6 shrink-0 place-items-center border text-xs", done ? "border-ok bg-ok text-bg" : "border-linehi")}>{done ? <Icon name="check" size={12} /> : i + 1}</span>
+                    {x.label}
+                  </button>
+                </li>
+              );
+            })}
+            <li className="border-t border-line p-2"><button className="btn small ghost danger w-full" onClick={() => { if (confirm("Throw away this unfinished runner?")) { discardDraft(); router.push("/forge"); } }}><Icon name="trash" size={14} /> Discard build</button></li>
+          </ol>
+        )}
+      </div>
+      {sheet && (
+        <div className="no-print fixed inset-0 z-[60] bg-black/60 md:hidden" onClick={() => setSheet(false)} role="presentation">
+          <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto border-t border-accent bg-bg p-3 pb-[calc(1rem+env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Runner summary">
+            <div className="mb-2 flex items-center justify-between"><span className="font-display font-semibold">Your runner so far</span><button className="btn small ghost" onClick={() => setSheet(false)} aria-label="Close"><Icon name="x" size={16} /></button></div>
+            <Readout c={draft} />
+          </div>
+        </div>
+      )}
+
       {/* step rail */}
-      <nav aria-label="Forge steps" className="lg:sticky lg:top-16 lg:h-fit">
+      <nav aria-label="Forge steps" className="hidden min-w-0 md:block lg:sticky lg:top-16 lg:h-fit">
         <ol className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
           {steps.map((s, i) => {
             const on = s.id === step.id;
@@ -122,22 +170,23 @@ export function Forge() {
       {/* step body */}
       <div className="min-w-0">
         <div key={step.id}><Comp c={draft} patch={patchDraft} /></div>
-        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-          <button className="btn" disabled={idx === 0} onClick={() => setStepId(steps[idx - 1].id)}><Icon name="back" size={16} /> {idx > 0 ? steps[idx - 1].label : "Back"}</button>
+        <div className="max-md:h-24" aria-hidden />
+        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 max-md:fixed max-md:inset-x-0 max-md:bottom-[calc(3.5rem+env(safe-area-inset-bottom))] max-md:z-30 max-md:mt-0 max-md:flex-nowrap max-md:bg-bg2/95 max-md:px-3 max-md:py-2 max-md:backdrop-blur">
+          <button className="btn max-md:min-w-0 max-md:flex-1" aria-label="Previous step" disabled={idx === 0} onClick={() => { setStepId(steps[idx - 1].id); window.scrollTo({ top: 0 }); }}><Icon name="back" size={16} /> <span className="max-md:sr-only">{idx > 0 ? steps[idx - 1].label : "Back"}</span></button>
           {isLast ? (
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 max-md:min-w-0 max-md:flex-[2] max-md:justify-end max-md:gap-2">
               {blockers.length > 0 && (
-                <label className="flex items-center gap-2 text-sm text-dim"><input type="checkbox" className="accent-[var(--accent)]" checked={saveAnyway} onChange={(e) => setSaveAnyway(e.target.checked)} /> Save with open problems</label>
+                <label className="flex items-center gap-2 text-sm text-dim max-md:text-xs"><input type="checkbox" className="accent-[var(--accent)]" checked={saveAnyway} onChange={(e) => setSaveAnyway(e.target.checked)} /> Save with open problems</label>
               )}
               <button className="btn primary" disabled={blockers.length > 0 && !saveAnyway} onClick={finish}><Icon name="check" size={16} /> Finish and open sheet</button>
             </div>
           ) : (
-            <button className="btn primary" onClick={() => setStepId(steps[idx + 1].id)}>{steps[idx + 1].label} <Icon name="chev" size={16} /></button>
+            <button className="btn primary max-md:min-w-0 max-md:flex-[2]" onClick={() => { setStepId(steps[idx + 1].id); window.scrollTo({ top: 0 }); }}><span className="max-md:truncate">{steps[idx + 1].label}</span> <Icon name="chev" size={16} /></button>
           )}
         </div>
       </div>
 
-      <div className="lg:sticky lg:top-16 lg:h-fit"><Readout c={draft} /></div>
+      <div className="hidden min-w-0 md:block lg:sticky lg:top-16 lg:h-fit"><Readout c={draft} /></div>
     </div>
   );
 }

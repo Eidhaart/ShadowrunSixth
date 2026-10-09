@@ -27,6 +27,9 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: "settings" },
 ] as const;
 
+/** The phone tab bar shows these; everything else lives under More. */
+const MOBILE_PRIMARY: string[] = ["/", "/dice", "/forge", "/runners", "/comms"];
+
 function hexInk(hex: string): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex);
   if (!m) return "#111";
@@ -132,7 +135,7 @@ function DiceTray() {
   const pathname = usePathname();
   if (pathname === "/dice") return null;
   return (
-    <div className="no-print fixed bottom-20 right-3 z-40 flex flex-col items-end gap-2 md:bottom-5 md:right-5">
+    <div className={clsx("no-print fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-3 z-40 flex flex-col items-end gap-2 md:bottom-5 md:right-5", (pathname.startsWith("/forge") || pathname.startsWith("/comms")) && "max-md:hidden")}>
       {open && last && (
         <div className="panel w-[min(94vw,460px)] p-4 shadow-2xl">
           <div className="mb-2 flex items-center justify-between">
@@ -151,11 +154,11 @@ function DiceTray() {
         </div>
       )}
       <button
-        className="btn primary"
+        className="btn primary max-md:!h-12 max-md:!min-w-12 max-md:!rounded-full max-md:!px-3 max-md:![clip-path:none] max-md:shadow-lg"
         onClick={() => (last ? setOpen(!open) : doRoll({ label: "Quick roll", pool: 6 }))}
         title="Quick roll"
       >
-        <Icon name="dice" size={18} /> {last && open ? "Hide" : "Roll"}
+        <Icon name="dice" size={18} /> <span className={clsx(!(last && open) && "max-md:sr-only")}>{last && open ? "Hide" : "Roll"}</span>
       </button>
     </div>
   );
@@ -313,6 +316,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, [chatUrl, room, handle, role]);
 
   const active = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const [more, setMore] = useState(false);
+  const moreActive = NAV.some((n) => !MOBILE_PRIMARY.includes(n.href) && active(n.href));
+  useEffect(() => { setMore(false); }, [pathname]); // eslint-disable-line react-hooks/set-state-in-effect
 
   return (
     <div className="flex min-h-dvh">
@@ -345,7 +351,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
 
-      <div className="flex min-w-0 flex-1 flex-col pb-16 md:pb-0">
+      <div className="flex min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <header className="no-print sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-line bg-bg/85 px-3 backdrop-blur md:px-5">
           <span className="font-display text-sm font-semibold tracking-wide md:hidden">SIXTHDECK</span>
           <div className="hidden items-center gap-4 text-xs text-dim md:flex">
@@ -357,22 +363,47 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex-1" />
           <button className="btn small ghost" onClick={() => setPalette(true)} aria-label="Open command bar">
-            <Icon name="search" size={15} /> <span className="hidden sm:inline">Search or command</span> <span className="kbd">Ctrl K</span>
+            <Icon name="search" size={15} /> <span className="hidden sm:inline">Search or command</span> <span className="kbd hidden md:inline">Ctrl K</span>
           </button>
         </header>
         <main className="min-w-0 flex-1">{children}</main>
       </div>
 
       {/* tab bar (mobile) */}
-      <nav className="no-print fixed inset-x-0 bottom-0 z-40 flex overflow-x-auto border-t border-line bg-bg2/95 backdrop-blur md:hidden" aria-label="Modules">
-        {NAV.map((n) => (
-          <Link key={n.href} href={n.href} aria-current={active(n.href) ? "page" : undefined}
-            className={clsx("flex min-w-[64px] flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-display", active(n.href) ? "text-accent" : "text-dim")}>
-            <Icon name={n.icon} size={20} />
+      <nav className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-bg2/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Modules">
+        {NAV.filter((n) => MOBILE_PRIMARY.includes(n.href)).map((n) => (
+          <Link key={n.href} href={n.href} aria-current={active(n.href) ? "page" : undefined} onClick={() => setMore(false)}
+            className={clsx("relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-display", active(n.href) ? "text-accent" : "text-dim")}>
+            <Icon name={n.icon} size={22} />
             {n.label}
+            {n.href === "/comms" && comms.unread > 0 && !active("/comms") && <span className="absolute right-[28%] top-2 h-2 w-2 rounded-full bg-danger" />}
           </Link>
         ))}
+        <button
+          type="button"
+          aria-expanded={more}
+          onClick={() => setMore(!more)}
+          className={clsx("flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-display", more || moreActive ? "text-accent" : "text-dim")}
+        >
+          <Icon name="menu" size={22} />
+          More
+        </button>
       </nav>
+      {more && (
+        <div className="no-print fixed inset-0 z-[39] md:hidden" onClick={() => setMore(false)} role="presentation">
+          <div className="absolute inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] border-t border-line bg-bg2 p-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="grid grid-cols-4 gap-2">
+              {NAV.filter((n) => !MOBILE_PRIMARY.includes(n.href)).map((n) => (
+                <Link key={n.href} href={n.href} onClick={() => setMore(false)} aria-current={active(n.href) ? "page" : undefined}
+                  className={clsx("flex flex-col items-center gap-1 border py-3 text-xs font-display", active(n.href) ? "border-accent text-accent" : "border-line text-dim")}>
+                  <Icon name={n.icon} size={22} />
+                  {n.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <DiceTray />
       <div className="fx fx-scan" aria-hidden />
