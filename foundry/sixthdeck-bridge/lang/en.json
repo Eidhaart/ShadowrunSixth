@@ -1,0 +1,13 @@
+{
+  "SIXTHDECK.Import": "Import SixthDeck runner",
+  "SIXTHDECK.Imported": "Imported {name} from SixthDeck.",
+  "SIXTHDECK.BadFile": "That file is not a SixthDeck runner export.",
+  "SIXTHDECK.Url": "Relay address",
+  "SIXTHDECK.UrlHint": "Address of the SixthDeck chat relay, for example ws://192.168.1.20:8787. Leave empty to turn the bridge off.",
+  "SIXTHDECK.Room": "Room",
+  "SIXTHDECK.Handle": "Handle shown in SixthDeck",
+  "SIXTHDECK.Rolls": "Share dice rolls",
+  "SIXTHDECK.RollsHint": "Send every dice roll made in Foundry to the SixthDeck room.",
+  "SIXTHDECK.Online": "SixthDeck bridge online",
+  "SIXTHDECK.Offline": "SixthDeck bridge offline"
+}

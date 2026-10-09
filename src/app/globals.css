@@ -1,26 +1,301 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ───────────────────────── Theme tokens ─────────────────────────
+   Four skins share one token set. Sodium is the default: wet Seattle
+   asphalt lit by sodium-vapor amber, with matrix-cyan for anything
+   digital and astral violet for anything magical. */
+:root,
+:root[data-theme="sodium"] {
+  --bg: #080a0e;
+  --bg-2: #0c1016;
+  --panel: #10151d;
+  --panel-hi: #161d28;
+  --line: #243040;
+  --line-hi: #36485f;
+  --fg: #e9e5da;
+  --fg-dim: #8f98a8;
+  --fg-faint: #5b6577;
+  --accent: #ffae3d;
+  --accent-ink: #1a1203;
+  --cyan: #43dbe8;
+  --astral: #b995ff;
+  --danger: #ff506a;
+  --ok: #7ee3a0;
+  --grid: rgba(255, 174, 61, 0.045);
+  --halo-a: rgba(255, 174, 61, 0.1);
+  --halo-b: rgba(67, 219, 232, 0.08);
+  color-scheme: dark;
+}
+:root[data-theme="matrix"] {
+  --bg: #04090c;
+  --bg-2: #07131a;
+  --panel: #0a1a22;
+  --panel-hi: #0f2630;
+  --line: #17414d;
+  --line-hi: #226478;
+  --fg: #dff7fb;
+  --fg-dim: #7fb0bd;
+  --fg-faint: #4a7580;
+  --accent: #3fe3ff;
+  --accent-ink: #00181d;
+  --cyan: #3fe3ff;
+  --astral: #ff6fb1;
+  --danger: #ff5577;
+  --ok: #5dffb0;
+  --grid: rgba(63, 227, 255, 0.05);
+  --halo-a: rgba(63, 227, 255, 0.12);
+  --halo-b: rgba(255, 111, 177, 0.07);
+  color-scheme: dark;
+}
+:root[data-theme="astral"] {
+  --bg: #0a0710;
+  --bg-2: #100b1b;
+  --panel: #161024;
+  --panel-hi: #1e1530;
+  --line: #34264f;
+  --line-hi: #4d3a77;
+  --fg: #efe9fb;
+  --fg-dim: #a595c4;
+  --fg-faint: #6d5e8d;
+  --accent: #c39bff;
+  --accent-ink: #14082a;
+  --cyan: #7fd9ff;
+  --astral: #ffd27a;
+  --danger: #ff6a8a;
+  --ok: #8ef0c0;
+  --grid: rgba(195, 155, 255, 0.05);
+  --halo-a: rgba(195, 155, 255, 0.13);
+  --halo-b: rgba(255, 210, 122, 0.06);
+  color-scheme: dark;
+}
+:root[data-theme="corp"] {
+  --bg: #e7eaee;
+  --bg-2: #dde1e7;
+  --panel: #f6f7f9;
+  --panel-hi: #ffffff;
+  --line: #c3cad4;
+  --line-hi: #9aa5b5;
+  --fg: #12161d;
+  --fg-dim: #4c5667;
+  --fg-faint: #7d8797;
+  --accent: #c8102e;
+  --accent-ink: #ffffff;
+  --cyan: #0b6bcb;
+  --astral: #6d3fd1;
+  --danger: #c8102e;
+  --ok: #138a4b;
+  --grid: rgba(18, 22, 29, 0.05);
+  --halo-a: rgba(200, 16, 46, 0.06);
+  --halo-b: rgba(11, 107, 203, 0.05);
+  color-scheme: light;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-bg2: var(--bg-2);
+  --color-panel: var(--panel);
+  --color-panelhi: var(--panel-hi);
+  --color-line: var(--line);
+  --color-linehi: var(--line-hi);
+  --color-fg: var(--fg);
+  --color-dim: var(--fg-dim);
+  --color-faint: var(--fg-faint);
+  --color-accent: var(--accent);
+  --color-accentink: var(--accent-ink);
+  --color-cyan: var(--cyan);
+  --color-astral: var(--astral);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --font-display: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ───────────────────────── Base ───────────────────────── */
+html {
+  background: var(--bg);
+  font-size: calc(16px * var(--font-scale, 1));
 }
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+  background:
+    radial-gradient(1100px 600px at 12% -10%, var(--halo-a), transparent 60%),
+    radial-gradient(900px 600px at 100% 110%, var(--halo-b), transparent 60%),
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 36px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 36px 100%,
+    var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+::selection {
+  background: color-mix(in oklab, var(--accent) 45%, transparent);
+  color: var(--fg);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-hi) transparent;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+}
+
+/* ───────────────────────── Panels ─────────────────────────
+   A panel is a plate with HUD corner brackets. Brackets are drawn with
+   gradients so the border stays crisp at any size. */
+.panel {
+  position: relative;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--panel-hi) 55%, var(--panel)), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+.panel::before,
+.panel::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  border: 0 solid var(--accent);
+  opacity: 0.9;
+}
+.panel::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
+.panel::after { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
+.panel.quiet::before, .panel.quiet::after { display: none; }
+.panel-head {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .55rem .9rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+/* ───────────────────────── Controls ───────────────────────── */
+.btn {
+  --_bg: var(--panel-hi);
+  --_fg: var(--fg);
+  --_bd: var(--line-hi);
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 2.25rem; padding: .4rem .95rem;
+  font-family: var(--font-display); font-weight: 600; font-size: .9rem;
+  letter-spacing: .03em;
+  color: var(--_fg); background: var(--_bg);
+  border: 1px solid var(--_bd);
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s, transform .08s;
+}
+.btn:hover { --_bd: var(--accent); color: var(--accent); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.btn.primary { --_bg: var(--accent); --_fg: var(--accent-ink); --_bd: var(--accent); }
+.btn.primary:hover { filter: brightness(1.1); color: var(--accent-ink); }
+.btn.danger { --_bd: color-mix(in oklab, var(--danger) 60%, var(--line)); color: var(--danger); }
+.btn.ghost { --_bg: transparent; --_bd: transparent; }
+.btn.small { min-height: 1.8rem; padding: .2rem .6rem; font-size: .8rem; }
+
+.field {
+  width: 100%;
+  background: color-mix(in oklab, var(--bg) 70%, var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--fg);
+  padding: .5rem .7rem;
+  min-height: 2.25rem;
+}
+.field:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 1px var(--accent); }
+.field::placeholder { color: var(--fg-faint); }
+select.field { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--fg-dim) 50%), linear-gradient(135deg, var(--fg-dim) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 2rem; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .12rem .55rem; border: 1px solid var(--line-hi);
+  font-size: .78rem; color: var(--fg-dim);
+  border-radius: 999px;
+  cursor: default;
+}
+button.chip { cursor: pointer; transition: all .12s; }
+button.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip.on { border-color: var(--accent); color: var(--accent); background: color-mix(in oklab, var(--accent) 12%, transparent); }
+
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.glow { text-shadow: 0 0 calc(14px * var(--glow, 1)) color-mix(in oklab, var(--accent) 60%, transparent); }
+.kbd { font-family: var(--font-mono); font-size: .72rem; padding: .05rem .35rem; border: 1px solid var(--line-hi); border-bottom-width: 2px; border-radius: 3px; color: var(--fg-dim); }
+
+/* ───────────────────────── Screen effects ───────────────────────── */
+.fx { position: fixed; inset: 0; pointer-events: none; z-index: 90; }
+.fx-scan {
+  background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 3px);
+  opacity: var(--scan, .35);
+  mix-blend-mode: multiply;
+}
+.fx-vignette {
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 120%);
+  opacity: var(--vig, .7);
+}
+[data-theme="corp"] .fx-scan { opacity: calc(var(--scan, .35) * .25); }
+[data-theme="corp"] .fx-vignette { opacity: calc(var(--vig, .7) * .2); }
+.fx-flicker { animation: flicker 7s infinite steps(1); background: rgba(255,255,255,.012); }
+@keyframes flicker {
+  0%, 94%, 100% { opacity: 0 }
+  95% { opacity: 1 } 96% { opacity: 0 } 97% { opacity: .6 }
+}
+
+/* ───────────────────────── Dice ───────────────────────── */
+.die {
+  --s: 3.1rem;
+  position: relative; width: var(--s); height: var(--s);
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+  padding: calc(var(--s) * .13);
+  background: linear-gradient(145deg, var(--panel-hi), var(--panel));
+  border: 1px solid var(--line-hi);
+  border-radius: calc(var(--s) * .16);
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+.die i { width: 62%; height: 62%; margin: auto; border-radius: 50%; background: var(--fg-faint); }
+.die.hit { border-color: var(--accent); box-shadow: 0 0 calc(18px * var(--glow, 1)) color-mix(in oklab, var(--accent) 55%, transparent), inset 0 0 12px color-mix(in oklab, var(--accent) 22%, transparent); }
+.die.hit i { background: var(--accent); }
+.die.one { border-color: color-mix(in oklab, var(--danger) 70%, var(--line)); }
+.die.one i { background: var(--danger); }
+.die.ghost { opacity: .32; filter: grayscale(.8); }
+.die.boom::after { content: "✦"; position: absolute; top: -.45rem; right: -.35rem; font-size: .8rem; color: var(--cyan); }
+.die.bump::after { content: "+1"; position: absolute; top: -.5rem; right: -.4rem; font-size: .65rem; font-family: var(--font-mono); color: var(--cyan); }
+.die.rolling { animation: tumble .12s infinite linear; border-color: var(--cyan); }
+@keyframes tumble { 0% { transform: rotate(-9deg) translateY(-2px) } 50% { transform: rotate(7deg) translateY(2px) } 100% { transform: rotate(-9deg) translateY(-2px) } }
+.die.settle { animation: settle .35s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes settle { from { transform: scale(1.25) rotate(8deg) } to { transform: none } }
+
+/* ───────────────────────── Reading text ───────────────────────── */
+.prose-rules p { margin: 0 0 .85rem; max-width: 70ch; }
+.prose-rules { color: color-mix(in oklab, var(--fg) 92%, transparent); }
+mark.hl { background: color-mix(in oklab, var(--accent) 35%, transparent); color: var(--fg); padding: 0 .1em; border-radius: 2px; }
+
+/* ───────────────────────── Motion preferences ───────────────────────── */
+:root[data-motion="reduced"] *, :root[data-motion="reduced"] *::before, :root[data-motion="reduced"] *::after {
+  animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+
+/* boot sequence: the one orchestrated moment */
+.boot-line { opacity: 0; animation: bootin .01s forwards; }
+@keyframes bootin { to { opacity: 1 } }
+.sweep { position: relative; overflow: hidden; }
+.sweep::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 40%, color-mix(in oklab, var(--accent) 35%, transparent) 50%, transparent 60%); transform: translateX(-120%); animation: sweep 1.4s .2s ease-out forwards; }
+@keyframes sweep { to { transform: translateX(120%) } }
+
+@media print {
+  .fx, .no-print { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
 }

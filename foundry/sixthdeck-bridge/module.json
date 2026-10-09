@@ -1,0 +1,10 @@
+{
+  "id": "sixthdeck-bridge",
+  "title": "SixthDeck Bridge",
+  "description": "Relays chat and dice between Foundry VTT and the SixthDeck app, and imports runners exported from SixthDeck.",
+  "version": "0.1.0",
+  "authors": [{ "name": "SixthDeck" }],
+  "compatibility": { "minimum": "12", "verified": "13" },
+  "esmodules": ["scripts/bridge.js"],
+  "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }]
+}

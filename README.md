@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SixthDeck
 
-## Getting Started
+A Shadowrun Sixth World companion in a cyberdeck skin: searchable rules, a dice roller with Edge, a guided character forge, fully automated runner sheets, table chat and a Foundry VTT bridge.
 
-First, run the development server:
+## Run it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev            # http://localhost:3000
+npm run chat           # optional: table chat relay on ws://<host>:8787
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Load the rules (your own copy)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+No book text ships with the app. Import your own legitimately obtained PDF:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- In the app: open **Library** and drop the PDF on the import panel. It is parsed in your browser and stored in IndexedDB.
+- Or from the CLI: `npm run import:rules -- path/to/book.pdf` writes `data/rulebook.local.json` (git-ignored), which the dev server picks up automatically.
 
-## Learn More
+Quality and spell/power lists in the Forge are read from the imported book.
 
-To learn more about Next.js, take a look at the following resources:
+## What is where
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Page | What it does |
+| --- | --- |
+| Deck | Home, quick roll, runners, pinned rules |
+| Library | Full-text search, lenses (combat, magic, hacking, GM, ...), pins, share to chat |
+| Dice | Pool roller, Edge boosts, odds, history |
+| Forge | Guided priority-system character creation with live budget checks |
+| Runners | Saved characters (this browser), JSON import/export, automated sheet |
+| Comms | Rooms, chat, shared rolls |
+| Foundry | Setup for the bridge module in `foundry/sixthdeck-bridge` |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tests
 
-## Deploy on Vercel
+`npm test` (rules engine against the book's worked examples), `npm run lint`, `npm run build`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Known gaps
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Edge starts at rank 1; Edge, Magic and racial attribute increases cost 1 adjustment point each. Check against your book.
+- Untrained skill rolls use a -1 penalty.
+- Gear prices are not parsed from the book; gear is entered by hand.
+- The Foundry module has not been run inside Foundry yet.
