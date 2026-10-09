@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { ATTRIBUTES, ATTR_ABBR, METATYPES, MAGIC_TYPE_LABEL } from "@/lib/sr6/data";
 import type { Character } from "@/lib/sr6/character";
 import { budget, derive, validate } from "@/lib/sr6/derive";
+import { Portrait } from "@/components/Portrait";
 import { Budget } from "./ui";
 
 function Stat({ label, value, sub }: { label: string; value: React.ReactNode; sub?: string }) {
@@ -24,9 +25,12 @@ export function Readout({ c, onGo }: { c: Character; onGo?: (where: string) => v
 
   return (
     <aside className="panel p-4" aria-label="Runner readout">
-      <div className="mb-3">
-        <div className="font-display text-xl font-bold leading-tight">{c.alias || c.name || "Unnamed runner"}</div>
-        <div className="text-sm text-dim">{meta.name}{c.magicType !== "mundane" ? ` · ${MAGIC_TYPE_LABEL[c.magicType]}` : ""}{c.archetype ? ` · ${c.archetype}` : ""}</div>
+      <div className="mb-3 flex items-center gap-3">
+        {c.portrait && <Portrait src={c.portrait} name={c.alias || c.name} className="w-14" />}
+        <div className="min-w-0">
+          <div className="font-display text-xl font-bold leading-tight">{c.alias || c.name || "Unnamed runner"}</div>
+          <div className="text-sm text-dim">{meta.name}{c.magicType !== "mundane" ? ` · ${MAGIC_TYPE_LABEL[c.magicType]}` : ""}{c.archetype ? ` · ${c.archetype}` : ""}</div>
+        </div>
       </div>
 
       <div className="mb-4 grid grid-cols-4 gap-1 text-center">

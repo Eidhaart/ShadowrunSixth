@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
+import { Portrait } from "@/components/Portrait";
 import { RollView } from "@/components/Dice";
 import { doInitiative, doRoll } from "@/lib/actions";
 import { useRunners } from "@/lib/store/characters";
@@ -248,10 +249,13 @@ export function Sheet({ id }: { id: string }) {
     <div className="mx-auto max-w-[1500px] px-4 py-6 md:px-8">
       {/* header */}
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3 md:mb-5 md:gap-4">
-        <div>
-          <h1 className="text-3xl font-bold md:text-4xl">{who}</h1>
-          <p className="mt-1 text-dim">{c.alias && c.name ? `${c.name} · ` : ""}{meta.name}{c.magicType !== "mundane" ? ` · ${MAGIC_TYPE_LABEL[c.magicType]}` : ""}{c.archetype ? ` · ${c.archetype}` : ""}</p>
-          {c.concept && <p className="mt-1 max-w-2xl text-sm text-faint">{c.concept}</p>}
+        <div className="flex min-w-0 items-start gap-4">
+          {c.portrait && <Portrait src={c.portrait} name={who} className="w-20 md:w-28" />}
+          <div className="min-w-0">
+            <h1 className="text-3xl font-bold md:text-4xl">{who}</h1>
+            <p className="mt-1 text-dim">{c.alias && c.name ? `${c.name} · ` : ""}{meta.name}{c.magicType !== "mundane" ? ` · ${MAGIC_TYPE_LABEL[c.magicType]}` : ""}{c.archetype ? ` · ${c.archetype}` : ""}</p>
+            {c.concept && <p className="mt-1 max-w-2xl text-sm text-faint">{c.concept}</p>}
+          </div>
         </div>
         <div className="no-print grid w-full grid-cols-3 gap-2 max-md:[&_.btn]:px-2 max-md:[&_.btn]:text-xs md:flex md:w-auto md:flex-wrap">
           <Link href={`/forge?edit=${c.id}`} className="btn small"><Icon name="forge" size={14} /> Edit build</Link>

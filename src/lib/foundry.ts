@@ -19,7 +19,7 @@ export function runnerToFoundry(c: Character, d: Derived) {
   return {
     name: c.alias || c.name || "Runner",
     type: "character",
-    img: "icons/svg/mystery-man.svg",
+    img: c.portrait || "icons/svg/mystery-man.svg",
     system: {
       attributes: d.attrs,
       edge: { value: d.edgeMax - c.edgeBurned, max: d.edgeMax },

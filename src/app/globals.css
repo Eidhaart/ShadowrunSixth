@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ───────────────────────── Theme tokens ─────────────────────────
-   Four skins share one token set. Sodium is the default: wet Seattle
+   Every skin shares one token set. Sodium is the default: wet Seattle
    asphalt lit by sodium-vapor amber, with matrix-cyan for anything
    digital and astral violet for anything magical. */
 :root,
@@ -90,6 +90,154 @@
   color-scheme: light;
 }
 
+:root[data-theme="terminal"] {
+  --bg: #020a04;
+  --bg-2: #04120a;
+  --panel: #07180e;
+  --panel-hi: #0b2214;
+  --line: #14472a;
+  --line-hi: #1f6b3f;
+  --fg: #c9f7d6;
+  --fg-dim: #6fb485;
+  --fg-faint: #43755a;
+  --accent: #39ff7a;
+  --accent-ink: #02150a;
+  --cyan: #7dffd0;
+  --astral: #d6ff5c;
+  --danger: #ff5a4d;
+  --ok: #39ff7a;
+  --grid: rgba(57,255,122,.05);
+  --halo-a: rgba(57,255,122,.10);
+  --halo-b: rgba(214,255,92,.05);
+  color-scheme: dark;
+}
+:root[data-theme="neon"] {
+  --bg: #0b0620;
+  --bg-2: #120a2e;
+  --panel: #1a0f3d;
+  --panel-hi: #241450;
+  --line: #43267f;
+  --line-hi: #6a3fc0;
+  --fg: #f4e9ff;
+  --fg-dim: #b39ae0;
+  --fg-faint: #7a62ad;
+  --accent: #ff3ea5;
+  --accent-ink: #200016;
+  --cyan: #2df0ff;
+  --astral: #ffe14d;
+  --danger: #ff5a5a;
+  --ok: #5dffb0;
+  --grid: rgba(255,62,165,.06);
+  --halo-a: rgba(255,62,165,.14);
+  --halo-b: rgba(45,240,255,.10);
+  color-scheme: dark;
+}
+:root[data-theme="crimson"] {
+  --bg: #0c0607;
+  --bg-2: #140a0c;
+  --panel: #1c0f12;
+  --panel-hi: #26151a;
+  --line: #4a2128;
+  --line-hi: #70333d;
+  --fg: #f3e6e4;
+  --fg-dim: #b0898d;
+  --fg-faint: #7a5a5f;
+  --accent: #ff3b3b;
+  --accent-ink: #1a0303;
+  --cyan: #5fd0e0;
+  --astral: #ffb34d;
+  --danger: #ff8a5a;
+  --ok: #7ee3a0;
+  --grid: rgba(255,59,59,.045);
+  --halo-a: rgba(255,59,59,.12);
+  --halo-b: rgba(255,179,77,.05);
+  color-scheme: dark;
+}
+:root[data-theme="rust"] {
+  --bg: #0e0a07;
+  --bg-2: #16100b;
+  --panel: #1e1610;
+  --panel-hi: #281d15;
+  --line: #4a3523;
+  --line-hi: #6e4f33;
+  --fg: #ecdfd0;
+  --fg-dim: #a89580;
+  --fg-faint: #70604f;
+  --accent: #e2762a;
+  --accent-ink: #1a0c02;
+  --cyan: #6cc7b8;
+  --astral: #c79cff;
+  --danger: #ff5a4a;
+  --ok: #9bd16b;
+  --grid: rgba(226,118,42,.045);
+  --halo-a: rgba(226,118,42,.12);
+  --halo-b: rgba(108,199,184,.06);
+  color-scheme: dark;
+}
+:root[data-theme="jade"] {
+  --bg: #060c0b;
+  --bg-2: #0a1514;
+  --panel: #0e1d1b;
+  --panel-hi: #142926;
+  --line: #1f4a43;
+  --line-hi: #2f7266;
+  --fg: #e4f2ec;
+  --fg-dim: #85b0a4;
+  --fg-faint: #52776d;
+  --accent: #e8c15a;
+  --accent-ink: #1a1303;
+  --cyan: #3fe0b0;
+  --astral: #b995ff;
+  --danger: #ff6270;
+  --ok: #7ef0b0;
+  --grid: rgba(232,193,90,.04);
+  --halo-a: rgba(63,224,176,.10);
+  --halo-b: rgba(232,193,90,.07);
+  color-scheme: dark;
+}
+:root[data-theme="blackout"] {
+  --bg: #000000;
+  --bg-2: #0a0a0a;
+  --panel: #0d0d0d;
+  --panel-hi: #1a1a1a;
+  --line: #6b6b6b;
+  --line-hi: #bdbdbd;
+  --fg: #ffffff;
+  --fg-dim: #d0d0d0;
+  --fg-faint: #a8a8a8;
+  --accent: #ffe600;
+  --accent-ink: #000000;
+  --cyan: #00e5ff;
+  --astral: #ff8cff;
+  --danger: #ff5252;
+  --ok: #3dff8a;
+  --grid: rgba(255,255,255,.03);
+  --halo-a: rgba(255,230,0,.04);
+  --halo-b: rgba(0,229,255,.03);
+  color-scheme: dark;
+}
+:root[data-theme="ice"] {
+  --bg: #e6eef5;
+  --bg-2: #d9e4ee;
+  --panel: #f4f8fb;
+  --panel-hi: #ffffff;
+  --line: #b9c9d8;
+  --line-hi: #8aa2b9;
+  --fg: #0e1a26;
+  --fg-dim: #46586b;
+  --fg-faint: #7a8da0;
+  --accent: #0a6fd6;
+  --accent-ink: #ffffff;
+  --cyan: #0a8f9c;
+  --astral: #7b4ee0;
+  --danger: #c8202f;
+  --ok: #12864c;
+  --grid: rgba(14,26,38,.05);
+  --halo-a: rgba(10,111,214,.08);
+  --halo-b: rgba(10,143,156,.06);
+  color-scheme: light;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-bg2: var(--bg-2);
@@ -106,8 +254,8 @@
   --color-astral: var(--astral);
   --color-danger: var(--danger);
   --color-ok: var(--ok);
-  --font-display: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--ff-display, "Chakra Petch", ui-sans-serif, system-ui, sans-serif);
+  --font-sans: var(--ff-sans, "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif);
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -171,6 +319,7 @@ h1, h2, h3, h4 {
 .panel::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
 .panel::after { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
 .panel.quiet::before, .panel.quiet::after { display: none; }
+.portrait-empty { background: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in oklab, var(--line) 70%, transparent) 6px 7px); }
 .panel-head {
   display: flex; align-items: center; gap: .6rem;
   padding: .55rem .9rem;
@@ -243,8 +392,8 @@ button.chip:hover { border-color: var(--accent); color: var(--accent); }
   background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 120%);
   opacity: var(--vig, .7);
 }
-[data-theme="corp"] .fx-scan { opacity: calc(var(--scan, .35) * .25); }
-[data-theme="corp"] .fx-vignette { opacity: calc(var(--vig, .7) * .2); }
+[data-theme="corp"] .fx-scan, [data-theme="ice"] .fx-scan { opacity: calc(var(--scan, .35) * .25); }
+[data-theme="corp"] .fx-vignette, [data-theme="ice"] .fx-vignette { opacity: calc(var(--vig, .7) * .2); }
 .fx-flicker { animation: flicker 7s infinite steps(1); background: rgba(255,255,255,.012); }
 @keyframes flicker {
   0%, 94%, 100% { opacity: 0 }
@@ -340,3 +489,35 @@ mark.hl { background: color-mix(in oklab, var(--accent) 35%, transparent); color
 @layer base {
   .grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+
+/* ───────────────────────── Personalisation ─────────────────────────
+   Settings put data-* attributes on <html>; everything below reacts to them. These rules sit
+   outside any layer, so they win over Tailwind utilities where they need to. */
+:root[data-font="terminal"] { --ff-display: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; --ff-sans: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+:root[data-font="clean"] { --ff-display: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif; --ff-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif; }
+:root[data-font="legible"] { --ff-display: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif; --ff-sans: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif; }
+:root[data-font="system"] { --ff-display: ui-sans-serif, system-ui, sans-serif; --ff-sans: ui-sans-serif, system-ui, sans-serif; }
+
+:root[data-corners="square"] .btn { clip-path: none; }
+:root[data-corners="round"] .btn { clip-path: none; border-radius: .6rem; }
+:root[data-corners="round"] .panel { border-radius: .8rem; }
+:root[data-corners="round"] .panel::before, :root[data-corners="round"] .panel::after { display: none; }
+:root[data-corners="round"] .field, :root[data-corners="round"] .meter, :root[data-corners="round"] .portrait { border-radius: .55rem; }
+:root[data-brackets="off"] .panel::before, :root[data-brackets="off"] .panel::after { display: none; }
+
+:root[data-backdrop="glow"] body { background: radial-gradient(1100px 600px at 12% -10%, var(--halo-a), transparent 60%), radial-gradient(900px 600px at 100% 110%, var(--halo-b), transparent 60%), var(--bg); }
+:root[data-backdrop="flat"] body { background: var(--bg); }
+
+@media (min-width: 768px) {
+  :root[data-density="compact"] body { line-height: 1.4; }
+  :root[data-density="compact"] .panel.p-5, :root[data-density="compact"] .panel.p-6 { padding: .8rem 1rem; }
+  :root[data-density="compact"] .panel.p-4 { padding: .65rem .85rem; }
+  :root[data-density="compact"] .btn { min-height: 2rem; padding-block: .25rem; }
+  :root[data-density="compact"] .btn.small { min-height: 1.6rem; }
+  :root[data-density="compact"] .field { min-height: 2rem; padding-block: .3rem; }
+  :root[data-density="compact"] .space-y-4 > :not(:last-child) { margin-bottom: .6rem; }
+  :root[data-density="compact"] .gap-5 { gap: .9rem; }
+  :root[data-density="compact"] .gap-4 { gap: .7rem; }
+}
+:root[data-density="compact"] .panel-head { padding-block: .4rem; }

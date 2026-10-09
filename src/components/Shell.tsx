@@ -44,6 +44,11 @@ function ApplySettings() {
     const el = document.documentElement;
     el.dataset.theme = s.theme;
     el.dataset.motion = s.motion;
+    el.dataset.font = s.font;
+    el.dataset.corners = s.corners;
+    el.dataset.density = s.density;
+    el.dataset.backdrop = s.backdrop;
+    el.dataset.brackets = s.brackets ? "on" : "off";
     el.style.setProperty("--scan", String(s.scanlines));
     el.style.setProperty("--vig", String(s.vignette));
     el.style.setProperty("--glow", String(s.glow));
@@ -55,7 +60,7 @@ function ApplySettings() {
       el.style.removeProperty("--accent");
       el.style.removeProperty("--accent-ink");
     }
-  }, [s.theme, s.motion, s.scanlines, s.vignette, s.glow, s.fontScale, s.customAccent]);
+  }, [s.theme, s.motion, s.font, s.corners, s.density, s.backdrop, s.brackets, s.scanlines, s.vignette, s.glow, s.fontScale, s.customAccent]);
   return null;
 }
 

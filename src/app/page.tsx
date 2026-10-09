@@ -1,4 +1,5 @@
 "use client";
+import { Portrait } from "@/components/Portrait";
 import { useMemo } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
@@ -85,9 +86,12 @@ export default function DeckHome() {
                 return (
                   <li key={r.id}>
                     <Link href={`/runners/${r.id}`} className="flex items-center justify-between gap-3 py-2.5 hover:text-accent">
-                      <span className="min-w-0">
-                        <span className="block truncate font-display font-semibold">{r.alias || r.name || "Unnamed runner"}</span>
-                        <span className="text-xs text-dim">{METATYPES[r.metatype].name}{r.archetype ? ` · ${r.archetype}` : ""}</span>
+                      <span className="flex min-w-0 items-center gap-3">
+                        <Portrait src={r.portrait} name={r.alias || r.name} className="w-9 text-xs" />
+                        <span className="min-w-0">
+                          <span className="block truncate font-display font-semibold">{r.alias || r.name || "Unnamed runner"}</span>
+                          <span className="text-xs text-dim">{METATYPES[r.metatype].name}{r.archetype ? ` · ${r.archetype}` : ""}</span>
+                        </span>
                       </span>
                       <span className="shrink-0 text-xs text-dim num">Init {d.initiative.rank}+{d.initiative.dice}D6 · DR {d.defenseRating}</span>
                     </Link>

@@ -3,6 +3,8 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { Page } from "@/components/Page";
+import { Portrait } from "@/components/Portrait";
+import { isPortrait } from "@/lib/portrait";
 import { useRunners } from "@/lib/store/characters";
 import { derive } from "@/lib/sr6/derive";
 import { MAGIC_TYPE_LABEL, METATYPES } from "@/lib/sr6/data";
@@ -32,7 +34,7 @@ export default function RunnersPage() {
       const list: Character[] = Array.isArray(raw) ? raw : raw?.runners ?? [raw];
       let n = 0;
       for (const c of list) {
-        if (c && c.version === 1 && c.metatype && c.attrPts) { importOne(c); n++; }
+        if (c && c.version === 1 && c.metatype && c.attrPts) { if (c.portrait && !isPortrait(c.portrait)) delete c.portrait; importOne(c); n++; }
       }
       setMsg(n ? `Imported ${n} runner${n === 1 ? "" : "s"}.` : "That file does not contain Sixthdeck runners.");
     } catch {
@@ -69,8 +71,13 @@ export default function RunnersPage() {
             return (
               <li key={r.id} className="panel flex flex-col p-4">
                 <Link href={`/runners/${r.id}`} className="group block">
-                  <div className="font-display text-xl font-bold group-hover:text-accent">{r.alias || r.name || "Unnamed runner"}</div>
-                  <div className="text-sm text-dim">{METATYPES[r.metatype].name}{r.magicType !== "mundane" ? ` · ${MAGIC_TYPE_LABEL[r.magicType]}` : ""}{r.archetype ? ` · ${r.archetype}` : ""}</div>
+                  <div className="flex items-start gap-3">
+                    <Portrait src={r.portrait} name={r.alias || r.name} className="w-14 text-xl" />
+                    <div className="min-w-0">
+                      <div className="font-display text-xl font-bold group-hover:text-accent">{r.alias || r.name || "Unnamed runner"}</div>
+                      <div className="text-sm text-dim">{METATYPES[r.metatype].name}{r.magicType !== "mundane" ? ` · ${MAGIC_TYPE_LABEL[r.magicType]}` : ""}{r.archetype ? ` · ${r.archetype}` : ""}</div>
+                    </div>
+                  </div>
                   <dl className="mt-3 grid grid-cols-4 gap-1.5 text-center text-xs">
                     <div className="border border-line py-1"><dt className="text-faint">Init</dt><dd className="num text-base font-semibold">{d.initiative.rank}+{d.initiative.dice}</dd></div>
                     <div className="border border-line py-1"><dt className="text-faint">DR</dt><dd className="num text-base font-semibold">{d.defenseRating}</dd></div>

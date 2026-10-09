@@ -7,6 +7,8 @@ import "@fontsource/ibm-plex-sans/500.css";
 import "@fontsource/ibm-plex-sans/600.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource/atkinson-hyperlegible/400.css";
+import "@fontsource/atkinson-hyperlegible/700.css";
 import "./globals.css";
 import { Shell } from "@/components/Shell";
 
@@ -23,7 +25,7 @@ export const viewport: Viewport = {
 };
 
 // Apply the saved theme before first paint so the page never flashes the wrong skin.
-const THEME_BOOT = `try{var s=JSON.parse(localStorage.getItem('sixthdeck.settings')||'{}').state||{};var e=document.documentElement;if(s.theme)e.dataset.theme=s.theme;if(s.motion)e.dataset.motion=s.motion;if(s.fontScale)e.style.setProperty('--font-scale',s.fontScale);if(s.customAccent)e.style.setProperty('--accent',s.customAccent)}catch(_){}`;
+const THEME_BOOT = `try{var s=JSON.parse(localStorage.getItem('sixthdeck.settings')||'{}').state||{};var e=document.documentElement,d=e.dataset;if(s.theme)d.theme=s.theme;if(s.motion)d.motion=s.motion;if(s.font)d.font=s.font;if(s.corners)d.corners=s.corners;if(s.density)d.density=s.density;if(s.backdrop)d.backdrop=s.backdrop;if(s.brackets===false)d.brackets='off';if(s.fontScale)e.style.setProperty('--font-scale',s.fontScale);if(s.customAccent)e.style.setProperty('--accent',s.customAccent)}catch(_){}`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

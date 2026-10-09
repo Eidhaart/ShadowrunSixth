@@ -1,4 +1,5 @@
 "use client";
+import { isPortrait } from "@/lib/portrait";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { newCharacter, type Character } from "@/lib/sr6/character";
@@ -85,6 +86,7 @@ export const useRunners = create<RunnersState>()(
         }),
       importOne: (c) => {
         const copy = clone(c);
+        if (copy.portrait && !isPortrait(copy.portrait)) delete copy.portrait;
         if (get().runners[copy.id]) copy.id = newCharacter().id;
         copy.updatedAt = Date.now();
         set((s) => ({ runners: { ...s.runners, [copy.id]: copy } }));
