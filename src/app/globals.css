@@ -238,6 +238,30 @@
   color-scheme: light;
 }
 
+/* Zaibatsu: a corporate security terminal. Near-black with a red cast, dim red hairlines,
+   signal red accent, yellow for warnings, cyan for data. Glow kept to a whisper. */
+:root[data-theme="zaibatsu"] {
+  --bg: #0a0708;
+  --bg-2: #0f090a;
+  --panel: #140a0c;
+  --panel-hi: #1c0e11;
+  --line: #3a1a1f;
+  --line-hi: #5a2a30;
+  --fg: #f0e2e3;
+  --fg-dim: #b89a9d;
+  --fg-faint: #7a4a50;
+  --accent: #ff2a3c;
+  --accent-ink: #0a0708;
+  --cyan: #00f0ff;
+  --astral: #ff2e88;
+  --danger: #fcee0a;
+  --ok: #00ff9f;
+  --grid: rgba(255, 42, 60, .03);
+  --halo-a: rgba(255, 42, 60, .06);
+  --halo-b: rgba(0, 240, 255, .025);
+  color-scheme: dark;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-bg2: var(--bg-2);
@@ -521,3 +545,11 @@ mark.hl { background: color-mix(in oklab, var(--accent) 35%, transparent); color
   :root[data-density="compact"] .gap-4 { gap: .7rem; }
 }
 :root[data-density="compact"] .panel-head { padding-block: .4rem; }
+
+/* Zaibatsu keeps its terminal voice: mono headings when the default typeface is chosen, quieter
+   brackets, and a faint glow. */
+:root[data-theme="zaibatsu"][data-font="street"] { --ff-display: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+:root[data-theme="zaibatsu"] h1, :root[data-theme="zaibatsu"] h2 { letter-spacing: .04em; }
+:root[data-theme="zaibatsu"] .panel::before, :root[data-theme="zaibatsu"] .panel::after { opacity: .6; width: 10px; height: 10px; }
+:root[data-theme="zaibatsu"] .glow { text-shadow: 0 0 calc(5px * var(--glow, 1)) color-mix(in oklab, var(--accent) 35%, transparent); }
+:root[data-theme="zaibatsu"] .die.hit { box-shadow: 0 0 calc(8px * var(--glow, 1)) color-mix(in oklab, var(--accent) 35%, transparent); }

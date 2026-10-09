@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { RuleCategory } from "@/lib/rules/types";
 
-export type ThemeId = "sodium" | "matrix" | "astral" | "corp" | "terminal" | "neon" | "crimson" | "rust" | "jade" | "ice" | "blackout";
+export type ThemeId = "sodium" | "matrix" | "astral" | "corp" | "terminal" | "neon" | "crimson" | "rust" | "jade" | "ice" | "blackout" | "zaibatsu";
 
 export const THEMES: { id: ThemeId; name: string; blurb: string; light?: boolean; swatch: [string, string, string] }[] = [
   { id: "sodium", name: "Sodium", blurb: "Seattle night, amber street light", swatch: ["#080a0e", "#ffae3d", "#43dbe8"] },
@@ -11,6 +11,7 @@ export const THEMES: { id: ThemeId; name: string; blurb: string; light?: boolean
   { id: "astral", name: "Astral", blurb: "Aura-lit violet, gold highlights", swatch: ["#0a0710", "#c39bff", "#ffd27a"] },
   { id: "terminal", name: "Terminal", blurb: "Green phosphor, old-school deck", swatch: ["#020a04", "#39ff7a", "#d6ff5c"] },
   { id: "neon", name: "Neon", blurb: "Hot pink and electric cyan on indigo", swatch: ["#0b0620", "#ff3ea5", "#2df0ff"] },
+  { id: "zaibatsu", name: "Zaibatsu", blurb: "Megacorp terminal: red hairlines, mono headings", swatch: ["#0a0708", "#ff2a3c", "#fcee0a"] },
   { id: "crimson", name: "Crimson", blurb: "Red Samurai black and blood red", swatch: ["#0c0607", "#ff3b3b", "#ffb34d"] },
   { id: "rust", name: "Rust", blurb: "Barrens scrap, burnt orange", swatch: ["#0e0a07", "#e2762a", "#6cc7b8"] },
   { id: "jade", name: "Jade", blurb: "Triad lacquer, gold on deep green", swatch: ["#060c0b", "#e8c15a", "#3fe0b0"] },
