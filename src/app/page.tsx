@@ -13,6 +13,7 @@ import { useSettings } from "@/lib/store/settings";
 import { derive } from "@/lib/sr6/derive";
 import { withAdv } from "@/lib/sr6/advance";
 import { METATYPES } from "@/lib/sr6/data";
+import { VOICES } from "@/lib/style/catalog";
 
 export default function DeckHome() {
   const status = useRulebook((s) => s.status);
@@ -21,6 +22,8 @@ export default function DeckHome() {
   const runners = useMemo(() => Object.values(runnerMap), [runnerMap]);
   const draft = useRunners((s) => s.draft);
   const handle = useSettings((s) => s.handle);
+  const voiceId = useSettings((s) => s.voice);
+  const voice = VOICES.find((v) => v.id === voiceId) ?? VOICES[0];
   const toggleLens = useSettings((s) => s.toggleLens);
 
   const counts = new Map<RuleCategory, number>();
@@ -29,8 +32,8 @@ export default function DeckHome() {
   return (
     <Page
       wide
-      title={handle ? `Jacked in, ${handle}` : "Jacked in"}
-      kicker="Rules, dice, runners and the table chat in one place. Everything stays on your device unless you link a room."
+      title={voice.greet(handle)}
+      kicker={voice.kicker}
     >
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <div className="space-y-5">

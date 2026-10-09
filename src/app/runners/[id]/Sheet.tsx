@@ -118,7 +118,7 @@ function TabBar({ tab, setTab, awakened, sustained, karma }: { tab: string; setT
           role="tab"
           aria-selected={tab === x.id}
           onClick={() => setTab(x.id)}
-          className={clsx("-mb-px min-h-11 whitespace-nowrap border-b-2 px-4 py-2 font-display text-sm font-semibold transition-colors", tab === x.id ? "border-accent text-accent" : "border-transparent text-dim hover:text-fg")}
+          className={clsx("-mb-px min-h-11 whitespace-nowrap border-b-2 px-4 py-2 font-ui text-sm font-semibold transition-colors", tab === x.id ? "border-accent text-accent" : "border-transparent text-dim hover:text-fg")}
         >
           {x.label}{(x.id === "magic" || (x.id === "matrix" && !awakened)) && sustained > 0 && <span className="ml-1.5 chip !py-0">−{sustained * 2}</span>}
           {x.id === "advance" && karma > 0 && <span className="num ml-1.5 chip on !py-0" title={`${karma} Karma to spend`}>{karma}</span>}

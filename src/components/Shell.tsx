@@ -15,6 +15,7 @@ import { MODULE_LIST } from "@/lib/academy/modules";
 import { useAcademy } from "@/lib/academy/progress";
 import { doRoll } from "@/lib/actions";
 import { useCatalog } from "@/lib/compendium/catalog";
+import { VOICES, fontVars } from "@/lib/style/catalog";
 
 const NAV = [
   { href: "/", label: "Deck", icon: "deck" },
@@ -50,7 +51,15 @@ function ApplySettings() {
     el.dataset.corners = s.corners;
     el.dataset.density = s.density;
     el.dataset.backdrop = s.backdrop;
-    el.dataset.brackets = s.brackets ? "on" : "off";
+    el.dataset.ornament = s.ornament;
+    el.dataset.heads = s.heads;
+    const fv = fontVars(s.font, s.theme);
+    el.style.setProperty("--ff-display", fv.display);
+    el.style.setProperty("--ff-sans", fv.body);
+    el.style.setProperty("--ff-ui", fv.ui);
+    el.style.setProperty("--glyph", s.glyph ? JSON.stringify(`${s.glyph}\uFE0E`) : "none");
+    el.dataset.glyph = s.glyph ? "on" : "off";
+    el.style.setProperty("--motif-k", String(s.motifStrength));
     el.style.setProperty("--scan", String(s.scanlines));
     el.style.setProperty("--vig", String(s.vignette));
     el.style.setProperty("--glow", String(s.glow));
@@ -62,12 +71,12 @@ function ApplySettings() {
       el.style.removeProperty("--accent");
       el.style.removeProperty("--accent-ink");
     }
-  }, [s.theme, s.motion, s.font, s.corners, s.density, s.backdrop, s.brackets, s.scanlines, s.vignette, s.glow, s.fontScale, s.customAccent]);
+  }, [s.theme, s.motion, s.font, s.corners, s.density, s.backdrop, s.ornament, s.heads, s.glyph, s.motifStrength, s.scanlines, s.vignette, s.glow, s.fontScale, s.customAccent]);
   return null;
 }
 
 function Boot() {
-  const { skipBoot, motion } = useSettings();
+  const { skipBoot, motion, voice, deckName } = useSettings();
   const status = useRulebook((s) => s.status);
   const sections = useRulebook((s) => s.book?.sections.length ?? 0);
   const [show, setShow] = useState(false);
@@ -87,19 +96,13 @@ function Boot() {
     try { sessionStorage.setItem("sd.booted", "1"); } catch { /* ignore */ }
   }, [skipBoot, motion]);
 
-  const lines = useMemo(
-    () => [
-      "SIXTHDECK BIOS 6.0.80  //  cyberdeck cold start",
-      "seating datajack ........................ ok",
-      "loading ICE-breaker stubs ............... ok",
-      status === "ready"
-        ? `mounting rulebook ..................... ${sections.toLocaleString()} sections indexed`
-        : "mounting rulebook ..................... waiting for a book chip",
-      "forging fake SIN ........................ rating 4",
-      "jacking in",
-    ],
-    [status, sections],
-  );
+  const lines = useMemo(() => {
+    const v = VOICES.find((x) => x.id === voice) ?? VOICES[0];
+    const book = status === "ready"
+      ? `mounting rulebook ..................... ${sections.toLocaleString()} sections indexed`
+      : "mounting rulebook ..................... waiting for a book chip";
+    return v.boot(book, (deckName || "Sixthdeck").toUpperCase());
+  }, [status, sections, voice, deckName]);
 
   useEffect(() => {
     if (!show) return;
@@ -309,7 +312,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const init = useRulebook((s) => s.init);
   const rb = useRulebook((s) => s.status);
   const setPalette = useUi((s) => s.setPalette);
-  const { flicker, handle, chatUrl, room, role } = useSettings();
+  const { flicker, handle, chatUrl, room, role, deckName, deckTag } = useSettings();
   const comms = useComms();
 
   useEffect(() => { void init(); }, [init]);
@@ -334,15 +337,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
   useEffect(() => { setMore(false); }, [pathname]); // eslint-disable-line react-hooks/set-state-in-effect
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="isolate flex min-h-dvh">
+      <div className="motif" aria-hidden="true" />
       <ApplySettings />
       <Boot />
       <Palette />
 
       {/* rail (desktop) */}
       <nav className="no-print sticky top-0 hidden h-dvh w-[78px] shrink-0 flex-col items-center gap-1 border-r border-line bg-bg2/80 py-4 backdrop-blur md:flex" aria-label="Modules">
-        <Link href="/" className="mb-3 grid h-11 w-11 place-items-center border border-accent font-display text-lg font-bold text-accent glow" aria-label="Sixthdeck home">
-          S6
+        <Link href="/" className={clsx("mb-3 grid h-11 w-11 place-items-center overflow-hidden border border-accent font-display font-bold leading-none text-accent glow", deckTag.length > 2 ? "text-xs" : "text-lg")} aria-label={`${deckName || "Sixthdeck"} home`}>
+          {deckTag || "S6"}
         </Link>
         {NAV.map((n) => (
           <Link
@@ -350,11 +354,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
             href={n.href}
             aria-current={active(n.href) ? "page" : undefined}
             className={clsx(
-              "relative flex w-full flex-col items-center gap-1 py-2.5 text-[11px] font-display tracking-wide transition-colors",
-              active(n.href) ? "text-accent" : "text-dim hover:text-fg",
+              "relative flex w-full flex-col items-center gap-1 py-2.5 text-[11px] font-ui tracking-wide transition-colors",
+              active(n.href) ? "nav-on" : "text-dim hover:text-fg",
             )}
           >
-            {active(n.href) && <span className="absolute left-0 top-2 h-[calc(100%-1rem)] w-[3px] bg-accent" />}
+            {active(n.href) && <span className="nav-bar absolute left-0 top-2 h-[calc(100%-1rem)] w-[3px]" />}
             <Icon name={n.icon} size={22} />
             {n.label}
             {n.href === "/comms" && comms.unread > 0 && !active("/comms") && (
@@ -366,7 +370,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <header className="no-print sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-line bg-bg/85 px-3 backdrop-blur md:px-5">
-          <span className="font-display text-sm font-semibold tracking-wide md:hidden">SIXTHDECK</span>
+          <span className="truncate font-display text-sm font-semibold tracking-wide text-accent md:hidden">{(deckName || "Sixthdeck").toUpperCase()}</span>
           <div className="hidden items-center gap-4 text-xs text-dim md:flex">
             <span className="flex items-center gap-1.5"><StatusDot on={rb === "ready"} warn={rb !== "ready"} /> Rulebook {rb === "ready" ? "mounted" : rb === "loading" ? "loading" : "not loaded"}</span>
             <span className="flex items-center gap-1.5">
@@ -386,7 +390,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <nav className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-bg2/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Modules">
         {NAV.filter((n) => MOBILE_PRIMARY.includes(n.href)).map((n) => (
           <Link key={n.href} href={n.href} aria-current={active(n.href) ? "page" : undefined} onClick={() => setMore(false)}
-            className={clsx("relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-display", active(n.href) ? "text-accent" : "text-dim")}>
+            className={clsx("relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-ui", active(n.href) ? "nav-on" : "text-dim")}>
             <Icon name={n.icon} size={22} />
             {n.label}
             {n.href === "/comms" && comms.unread > 0 && !active("/comms") && <span className="absolute right-[28%] top-2 h-2 w-2 rounded-full bg-danger" />}
@@ -396,7 +400,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           type="button"
           aria-expanded={more}
           onClick={() => setMore(!more)}
-          className={clsx("flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-display", more || moreActive ? "text-accent" : "text-dim")}
+          className={clsx("flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-ui", more || moreActive ? "text-accent" : "text-dim")}
         >
           <Icon name="menu" size={22} />
           More
@@ -408,7 +412,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <div className="grid grid-cols-4 gap-2">
               {NAV.filter((n) => !MOBILE_PRIMARY.includes(n.href)).map((n) => (
                 <Link key={n.href} href={n.href} onClick={() => setMore(false)} aria-current={active(n.href) ? "page" : undefined}
-                  className={clsx("flex flex-col items-center gap-1 border py-3 text-xs font-display", active(n.href) ? "border-accent text-accent" : "border-line text-dim")}>
+                  className={clsx("flex flex-col items-center gap-1 border py-3 text-xs font-ui", active(n.href) ? "border-accent text-accent" : "border-line text-dim")}>
                   <Icon name={n.icon} size={22} />
                   {n.label}
                 </Link>
