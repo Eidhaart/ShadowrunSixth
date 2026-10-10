@@ -5,7 +5,7 @@
 
 export type ThemeId =
   | "sodium" | "matrix" | "astral" | "corp" | "terminal" | "neon" | "crimson" | "rust" | "jade" | "ice" | "blackout" | "zaibatsu"
-  | "spraypaint" | "chrome" | "ronin" | "grimoire" | "totem" | "dojo" | "resonance" | "hazard" | "noir";
+  | "municipal" | "spraypaint" | "chrome" | "ronin" | "grimoire" | "totem" | "dojo" | "resonance" | "hazard" | "noir";
 
 export type ThemeGroup = "Streets" | "Arcane" | "Steel" | "Matrix" | "Corporate" | "Classic";
 
@@ -37,6 +37,7 @@ export const THEMES: ThemeDef[] = [
   { id: "matrix", name: "Matrix", group: "Matrix", blurb: "Cold AR overlay, cyan on deep teal, pink alerts", swatch: ["#04090c", "#3fe3ff", "#ff6fb1", "#5dffb0"] },
   { id: "terminal", name: "Terminal", group: "Matrix", blurb: "Green phosphor, old-school deck", swatch: ["#020a04", "#39ff7a", "#d6ff5c", "#7dffd0"] },
   { id: "resonance", name: "Resonance", group: "Matrix", blurb: "Iridescent teal to violet, living data", swatch: ["#05060c", "#7cf7e4", "#c07bff", "#ff8ad8"] },
+  { id: "municipal", name: "Municipal Terminal", group: "Corporate", blurb: "Your Port Meridian terminal: THE red, cyan, yellow, green, blue", swatch: ["#150f1d", "#ff1238", "#1fe3f0", "#f6e33b"] },
   { id: "zaibatsu", name: "Zaibatsu", group: "Corporate", blurb: "Megacorp terminal: red hairlines, mono headings", swatch: ["#0a0708", "#ff2a3c", "#00f0ff", "#fcee0a"] },
   { id: "corp", name: "Corp", group: "Corporate", light: true, blurb: "Clean arcology light, megacorp red", swatch: ["#e7eaee", "#c8102e", "#0b6bcb", "#6d3fd1"] },
   { id: "ice", name: "Ice", group: "Corporate", light: true, blurb: "Pale lab light, cobalt and teal", swatch: ["#e6eef5", "#0a6fd6", "#0a8f9c", "#7b4ee0"] },
@@ -46,7 +47,7 @@ export const THEME_GROUPS: ThemeGroup[] = ["Streets", "Arcane", "Steel", "Matrix
 
 export type FontId =
   | "street" | "terminal" | "clean" | "legible" | "system"
-  | "marker" | "stencil" | "blackletter" | "arcane" | "uncial" | "crt" | "hud" | "katana" | "dossier" | "mincho" | "glyphic" | "executive" | "glitch";
+  | "marker" | "stencil" | "blackletter" | "arcane" | "uncial" | "crt" | "hud" | "katana" | "dossier" | "readout" | "mincho" | "glyphic" | "executive" | "glitch";
 
 /** `ui` is the face for buttons, tabs and navigation when the display face is too ornate for small text. */
 export interface FontDef { id: FontId; name: string; blurb: string; display: string; body: string; ui?: string }
@@ -64,6 +65,7 @@ export const FONTS: FontDef[] = [
   { id: "mincho", name: "Mincho", blurb: "Brushed serif for the quiet path", display: '"Shippori Mincho", Georgia, serif', body: '"Shippori Mincho", Georgia, serif' },
   { id: "katana", name: "Katana", blurb: "Tall condensed steel", display: '"Teko", "Rajdhani", sans-serif', body: '"Rajdhani", ' + PLEX, ui: '"Rajdhani", ' + PLEX },
   { id: "hud", name: "HUD", blurb: "Vehicle heads-up display", display: '"Oxanium", "Chakra Petch", sans-serif', body: '"Rajdhani", ' + PLEX },
+  { id: "readout", name: "Readout", blurb: "Share Tech Mono terminal headings", display: '"Share Tech Mono", ' + MONO, body: PLEX, ui: '"Share Tech Mono", ' + MONO },
   { id: "crt", name: "CRT", blurb: "Pixel terminal headings", display: '"VT323", ' + MONO, body: '"Share Tech Mono", ' + MONO, ui: '"Share Tech Mono", ' + MONO },
   { id: "terminal", name: "Terminal", blurb: "Monospace everywhere", display: MONO, body: MONO },
   { id: "glyphic", name: "Glyphic", blurb: "Resonant lowercase glyphs", display: '"Major Mono Display", ' + MONO, body: '"Syne Mono", ' + MONO, ui: '"Syne Mono", ' + MONO },
@@ -74,7 +76,7 @@ export const FONTS: FontDef[] = [
   { id: "system", name: "System", blurb: "Your device's own font", display: "ui-sans-serif, system-ui, sans-serif", body: "ui-sans-serif, system-ui, sans-serif" },
 ];
 
-export type OrnamentId = "brackets" | "tape" | "rivets" | "seal" | "filigree" | "stitch" | "traces" | "hazard" | "frame" | "none";
+export type OrnamentId = "barcode" | "brackets" | "tape" | "rivets" | "seal" | "filigree" | "stitch" | "traces" | "hazard" | "frame" | "none";
 export const ORNAMENTS: { id: OrnamentId; name: string; blurb: string }[] = [
   { id: "brackets", name: "HUD brackets", blurb: "Corner brackets" },
   { id: "tape", name: "Duct tape", blurb: "Taped to the wall" },
@@ -85,6 +87,7 @@ export const ORNAMENTS: { id: OrnamentId; name: string; blurb: string }[] = [
   { id: "traces", name: "Traces", blurb: "Circuit bars" },
   { id: "hazard", name: "Hazard", blurb: "Warning stripes on headers" },
   { id: "frame", name: "Frame", blurb: "Thin inner rule, top bar" },
+  { id: "barcode", name: "Barcode", blurb: "Terminal barcode on headers" },
   { id: "none", name: "Plain", blurb: "No decoration" },
 ];
 
@@ -192,6 +195,7 @@ export const PACKS: PackDef[] = [
   { id: "face", name: "Face", blurb: "Smoky bar, typed dossiers, a deal", s: { theme: "noir", font: "dossier", ornament: "frame", backdrop: "rain", glyph: "§", heads: "plain", voice: "fixer", corners: "square" } },
   { id: "astral", name: "Astral wanderer", blurb: "Auras and motes of light", s: { theme: "astral", font: "arcane", ornament: "filigree", backdrop: "stars", glyph: "✶", heads: "glow", voice: "arcane", corners: "round" } },
   { id: "suit", name: "Corp suit", blurb: "Arcology daylight, clean lines", s: { theme: "corp", font: "executive", ornament: "frame", backdrop: "flat", glyph: "■", heads: "plain", voice: "corp", corners: "square" } },
+  { id: "municipal", name: "Municipal Terminal", blurb: "Port Meridian city terminal, all activity logged", s: { theme: "municipal", font: "readout", ornament: "barcode", backdrop: "glow", glyph: "▸", heads: "caps", voice: "corp", corners: "square" } },
   { id: "zaibatsu", name: "Zaibatsu", blurb: "Megacorp security terminal", s: { theme: "zaibatsu", font: "street", ornament: "frame", backdrop: "glow", glyph: "▪", heads: "caps", voice: "corp", corners: "square" } },
   { id: "synthwave", name: "Neon kid", blurb: "Indigo night and arcade light", s: { theme: "neon", font: "glitch", ornament: "brackets", backdrop: "grid", glyph: "⚡", heads: "glow", voice: "street", corners: "cut" } },
 ];

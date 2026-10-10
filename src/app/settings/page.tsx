@@ -97,6 +97,7 @@ function OrnamentIcon({ id }: { id: OrnamentId }) {
       {id === "stitch" && <><rect x="10" y="10" width="44" height="20" fill="none" stroke={a} strokeDasharray="2 2" /><circle cx="14" cy="14" r="1.6" fill={b} /><circle cx="19" cy="14" r="1.6" fill={c} /></>}
       {id === "traces" && <><rect x="12" y="5" width="14" height="2.5" fill={a} /><rect x="29" y="5" width="9" height="2.5" fill={b} /><rect x="40" y="32.5" width="14" height="2.5" fill={a} /></>}
       {id === "hazard" && <><rect x="6" y="5" width="52" height="2" fill={b} /><path d="M44 7h4l-6 7h-4zM50 7h4l-6 7h-4zM56 7h2v2l-4 5h-4z" fill={a} /><line x1="6" y1="14" x2="58" y2="14" stroke="var(--line-hi)" /></>}
+      {id === "barcode" && <><rect x="6" y="5" width="52" height="1.5" fill={a} />{[0, 3, 5, 9, 14, 17].map((x, i) => <rect key={i} x={38 + x} y="9" width={i % 2 ? 1 : 2.5} height="6" fill={a} />)}</>}
       {id === "frame" && <><rect x="9" y="9" width="46" height="22" fill="none" stroke={a} strokeOpacity=".35" /><rect x="6" y="5" width="40" height="2" fill={a} /></>}
     </svg>
   );

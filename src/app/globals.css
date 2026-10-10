@@ -453,6 +453,29 @@
   color-scheme: dark;
 }
 
+[data-theme="municipal"] {
+  --bg: #070a13;
+  --bg-2: #0d0b14;
+  --panel: #0e0a10;
+  --panel-hi: #171119;
+  --line: #3a1520;
+  --line-hi: #6a2232;
+  --fg: #ebe7ef;
+  --fg-dim: #aaa4b6;
+  --fg-faint: #6c667a;
+  --accent: #ff1238;
+  --accent-ink: #070a13;
+  --cyan: #1fe3f0;
+  --astral: #5b8cff;
+  --danger: #f6e33b;
+  --ok: #22f59a;
+  --grid: rgba(255, 18, 56, .035);
+  --halo-a: rgba(255, 18, 56, .12);
+  --halo-b: rgba(91, 140, 255, .06);
+  --accent-2: #1fe3f0; --accent-3: #f6e33b; --bracket: #ff4f5e; --head-tint: #ff1238; --num: #ff4f5e; --nav: #ff1238; --title: #1fe3f0;
+  color-scheme: dark;
+}
+
 /* Colour roles: where each skin spends its second and third colours. */
 [data-theme="sodium"] { --accent-2: #43dbe8; --accent-3: #b995ff; --bracket: #ffae3d; --head-tint: #43dbe8; --num: #43dbe8; --nav: #ffae3d; }
 [data-theme="matrix"] { --accent-2: #ff6fb1; --accent-3: #5dffb0; --bracket: #ff6fb1; --head-tint: #ff6fb1; --num: #3fe3ff; --nav: #3fe3ff; }
@@ -895,3 +918,16 @@ h1 { color: var(--title, var(--fg)); background-image: var(--title-paint, none);
   background: linear-gradient(var(--accent), var(--accent)) left bottom / 1px 10px no-repeat, linear-gradient(var(--accent), var(--accent)) right bottom / 1px 10px no-repeat, linear-gradient(var(--accent), var(--accent)) center bottom / 100% 1px no-repeat; opacity: .8; }
 @keyframes path-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 .path-in { animation: path-in .55s cubic-bezier(.2,.8,.2,1) backwards; }
+
+/* Municipal Terminal: the Port Meridian night gradient behind everything. */
+:root[data-theme="municipal"]:not([data-backdrop="flat"]) body { background: linear-gradient(176deg, #2a1318 0%, #150f1d 50%, #070a13 100%) fixed; }
+:root[data-theme="municipal"][data-backdrop="grid"] body { background: linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 36px, linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 36px 100%, linear-gradient(176deg, #2a1318 0%, #150f1d 50%, #070a13 100%) fixed; }
+:root[data-theme="municipal"] .panel { background: rgba(5, 3, 7, .58); }
+
+/* barcode: a terminal barcode on the right of every panel header */
+[data-ornament="barcode"] .panel::before, [data-ornament="barcode"] .panel::after { display: none; }
+[data-ornament="barcode"] .panel { border-top: 1px solid color-mix(in oklab, var(--accent) 60%, transparent); }
+[data-ornament="barcode"] .panel-head {
+  background-image: repeating-linear-gradient(90deg, var(--accent) 0 3px, transparent 3px 5px, var(--accent) 5px 6px, transparent 6px 9px, var(--accent) 9px 13px, transparent 13px 14px, var(--accent) 14px 15px, transparent 15px 19px),
+    linear-gradient(90deg, color-mix(in oklab, var(--head-tint, transparent) 14%, transparent), transparent 72%);
+  background-size: 76px 9px, 100% 100%; background-repeat: no-repeat; background-position: right 12px center, 0 0; padding-right: 100px; }
