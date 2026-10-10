@@ -3,7 +3,8 @@ import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
 import { useRunners } from "@/lib/store/characters";
-import { BUILDS, PREMADES, fromBuild, fromPremade, type Build, type Premade } from "@/lib/sr6/premades";
+import { BUILDS, PREMADES, TEMPLATES, fromBuild, fromPremade, portraitUrl, type Build, type Premade } from "@/lib/sr6/premades";
+import { isPortrait } from "@/lib/portrait";
 import { derive } from "@/lib/sr6/derive";
 import { ATTRIBUTES, ATTR_ABBR, MAGIC_TYPE_LABEL, METATYPES, SKILL_BY_ID } from "@/lib/sr6/data";
 import { ArchetypeIcon, BlankArt, Bust, PremadeArt, TemplateArt } from "./PathArt";
@@ -70,16 +71,22 @@ function PremadeCard({ p, onTake, onEdit }: { p: Premade; onTake: () => void; on
   const c = useMemo(() => fromPremade(p), [p]);
   const d = derive(c);
   const b = BUILDS.find((x) => x.id === p.build)!;
+  const url = portraitUrl(p);
   return (
-    <article className="panel flex flex-col p-4">
-      <div className="flex items-start gap-3">
-        <Bust seed={p.alias} className="w-16 shrink-0 border border-line-hi" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 text-xs text-[color:var(--accent-2,var(--accent))]"><ArchetypeIcon id={b.id} size={14} /> {b.archetype}</div>
-          <h3 className="font-display text-2xl font-bold leading-tight">{p.alias}</h3>
-          <div className="text-xs text-dim">{p.name} · {METATYPES[b.metatype].name}{b.magicType !== "mundane" ? ` · ${MAGIC_TYPE_LABEL[b.magicType]}` : ""}</div>
-        </div>
+    <article className="panel flex flex-col overflow-hidden">
+      <div className="relative -mb-10 h-64 overflow-hidden border-b border-line bg-bg2">
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt={`${p.alias}, ${b.archetype}`} className="size-full object-cover object-[50%_20%]" loading="lazy" />
+        ) : (
+          <Bust seed={p.alias} className="mx-auto h-full" />
+        )}
+        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-panel via-panel/70 to-transparent" />
       </div>
+      <div className="relative flex flex-1 flex-col px-4 pb-4">
+        <div className="flex items-center gap-1.5 text-xs text-[color:var(--accent-2,var(--accent))]"><ArchetypeIcon id={b.id} size={14} /> {b.archetype}</div>
+        <h3 className="font-display text-2xl font-bold leading-tight">{p.alias}</h3>
+        <div className="text-xs text-dim">{p.name} · {METATYPES[c.metatype].name}{b.magicType !== "mundane" ? ` · ${MAGIC_TYPE_LABEL[b.magicType]}` : ""}</div>
       <p className="mt-3 text-sm italic text-dim">{p.concept}</p>
       <div className="mt-3"><AttrStrip c={c} /></div>
       <div className="num mt-2 flex flex-wrap gap-x-3 text-xs text-dim">
@@ -98,6 +105,7 @@ function PremadeCard({ p, onTake, onEdit }: { p: Premade; onTake: () => void; on
       <div className="mt-auto flex flex-wrap gap-2 pt-4">
         <button className="btn primary flex-1" onClick={onTake}><Icon name="check" size={15} /> Take {p.alias}</button>
         <button className="btn" onClick={onEdit}><Icon name="forge" size={15} /> Tweak in the Forge</button>
+      </div>
       </div>
     </article>
   );
@@ -122,6 +130,19 @@ function TemplateCard({ b, onUse }: { b: Build; onUse: () => void }) {
 }
 
 /** The Forge's front door: a ready runner, a template, or a blank build. */
+/** The premade as a character, with its portrait copied in as a data URL so it travels with exports. */
+async function premadeWithPortrait(p: Premade) {
+  const c = fromPremade(p);
+  const url = portraitUrl(p);
+  if (!url) return c;
+  try {
+    const blob = await (await fetch(url)).blob();
+    const data = await new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = bad; r.readAsDataURL(blob); });
+    if (isPortrait(data)) c.portrait = data;
+  } catch { /* offline: the runner just has no picture */ }
+  return c;
+}
+
 export function Paths({ onStarted, onTaken }: { onStarted: () => void; onTaken: (id: string) => void }) {
   const { startDraft, finishDraft } = useRunners();
   const [view, setView] = useState<View>("choose");
@@ -138,12 +159,12 @@ export function Paths({ onStarted, onTaken }: { onStarted: () => void; onTaken: 
         </p>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {view === "premade"
-            ? PREMADES.map((p) => (
+            ? [...PREMADES].sort((a, b) => Number(!!b.portrait) - Number(!!a.portrait)).map((p) => (
                 <PremadeCard key={p.alias} p={p}
-                  onTake={() => { startDraft(fromPremade(p)); const done = finishDraft(); if (done) onTaken(done.id); }}
-                  onEdit={() => { startDraft(fromPremade(p)); onStarted(); }} />
+                  onTake={async () => { startDraft(await premadeWithPortrait(p)); const done = finishDraft(); if (done) onTaken(done.id); }}
+                  onEdit={async () => { startDraft(await premadeWithPortrait(p)); onStarted(); }} />
               ))
-            : BUILDS.map((b) => <TemplateCard key={b.id} b={b} onUse={() => { startDraft(fromBuild(b)); onStarted(); }} />)}
+            : TEMPLATES.map((b) => <TemplateCard key={b.id} b={b} onUse={() => { startDraft(fromBuild(b)); onStarted(); }} />)}
         </div>
       </div>
     );
@@ -157,7 +178,7 @@ export function Paths({ onStarted, onTaken }: { onStarted: () => void; onTaken: 
       </div>
       <div className="grid gap-5 md:grid-cols-3 md:gap-6">
         <PathCard delay={0} label="PREMADE" title="Ready to run" lead="A finished runner with a story, gear and contacts." count={`${PREMADES.length} runners`} art={<PremadeArt />} onPick={() => setView("premade")} />
-        <PathCard delay={90} label="TEMPLATE" title="Start from a template" lead="Archetype numbers filled in. You name them and finish the build." count={`${BUILDS.length} archetypes`} art={<TemplateArt />} onPick={() => setView("template")} />
+        <PathCard delay={90} label="TEMPLATE" title="Start from a template" lead="Archetype numbers filled in. You name them and finish the build." count={`${TEMPLATES.length} archetypes`} art={<TemplateArt />} onPick={() => setView("template")} />
         <PathCard delay={180} label="FORGE" title="From scratch" lead="A blank runner. Every choice is yours, step by step." art={<BlankArt />} onPick={() => { startDraft(); onStarted(); }} />
       </div>
     </div>

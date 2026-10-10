@@ -9,7 +9,7 @@ import core from "@/data/gear-core.json";
 import { COMMLINKS, CYBERDECKS, RCCS } from "./rules6";
 import { newCharacter, uid, type Character, type Contact, type GearItem, type KnowledgeSkill, type QualityPick } from "./character";
 import type { AttrKey, MagicType, MetatypeId, PriorityColumn, PriorityLevel } from "./data";
-import { editExt } from "./ext";
+import { editExt, newVehicle } from "./ext";
 
 type CoreGear = { id: string; gear: Omit<GearItem, "id"> };
 const CORE = core as unknown as CoreGear[];
@@ -28,10 +28,12 @@ function item(id: string, opts: { qty?: number; rating?: number; name?: string }
 const est = (name: string, category: GearItem["category"], cost: number, extra: Partial<GearItem> = {}): Omit<GearItem, "id"> =>
   ({ name, category, cost, qty: 1, notes: "Not in the gear list yet; check the price in the book.", ...extra });
 
-export type ArchetypeId = "samurai" | "decker" | "mage" | "shaman" | "face" | "technomancer" | "rigger" | "adept";
+export type ArchetypeId = "samurai" | "decker" | "mage" | "shaman" | "face" | "technomancer" | "rigger" | "adept" | "samurai-elf";
 
 export interface Build {
   id: ArchetypeId;
+  /** Only used by premades; not offered as a template. */
+  hidden?: boolean;
   archetype: string;
   /** One line on how the build plays. */
   role: string;
@@ -68,6 +70,11 @@ export interface Premade {
   deck?: number;
   link?: number;
   rcc?: number;
+  /** Swap metatype for builds that work for several (no racial adjustments). */
+  metatype?: MetatypeId;
+  /** Picture in /public/portraits. */
+  portrait?: string;
+  vehicles?: { name: string; kind: "drone" | "vehicle"; note: string }[];
 }
 
 export const BUILDS: Build[] = [
@@ -82,6 +89,17 @@ export const BUILDS: Build[] = [
     specs: { firearms: "Rifles" },
     knowledge: ["Seattle street gangs", "Military small arms"],
     karmaToNuyen: 10,
+  },
+  {
+    id: "samurai-elf", hidden: true, archetype: "Street Samurai", role: "Precise, fast, and patient behind a scope.",
+    metatype: "elf", magicType: "mundane",
+    priorities: { attributes: "A", skills: "B", resources: "C", metatype: "D", magic: "E" },
+    attr: { body: 4, agility: 5, reaction: 4, strength: 3, willpower: 2, logic: 1, intuition: 4, charisma: 1 },
+    attrKar: { strength: 1, willpower: 1 },
+    adjRacial: { agility: 1 }, adjEdge: 3,
+    skills: { firearms: 6, "close-combat": 4, athletics: 4, perception: 4, stealth: 4, piloting: 2 },
+    specs: { firearms: "Rifles" },
+    knowledge: ["Military small arms", "Seattle rooftops"],
   },
   {
     id: "decker", archetype: "Decker", role: "Breaks hosts, spikes ICE, and keeps the Overwatch Score low.",
@@ -172,7 +190,7 @@ export const BUILDS: Build[] = [
 
 export const PREMADES: Premade[] = [
   {
-    build: "samurai", name: "Dmitri Kask", alias: "Brick",
+    build: "samurai", name: "Dmitri Kask", alias: "Brick", portrait: "brick",
     concept: "Ex-Lone Star tactical officer who sells the only thing the Star taught him.",
     background: "Grew up in Redmond, joined Lone Star for the steady pay and left after a raid that went wrong in all the ways the report did not mention. Bone lacing from a street clinic, a rifle he trusts more than people, and a reputation for finishing the job.",
     gear: [
@@ -200,9 +218,9 @@ export const PREMADES: Premade[] = [
     contacts: [{ name: "Null Pointer", role: "Data haven broker", connection: 4, loyalty: 2 }, { name: "Mr. Shiro", role: "Fixer", connection: 3, loyalty: 1 }],
   },
   {
-    build: "mage", name: "Ilsabet Rhein", alias: "Ashfall",
+    build: "mage", name: "Ilias Rhein", alias: "Ashfall", portrait: "ashfall",
     concept: "Dropped out of the Arcane Institute when the shadows paid better than tenure.",
-    background: "A scholarship student who made the faculty nervous. She learned that a Stunball is a better argument than a thesis, and that the only people who pay for that kind of knowledge do not sign their names.",
+    background: "A scholarship student who made the faculty nervous. He learned that a Stunball is a better argument than a thesis, and that the only people who pay for that kind of knowledge do not sign their names.",
     gear: [
       item("weapons-fichetti-security-600"), item("ammo-light-pistol-rounds", { qty: 2 }),
       item("magic-magical-lodge-material", { qty: 2 }), item("magic-reagent", { qty: 20, name: "Reagents (drams)" }),
@@ -213,7 +231,7 @@ export const PREMADES: Premade[] = [
     contacts: [{ name: "Professor Hask", role: "Talismonger", connection: 3, loyalty: 3 }, { name: "Juno", role: "Fixer", connection: 3, loyalty: 1 }],
   },
   {
-    build: "shaman", name: "Rowan Avery", alias: "Moss",
+    build: "shaman", name: "Rowan Avery", alias: "Moss", metatype: "elf", portrait: "moss",
     concept: "Raised in the Barrens by a street doc; listens to the spirits of broken places.",
     background: "Moss never had a SIN. What she had was a voice in the rubble that answered when she asked. She patches up whoever needs it and calls the spirits when patching up is not enough.",
     gear: [
@@ -249,6 +267,104 @@ export const PREMADES: Premade[] = [
     lifestyle: "low", months: 4,
     contacts: [{ name: "Patch", role: "Hardware fence", connection: 2, loyalty: 3 }, { name: "Echo", role: "Otaku mentor", connection: 3, loyalty: 4 }],
   },
+  {
+    build: "samurai", name: "Vesna Orlova", alias: "Vex", portrait: "vex",
+    concept: "Ganger turned gun-for-hire who still settles every argument up close.",
+    background: "Vex ran with the Ancients until the gang ran out of uses for her. She kept the shotgun, the bone lacing and the habit of walking into rooms first. Loyal to whoever pays on time, and to nobody who doesn't.",
+    gear: [
+      item("weapons-mossberg-cmdt"), item("ammo-shotgun-rounds", { qty: 10 }), item("weapons-ares-predator-vi"), item("ammo-heavy-pistol-rounds", { qty: 4 }), item("weapons-combat-knife"),
+      item("augmentations-bone-lacing-aluminum"), item("augmentations-bone-density-augmentation-rating-2"),
+      est("Armor vest", "armor", 500, { armor: 3, worn: true }),
+      item("identity-fake-sin", { rating: 4, name: "Fake SIN" }), item("identity-fake-license", { rating: 4, name: "Firearms license" }),
+      item("identity-docwagon-platinum-contract-1-year"),
+    ],
+    lifestyle: "middle", months: 15, link: 1,
+    contacts: [{ name: "Grease", role: "Ancients lieutenant", connection: 3, loyalty: 2 }, { name: "Mama Iva", role: "Fence", connection: 2, loyalty: 3 }],
+  },
+  {
+    build: "samurai-elf", name: "Liane Varga", alias: "Nightshade", portrait: "nightshade",
+    concept: "Ex-Tir Ghost washout with a cybereye and a long rifle; never misses twice.",
+    background: "Nightshade washed out of Tir special forces for asking the wrong officer the wrong question. She took the training, the tattoos and a grudge to Seattle, where people pay well for someone who can wait on a rooftop for six hours.",
+    gear: [
+      item("weapons-ruger-101"), item("ammo-rifle-rounds", { qty: 10 }), item("weapons-ares-predator-vi"), item("ammo-heavy-pistol-rounds", { qty: 4 }),
+      item("augmentations-bone-lacing-plastic"),
+      est("Armor jacket", "armor", 1000, { armor: 4, worn: true }),
+      item("identity-fake-sin", { rating: 4, name: "Fake SIN" }), item("identity-fake-license", { rating: 4, name: "Firearms license" }),
+      item("identity-docwagon-platinum-contract-1-year"), item("tools-grapple-gun"),
+    ],
+    lifestyle: "middle", months: 13, link: 2,
+    contacts: [{ name: "Corran", role: "Tir smuggler", connection: 3, loyalty: 2 }, { name: "Mr. Shiro", role: "Fixer", connection: 3, loyalty: 1 }],
+  },
+  {
+    build: "samurai-elf", name: "Kai Morrow", alias: "Rook", portrait: "rook",
+    concept: "Salish-Shidhe border runner who traded the forest for neon and never looked back.",
+    background: "Rook grew up running contraband over the Salish border and learned to shoot before he learned to drive. The tribal ink is real, the smile is not. He works with a rifle, a katana and the quiet certainty that he is the fastest person in any room.",
+    gear: [
+      item("weapons-ares-alpha"), item("ammo-rifle-rounds", { qty: 10 }), item("weapons-katana"), item("weapons-colt-government-2076"), item("ammo-heavy-pistol-rounds", { qty: 4 }),
+      item("augmentations-bone-lacing-aluminum"), item("augmentations-bone-density-augmentation-rating-4"),
+      est("Armor jacket", "armor", 1000, { armor: 4, worn: true }),
+      item("identity-fake-sin", { rating: 4, name: "Fake SIN" }), item("identity-fake-license", { rating: 4, name: "Firearms license" }),
+      item("identity-docwagon-gold-contract-1-year"), item("tools-tool-kit"), item("tools-grapple-gun"),
+    ],
+    lifestyle: "middle", months: 13, link: 2,
+    contacts: [{ name: "Aunt Winona", role: "Salish-Shidhe trader", connection: 3, loyalty: 4 }, { name: "Juno", role: "Fixer", connection: 3, loyalty: 1 }],
+  },
+  {
+    build: "mage", name: "Dorian Vey", alias: "Cinder", portrait: "cinder",
+    concept: "Street mage who burns bright, burns fast, and leaves the coat on.",
+    background: "Cinder learned magic from a dog-eared grimoire and a lot of mistakes. Fire answers him easily, which he thinks is a gift and his friends think is a warning. He charges extra for jobs where things need to stop existing.",
+    gear: [
+      item("weapons-ruger-super-warhawk"), item("ammo-heavy-pistol-rounds", { qty: 2 }),
+      est("Lined coat", "armor", 900, { armor: 3, worn: true }),
+      item("magic-reagent", { qty: 30, name: "Reagents (drams)" }), item("magic-magical-lodge-material"),
+      item("identity-fake-sin", { rating: 2, name: "Fake SIN" }), item("identity-docwagon-basic-contract-1-year"),
+    ],
+    lifestyle: "low", months: 6, link: 1,
+    contacts: [{ name: "Old Saul", role: "Talismonger", connection: 2, loyalty: 3 }, { name: "Mr. Shiro", role: "Fixer", connection: 3, loyalty: 1 }],
+  },
+  {
+    build: "shaman", name: "Teren Ashwood", alias: "Thorn", metatype: "elf", portrait: "thorn",
+    concept: "Follows the old forest spirits into the concrete, where they are angriest.",
+    background: "Thorn left the Salish woods because the spirits told him the city was sick. He wears his tradition on his skin, carries his fetishes on his jacket, and the spirit that walks beside him does not like anyone else very much.",
+    gear: [
+      item("weapons-knife"), item("weapons-yamaha-pulsar-i"),
+      item("magic-reagent", { qty: 20, name: "Reagents (drams)" }), item("magic-magical-lodge-material"),
+      item("identity-fake-sin", { rating: 1, name: "Fake SIN" }),
+    ],
+    lifestyle: "squatter", months: 3, link: 0,
+    contacts: [{ name: "Grandmother Cedar", role: "Tribal elder", connection: 3, loyalty: 4 }, { name: "Kettle", role: "Squatter gang boss", connection: 2, loyalty: 2 }],
+  },
+  {
+    build: "shaman", name: "Marcus Bell", alias: "Spark", portrait: "spark",
+    concept: "Nineteen, awakened last winter, and nobody has told him to be careful yet.",
+    background: "Spark woke up in a Redmond alley with blue fire in his hands and no idea why. A spirit has been teaching him since, in its own way. He is cocky, broke, and much more dangerous than he looks.",
+    gear: [
+      item("weapons-streetline-special"), item("ammo-holdout-rounds", { qty: 2 }), item("weapons-knife"),
+      item("magic-reagent", { qty: 10, name: "Reagents (drams)" }),
+      item("identity-fake-sin", { rating: 1, name: "Fake SIN" }), item("identity-docwagon-basic-contract-1-month"), item("identity-credstick-standard"),
+    ],
+    lifestyle: "squatter", months: 4, link: 0,
+    contacts: [{ name: "Dex", role: "Gutter punk", connection: 1, loyalty: 4 }, { name: "Doc Ferro", role: "Barrens street doc", connection: 2, loyalty: 2 }],
+  },
+  {
+    build: "rigger", name: "Bjorn Halvard", alias: "Gearbox", portrait: "gearbox",
+    concept: "Grizzled dwarf wheelman who talks to engines more kindly than to people.",
+    background: "Gearbox drove for the Mafia, then for the Yakuza, then for whoever paid in cash. He has a van that has outrun three Lone Star pursuits and a drone named after his ex-wife. Smokes when nervous, which is always.",
+    gear: [
+      item("weapons-remington-roomsweeper"), item("ammo-shotgun-rounds", { qty: 4 }),
+      est("Armor jacket", "armor", 1000, { armor: 4, worn: true }),
+      item("tools-tool-shop", { name: "Automotive tool shop" }), item("tools-tool-kit"),
+      item("electronics-sensor-array", { rating: 4, name: "Sensor array" }), item("electronics-rfid-tags-sensor", { qty: 2 }),
+      item("identity-fake-sin", { rating: 4, name: "Fake SIN" }), item("identity-fake-license", { rating: 4, name: "Driver's license" }),
+      item("identity-docwagon-gold-contract-1-year"),
+    ],
+    lifestyle: "middle", months: 4, link: 2, rcc: 1,
+    vehicles: [
+      { name: "Getaway van", kind: "vehicle", note: "Not in the gear list yet: enter stats and price from the book." },
+      { name: "Spotter drone \"Helga\"", kind: "drone", note: "Not in the gear list yet: enter stats and price from the book." },
+    ],
+    contacts: [{ name: "Sal Bertucci", role: "Mafia capo", connection: 4, loyalty: 1 }, { name: "Patch", role: "Hardware fence", connection: 2, loyalty: 3 }],
+  },
 ];
 
 /** Character from a build: the numbers only, ready for the Forge. */
@@ -279,6 +395,7 @@ export function fromBuild(b: Build): Character {
 export function fromPremade(p: Premade): Character {
   const b = BUILDS.find((x) => x.id === p.build)!;
   const c = fromBuild(b);
+  if (p.metatype) c.metatype = p.metatype;
   c.name = p.name;
   c.alias = p.alias;
   c.concept = p.concept;
@@ -291,8 +408,13 @@ export function fromPremade(p: Premade): Character {
     if (p.deck != null) { const d = CYBERDECKS[p.deck]; ex.matrix.deck = { name: d.name, rating: d.rating, a: d.a, s: d.s, slots: d.slots }; }
     if (p.link != null) { const l = COMMLINKS[p.link]; ex.matrix.link = { kind: "commlink", name: l.name, rating: l.rating, d: l.d, f: l.f, slots: l.slots, dice: 0 }; }
     if (p.rcc != null) ex.rcc = { ...RCCS[p.rcc] };
+    for (const v of p.vehicles ?? []) ex.vehicles.push({ ...newVehicle(v.kind), name: v.name, note: v.note });
   });
   if (p.deck != null) c.gear.push({ id: uid("g"), name: CYBERDECKS[p.deck].name, category: "commlink", cost: 0, qty: 1, notes: "Not priced in the gear list yet." });
+  if (p.rcc != null) c.gear.push({ id: uid("g"), name: RCCS[p.rcc].name, category: "commlink", cost: 0, qty: 1, notes: "Not priced in the gear list yet." });
   if (p.link != null) c.gear.push({ id: uid("g"), name: COMMLINKS[p.link].name, category: "commlink", cost: 0, qty: 1, notes: "Not priced in the gear list yet." });
   return c;
 }
+
+export const TEMPLATES = BUILDS.filter((b) => !b.hidden);
+export const portraitUrl = (p: Premade) => (p.portrait ? `/portraits/${p.portrait}.jpg` : undefined);
