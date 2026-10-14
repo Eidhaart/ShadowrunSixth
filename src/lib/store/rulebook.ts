@@ -3,44 +3,9 @@ import { create } from "zustand";
 import MiniSearch from "minisearch";
 import type { Rulebook, RuleCategory, RuleSection } from "@/lib/rules/types";
 
-const DB = "sixthdeck";
-const STORE = "kv";
-const KEY = "rulebook";
+import { idbDel, idbGet, idbSet } from "@/lib/idb";
 
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-async function idbGet<T>(key: string): Promise<T | undefined> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const r = db.transaction(STORE).objectStore(STORE).get(key);
-    r.onsuccess = () => resolve(r.result as T | undefined);
-    r.onerror = () => reject(r.error);
-  });
-}
-async function idbSet(key: string, val: unknown): Promise<void> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).put(val, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-async function idbDel(key: string): Promise<void> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).delete(key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
+const KEY = "rulebook";
 
 function buildIndex(book: Rulebook): MiniSearch<RuleSection> {
   const ms = new MiniSearch<RuleSection>({

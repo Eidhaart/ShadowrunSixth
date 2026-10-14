@@ -10,11 +10,13 @@ import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { apply, emptyTable, opsForPlayer, permitted, touchesHiddenTokens, viewFor } from "./vtt.mjs";
 
 const PORT = Number(process.env.PORT || 8787);
 const HISTORY = Number(process.env.HISTORY || 200);
 const FILE = process.env.CHAT_FILE || "data/chat-history.json";
 const MAX_LEN = 4000;
+const VTT_FILE = process.env.VTT_FILE || "data/vtt.json";
 
 /** @type {Map<string, {clients:Set<any>, log:any[]}>} */
 const rooms = new Map();
@@ -22,6 +24,21 @@ try {
   const saved = JSON.parse(readFileSync(FILE, "utf8"));
   for (const [name, log] of Object.entries(saved)) rooms.set(name, { clients: new Set(), log });
 } catch { /* first run */ }
+
+/** Table state per room, separate from the chat log because it can hold map images. */
+const tables = new Map();
+try {
+  for (const [name, t] of Object.entries(JSON.parse(readFileSync(VTT_FILE, "utf8")))) tables.set(name, t);
+} catch { /* first run */ }
+let vttDirty = false;
+setInterval(() => {
+  if (!vttDirty) return;
+  vttDirty = false;
+  try {
+    mkdirSync(dirname(VTT_FILE), { recursive: true });
+    writeFileSync(VTT_FILE, JSON.stringify(Object.fromEntries(tables)));
+  } catch (e) { console.error("vtt persist failed", e.message); }
+}, 5000).unref();
 
 let dirty = false;
 setInterval(() => {
@@ -49,7 +66,50 @@ const sys = (r, text) => {
 const clean = (s, n) => String(s ?? "").slice(0, n);
 
 const http = createServer((_req, res) => { res.writeHead(200, { "content-type": "text/plain" }); res.end("sixthdeck relay ok\n"); });
-const wss = new WebSocketServer({ server: http, maxPayload: 64 * 1024 });
+const wss = new WebSocketServer({ server: http, maxPayload: 16 * 1024 * 1024 });
+
+const snapshot = (name, c) => {
+  const t = tables.get(name);
+  send(c, { type: "vtt_snap", state: t ? viewFor(t, c) : null });
+};
+
+function handleVtt(name, r, ws, m) {
+  if (m.type === "vtt_req") { snapshot(name, ws); return; }
+  if (m.type === "vtt_restore") {
+    if (ws.role !== "gm" || !m.state || typeof m.state !== "object") return;
+    tables.set(name, m.state);
+    vttDirty = true;
+    for (const c of r.clients) snapshot(name, c);
+    return;
+  }
+  if (m.type === "vtt_fx") {
+    if (!m.fx || typeof m.fx !== "object") return;
+    if (m.fx.focus && ws.role !== "gm") delete m.fx.focus;
+    for (const c of r.clients) if (c !== ws) send(c, { type: "vtt_fx", fx: m.fx, from: ws.handle });
+    return;
+  }
+  if (m.type !== "vtt_op" || !Array.isArray(m.ops) || !m.ops.length || m.ops.length > 400) return;
+  if (!tables.has(name)) tables.set(name, emptyTable());
+  const t = tables.get(name);
+  if (!m.ops.every((op) => permitted(t, op, ws.handle, ws.role === "gm"))) {
+    send(ws, { type: "vtt_err", text: "The table refused that change.", id: m.id });
+    snapshot(name, ws);
+    return;
+  }
+  const before = structuredClone(t);
+  for (const op of m.ops) apply(t, op);
+  t.stamp = Date.now();
+  vttDirty = true;
+  const hiddenMove = touchesHiddenTokens(before, t, m.ops);
+  for (const c of r.clients) {
+    if (c === ws) continue;
+    if (c.role === "gm") { send(c, { type: "vtt_op", ops: m.ops, from: ws.handle, id: m.id }); continue; }
+    const ops = opsForPlayer(before, t, m.ops, c);
+    if (ops === null) { snapshot(name, c); continue; }
+    if (hiddenMove) ops.push({ k: "set", p: ["turn"], v: viewFor(t, { role: "player" }).turn });
+    if (ops.length) send(c, { type: "vtt_op", ops, from: ws.handle, id: m.id });
+  }
+}
 http.listen(PORT, () => console.log(`SixthDeck chat relay listening on :${PORT}`));
 wss.on("connection", (ws) => {
   let joined = null;
@@ -70,10 +130,13 @@ wss.on("connection", (ws) => {
       clearTimeout(timer);
       joined.clients.add(ws);
       send(ws, { type: "history", messages: joined.log });
+      ws.roomName = name;
+      snapshot(name, ws);
       sys(joined, `${ws.handle} jacked in${ws.source === "foundry" ? " from Foundry" : ""}`);
       presence(joined);
       return;
     }
+    if (typeof m?.type === "string" && m.type.startsWith("vtt_")) { handleVtt(ws.roomName, joined, ws, m); return; }
     if (!["chat", "roll", "init", "call", "decline", "withdraw"].includes(m?.type) || typeof m.id !== "string") return;
     if ((m.type === "call" || m.type === "withdraw") && ws.role !== "gm") return;
     if (m.type === "chat") { m.text = clean(m.text, MAX_LEN); m.as = m.as ? clean(m.as, 40) : undefined; }

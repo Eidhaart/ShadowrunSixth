@@ -32,6 +32,7 @@ const P: Record<string, string> = {
   grip: "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01",
   up: "M12 19V5M6 11l6-6 6 6",
   undo: "M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3",
+  map: "M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14",
   wifi: "M2 9a15 15 0 0120 0M5.5 12.5a10 10 0 0113 0M9 16a5 5 0 016 0M12 19.5h.01",
 };
 

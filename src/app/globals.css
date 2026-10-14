@@ -931,3 +931,49 @@ h1 { color: var(--title, var(--fg)); background-image: var(--title-paint, none);
   background-image: repeating-linear-gradient(90deg, var(--accent) 0 3px, transparent 3px 5px, var(--accent) 5px 6px, transparent 6px 9px, var(--accent) 9px 13px, transparent 13px 14px, var(--accent) 14px 15px, transparent 15px 19px),
     linear-gradient(90deg, color-mix(in oklab, var(--head-tint, transparent) 14%, transparent), transparent 72%);
   background-size: 76px 9px, 100% 100%; background-repeat: no-repeat; background-position: right 12px center, 0 0; padding-right: 100px; }
+
+/* ───────────────────────── Table (VTT) ───────────────────────── */
+.vtt-stage svg { display: block; }
+.vtt-gm { opacity: .55; }
+.vtt-gm image, .vtt-gm circle { filter: saturate(.6); }
+.vtt-turn { fill: none; stroke: var(--accent); stroke-width: 4; animation: vtt-turn 1.6s ease-in-out infinite; }
+@keyframes vtt-turn { 50% { stroke-opacity: .35; } }
+.vtt-ping { transform-box: fill-box; transform-origin: center; animation: vtt-ping 1.2s ease-out 2 both; }
+@keyframes vtt-ping { from { transform: scale(.4); opacity: 1; } to { transform: scale(5); opacity: 0; } }
+.vtt-toolbar, .vtt-hud, .vtt-flyout, .vtt-join {
+  background: color-mix(in oklab, var(--panel) 94%, transparent);
+  border: 1px solid var(--line-hi);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  backdrop-filter: blur(8px);
+}
+.vtt-tool {
+  display: grid; place-items: center; gap: .25rem; grid-auto-flow: column;
+  width: 2.25rem; height: 2.25rem; color: var(--fg-dim); border: 1px solid transparent; transition: color .12s, background .12s;
+}
+.vtt-tool:hover { color: var(--fg); background: var(--panel-hi); }
+.vtt-tool.on { color: var(--accent-ink); background: var(--accent); }
+.vtt-mini { width: 1.35rem; height: 1.35rem; display: grid; place-items: center; font-size: .8rem; line-height: 1; border: 1px solid var(--line); color: var(--fg-dim); }
+.vtt-mini:hover:not(:disabled) { color: var(--fg); border-color: var(--line-hi); }
+.vtt-mini:disabled { opacity: .35; }
+.vtt-num { width: 2.6rem; padding: .1rem .25rem; background: var(--bg-2); border: 1px solid var(--line); font-family: var(--font-mono); font-size: .8rem; text-align: center; color: var(--fg); -moz-appearance: textfield; }
+.vtt-num::-webkit-inner-spin-button, .vtt-num::-webkit-outer-spin-button { -webkit-appearance: none; }
+.vtt-select { background: var(--bg-2); border: 1px solid var(--line); color: var(--fg); font-size: .75rem; padding: .3rem .35rem; }
+.vtt-scenebar { scrollbar-width: thin; }
+.vtt-scene-chip { position: relative; padding: .3rem .75rem; font-size: .8rem; border: 1px solid var(--line); color: var(--fg-dim); font-family: var(--font-ui); }
+.vtt-scene-chip:hover { color: var(--fg); border-color: var(--line-hi); }
+.vtt-scene-chip.on { color: var(--fg); border-color: var(--accent); background: color-mix(in oklab, var(--accent) 12%, transparent); }
+.vtt-ribbon { position: absolute; left: -1px; top: -1px; width: 0; height: 0; border-top: 9px solid var(--accent); border-right: 9px solid transparent; }
+.vtt-conn { font-family: var(--font-mono); font-size: .7rem; color: var(--fg-faint); padding-left: .9rem; position: relative; }
+.vtt-conn::before { content: ""; position: absolute; left: 0; top: 50%; width: .45rem; height: .45rem; margin-top: -.22rem; border-radius: 50%; background: var(--fg-faint); }
+.vtt-conn.on::before { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.vtt-tab { color: var(--fg-dim); border-bottom: 2px solid transparent; }
+.vtt-tab:hover { color: var(--fg); }
+.vtt-tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+.vtt-turn-panel { background: color-mix(in oklab, var(--panel) 95%, transparent); backdrop-filter: blur(8px); box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+.vtt-turn-row.is-current { background: color-mix(in oklab, var(--accent) 14%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
+.vtt-pip { width: .6rem; height: .6rem; border: 1px solid var(--cyan); transform: rotate(45deg); margin: 0 .1rem; }
+.vtt-pip.on { background: var(--cyan); }
+.vtt-drag:active { cursor: grabbing; }
+.vtt-drag:hover { border-color: var(--line-hi); }
+@media (prefers-reduced-motion: reduce) { .vtt-turn, .vtt-ping { animation: none; } }
+@media (max-width: 767px) { .vtt-turn-panel { width: min(18rem, calc(100vw - 4.5rem)); max-height: 45dvh; } }

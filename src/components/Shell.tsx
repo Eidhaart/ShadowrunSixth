@@ -25,13 +25,14 @@ const NAV = [
   { href: "/forge", label: "Forge", icon: "forge" },
   { href: "/learn", label: "Academy", icon: "learn" },
   { href: "/runners", label: "Runners", icon: "runners" },
+  { href: "/table", label: "Table", icon: "map" },
   { href: "/comms", label: "Comms", icon: "comms" },
   { href: "/link", label: "Foundry", icon: "link" },
   { href: "/settings", label: "Settings", icon: "settings" },
 ] as const;
 
 /** The phone tab bar shows these; everything else lives under More. */
-const MOBILE_PRIMARY: string[] = ["/", "/dice", "/forge", "/runners", "/comms"];
+const MOBILE_PRIMARY: string[] = ["/", "/dice", "/table", "/runners", "/comms"];
 
 function hexInk(hex: string): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex);
@@ -145,7 +146,7 @@ function DiceTray() {
   const pathname = usePathname();
   if (pathname === "/dice") return null;
   return (
-    <div className={clsx("no-print fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-3 z-40 flex flex-col items-end gap-2 md:bottom-5 md:right-5", (pathname.startsWith("/forge") || pathname.startsWith("/comms")) && "max-md:hidden")}>
+    <div className={clsx("no-print fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-3 z-40 flex flex-col items-end gap-2 md:bottom-5 md:right-5", (pathname.startsWith("/forge") || pathname.startsWith("/comms") || pathname.startsWith("/table")) && "max-md:hidden", pathname.startsWith("/table") && "!items-start max-md:left-3 max-md:right-auto md:!bottom-3 md:left-[calc(78px+0.75rem)] md:right-auto")}>
       {open && last && (
         <div className="panel w-[min(94vw,460px)] p-4 shadow-2xl">
           <div className="mb-2 flex items-center justify-between">
