@@ -21,6 +21,8 @@ interface CommsState {
   /** Send a non-chat message (the table). Returns false when nothing is connected. */
   sendRaw: (m: RawMsg) => boolean;
   markRead: () => void;
+  /** Remove one of my chat lines (the GM may remove any). */
+  unsay: (msgId: string) => void;
 }
 
 let ws: WebSocket | null = null;
@@ -48,6 +50,8 @@ export const useComms = create<CommsState>((set, get) => {
     }));
   };
 
+  const drop = (msgId: string) => set((s) => ({ messages: s.messages.filter((x) => x.id !== msgId) }));
+
   const closeAll = () => {
     wanted = false;
     if (retryTimer) clearTimeout(retryTimer);
@@ -59,7 +63,7 @@ export const useComms = create<CommsState>((set, get) => {
   const openLocal = (room: string) => {
     if (typeof BroadcastChannel === "undefined") { set({ status: "off" }); return; }
     bc = new BroadcastChannel(`sixthdeck:${room}`);
-    bc.onmessage = (e) => { if (isVtt(e.data)) vttHandler?.(e.data); else ingest(e.data as WireMsg); };
+    bc.onmessage = (e) => { if (isVtt(e.data)) vttHandler?.(e.data); else if (e.data?.type === "unsay") drop(e.data.msgId); else ingest(e.data as WireMsg); };
     set({ status: "local", users: [{ handle: get().handle || "you", source: "this device" }] });
   };
 
@@ -80,6 +84,7 @@ export const useComms = create<CommsState>((set, get) => {
       if (isVtt(m as unknown)) { vttHandler?.(m as unknown as RawMsg); return; }
       if (m.type === "history") m.messages.forEach((x) => ingest(x, true, false));
       else if (m.type === "presence") set({ users: m.users });
+      else if (m.type === "unsay") drop(m.msgId);
       else ingest(m);
     };
     sock.onclose = () => {
@@ -120,6 +125,12 @@ export const useComms = create<CommsState>((set, get) => {
       else if (bc) bc.postMessage(m);
     },
     markRead: () => set({ unread: 0 }),
+    unsay: (msgId) => {
+      drop(msgId);
+      const m = { type: "unsay", msgId };
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(m));
+      else if (bc) bc.postMessage(m);
+    },
     sendRaw: (m) => {
       if (ws && ws.readyState === WebSocket.OPEN) { ws.send(JSON.stringify(m)); return true; }
       if (bc) { bc.postMessage(m); return true; }

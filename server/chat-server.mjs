@@ -137,6 +137,16 @@ wss.on("connection", (ws) => {
       return;
     }
     if (typeof m?.type === "string" && m.type.startsWith("vtt_")) { handleVtt(ws.roomName, joined, ws, m); return; }
+    // authors remove their own chat lines; the GM may remove any. Rolls stay on the record.
+    if (m?.type === "unsay" && typeof m.msgId === "string") {
+      const i = joined.log.findIndex((x) => x.id === m.msgId);
+      const target = joined.log[i];
+      if (!target || target.type !== "chat" || (target.from !== ws.handle && ws.role !== "gm")) return;
+      joined.log.splice(i, 1);
+      dirty = true;
+      for (const c of joined.clients) send(c, { type: "unsay", msgId: m.msgId });
+      return;
+    }
     if (!["chat", "roll", "init", "call", "decline", "withdraw"].includes(m?.type) || typeof m.id !== "string") return;
     if ((m.type === "call" || m.type === "withdraw") && ws.role !== "gm") return;
     if (m.type === "chat") { m.text = clean(m.text, MAX_LEN); m.as = m.as ? clean(m.as, 40) : undefined; }

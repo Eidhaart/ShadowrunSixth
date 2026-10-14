@@ -977,3 +977,7 @@ h1 { color: var(--title, var(--fg)); background-image: var(--title-paint, none);
 .vtt-drag:hover { border-color: var(--line-hi); }
 @media (prefers-reduced-motion: reduce) { .vtt-turn, .vtt-ping { animation: none; } }
 @media (max-width: 767px) { .vtt-turn-panel { width: min(18rem, calc(100vw - 4.5rem)); max-height: 45dvh; } }
+.msg-del { order: -1; align-self: center; width: 1.5rem; height: 1.5rem; display: grid; place-items: center; color: var(--fg-faint); opacity: 0; transition: opacity .12s, color .12s; }
+.group:hover .msg-del, .msg-del:focus-visible { opacity: 1; }
+.msg-del:hover { color: var(--danger); }
+@media (hover: none) { .msg-del { opacity: .6; } }

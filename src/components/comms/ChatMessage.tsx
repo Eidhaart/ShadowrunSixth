@@ -23,6 +23,11 @@ function Who({ m, mine }: { m: Extract<WireMsg, { type: "chat" | "roll" | "init"
 
 export function ChatMessage({ m, mine, hasCall }: { m: WireMsg; mine: boolean; hasCall: (id: string) => boolean }) {
   const fresh = useComms((s) => (m.id in s.fresh));
+  const gm = useComms((s) => s.role === "gm");
+  const unsay = useComms((s) => s.unsay);
+  const del = m.type === "chat" && (mine || gm) ? (
+    <button className="msg-del" onClick={() => unsay(m.id)} title="Delete message" aria-label="Delete message">×</button>
+  ) : null;
   if (m.type === "system")
     return <div className="py-1 text-center font-mono text-xs text-dim">— {m.text} · {time(m.at)} —</div>;
   if (m.type === "withdraw" || m.type === "decline") return null;
@@ -33,15 +38,16 @@ export function ChatMessage({ m, mine, hasCall }: { m: WireMsg; mine: boolean; h
   if (m.type === "chat") {
     if (m.ooc)
       return (
-        <div className={clsx("msg-in flex", mine && "justify-end")}>
+        <div className={clsx("msg-in group flex items-start gap-1", mine && "justify-end")}>
           <p className="max-w-[85%] break-words rounded-sm border border-dashed border-line px-3 py-1.5 text-sm text-dim">
             <span className="mr-2 font-mono text-xs text-faint">ooc</span><b className="mr-2 font-semibold">{m.from}</b>{m.text}
           </p>
+          {del}
         </div>
       );
     const narrator = m.gm && m.as;
     return (
-      <div className={clsx("msg-in flex", mine && !narrator && "justify-end", narrator && "justify-center")}>
+      <div className={clsx("msg-in group flex items-start gap-1", mine && !narrator && "justify-end", narrator && "justify-center")}>
         <div
           className={clsx(
             "panel max-w-[92%] px-3 py-2 md:max-w-[75%]",
@@ -52,6 +58,7 @@ export function ChatMessage({ m, mine, hasCall }: { m: WireMsg; mine: boolean; h
           <Who m={m} mine={mine} />
           <p className={clsx("whitespace-pre-wrap break-words", narrator && "italic")}>{m.text}</p>
         </div>
+        {del}
       </div>
     );
   }

@@ -60,6 +60,7 @@ export type WireMsg =
 
 export type ServerMsg =
   | { type: "history"; messages: WireMsg[] }
+  | { type: "unsay"; msgId: string }
   | { type: "presence"; users: { handle: string; source: string; role?: "gm" | "player" }[] }
   | WireMsg;
 
