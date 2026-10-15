@@ -16,6 +16,7 @@ import { TurnOrder } from "./TurnOrder";
 import { Dialogs } from "./Dialogs";
 import { DRAW_COLORS, useTableUi, type Tool } from "./ui";
 import { assetOps } from "./act";
+import { CombatFeed } from "./Combat";
 
 const TOOLS: { id: Tool; icon: string; label: string; key: string; gm?: boolean }[] = [
   { id: "select", icon: "M5 3l14 8-6 2-3 6z", label: "Select and move", key: "V" },
@@ -226,6 +227,12 @@ export function Table() {
           {state && scene && <Toolbar />}
           {state && ui.turnOpen && (
             <div className="absolute right-2 top-2 z-10 max-sm:left-14 max-sm:right-auto"><TurnOrder /></div>
+          )}
+          {state && scene && <CombatFeed />}
+          {ui.targeting && (
+            <div role="status" className="vtt-join absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 px-3 py-2 text-sm">
+              Click the target. <button className="btn small ghost" onClick={() => ui.set({ targeting: null })}>Cancel</button>
+            </div>
           )}
           {status === "off" && loaded && <JoinCard />}
           {newerLocal && me.gm && (

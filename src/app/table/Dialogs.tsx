@@ -5,13 +5,14 @@ import { Icon } from "@/components/Icon";
 import { Sheet } from "@/app/runners/[id]/Sheet";
 import { useComms } from "@/lib/store/comms";
 import { useRunners } from "@/lib/store/characters";
-import { BAR_META, type BarKey, type Npc, type Scene, type TableState, type Token } from "@/lib/vtt/types";
+import { BAR_META, type BarKey, type Npc, type Weapon, type Scene, type TableState, type Token } from "@/lib/vtt/types";
 import { useVtt } from "@/lib/vtt/store";
 import { loadImage } from "@/lib/vtt/images";
 import { blankNpc } from "@/lib/vtt/runner";
 import { vid } from "@/lib/vtt/ops";
 import { useTableUi } from "./ui";
 import { rollInitFor, rollPool } from "./act";
+import { AttackDialog } from "./Combat";
 
 function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   useEffect(() => {
@@ -46,8 +47,29 @@ function NpcEditor({ npc, onChange }: { npc: Npc; onChange: (n: Npc) => void }) 
         <label className="text-xs text-dim">Init dice<input className="field num" type="number" min={1} max={5} value={npc.init.dice} onChange={(e) => set({ init: { ...npc.init, dice: Math.max(1, Math.min(5, Number(e.target.value) || 1)) } })} /></label>
         <label className="text-xs text-dim">Defense rating<input className="field num" type="number" value={npc.dr} onChange={(e) => set({ dr: Number(e.target.value) || 0 })} /></label>
       </div>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="text-xs text-dim">Defense pool (REA + INT)<input className="field num" type="number" value={npc.defend ?? 0} onChange={(e) => set({ defend: Number(e.target.value) || 0 })} /></label>
+        <label className="text-xs text-dim">Soak pool (BOD)<input className="field num" type="number" value={npc.soak ?? 0} onChange={(e) => set({ soak: Number(e.target.value) || 0 })} /></label>
+      </div>
       <div className="space-y-1">
-        <div className="text-xs text-dim">Dice pools</div>
+        <div className="text-xs text-dim">Weapons: name, attack pool, DV, P or S, AR by range (Close/Near/Medium/Far/Extreme, – for none)</div>
+        {(npc.weapons ?? []).map((w, i) => {
+          const upd = (p: Partial<Weapon>) => set({ weapons: (npc.weapons ?? []).map((x, j) => (j === i ? { ...x, ...p } : x)) });
+          return (
+            <div key={i} className="flex flex-wrap gap-1.5">
+              <input className="field min-w-28 flex-1" value={w.name} onChange={(e) => upd({ name: e.target.value })} aria-label="Weapon" />
+              <input className="field num !w-16" type="number" value={w.pool} onChange={(e) => upd({ pool: Number(e.target.value) || 0 })} aria-label="Attack pool" title="Attack pool" />
+              <input className="field num !w-14" type="number" value={w.dv} onChange={(e) => upd({ dv: Number(e.target.value) || 0 })} aria-label="Damage Value" title="DV" />
+              <select className="field !w-16" value={w.type} onChange={(e) => upd({ type: e.target.value as "P" | "S" })} aria-label="Damage type"><option value="P">P</option><option value="S">S</option></select>
+              <input className="field num !w-36" defaultValue={w.ar.map((v) => v ?? "-").join("/")} onBlur={(e) => upd({ ar: [0, 1, 2, 3, 4].map((k) => { const v = Number(e.target.value.split("/")[k]); return Number.isFinite(v) && v > 0 ? v : null; }) })} aria-label="Attack Rating" title="AR, e.g. 10/10/8/-/-" />
+              <button className="btn small ghost" onClick={() => set({ weapons: (npc.weapons ?? []).filter((_, j) => j !== i) })} aria-label="Remove weapon"><Icon name="x" size={14} /></button>
+            </div>
+          );
+        })}
+        <button className="btn small" onClick={() => set({ weapons: [...(npc.weapons ?? []), { name: "Heavy pistol", pool: 8, dv: 3, type: "P", ar: [10, 10, 8, null, null] }] })}><Icon name="plus" size={14} /> Weapon</button>
+      </div>
+      <div className="space-y-1">
+        <div className="text-xs text-dim">Other dice pools</div>
         {npc.pools.map((p, i) => (
           <div key={i} className="flex gap-1.5">
             <input className="field flex-1" value={p.label} onChange={(e) => set({ pools: npc.pools.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} aria-label="Pool name" />
@@ -243,5 +265,6 @@ export function Dialogs() {
   if (dialog.kind === "token") return <TokenDialog key={dialog.id} id={dialog.id} />;
   if (dialog.kind === "card") return <CardDialog id={dialog.id} />;
   if (dialog.kind === "sheet") return <SheetDialog runnerId={dialog.runnerId} />;
+  if (dialog.kind === "attack") return <AttackDialog key={dialog.attackerId} attackerId={dialog.attackerId} targetId={dialog.targetId} />;
   return <HandoutDialog id={dialog.id} />;
 }

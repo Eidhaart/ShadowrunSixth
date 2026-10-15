@@ -2,7 +2,8 @@ import type { Character } from "@/lib/sr6/character";
 import { derive } from "@/lib/sr6/derive";
 import { withAdv } from "@/lib/sr6/advance";
 import { ATTRIBUTES, ATTR_ABBR, METATYPES, SKILL_BY_ID } from "@/lib/sr6/data";
-import type { Bar, BarKey, Card, Npc } from "./types";
+import type { Bar, BarKey, Card, Npc, Weapon } from "./types";
+import { parseDv } from "./combat";
 
 /** Condition monitors and Edge as token bars: current is boxes left. */
 export function barsFor(raw: Character): Record<BarKey, Bar> {
@@ -32,6 +33,26 @@ function pools(c: Character) {
   return out;
 }
 
+/** Weapons with their attack pools, plus an unarmed strike. */
+export function weaponsFor(raw: Character): Weapon[] {
+  const c = withAdv(raw);
+  const d = derive(c);
+  const poolFor = (sk: string) => {
+    const def = SKILL_BY_ID[sk];
+    const e = c.skills[sk];
+    const rank = e ? e.pts + e.kar : 0;
+    const attr = def?.attr === "magic" ? d.magic : def?.attr === "resonance" ? d.resonance : d.attrs[(def?.attr ?? "agility") as keyof typeof d.attrs] ?? 0;
+    return Math.max(0, attr + (rank > 0 ? rank : -1));
+  };
+  const out: Weapon[] = c.gear.filter((g) => g.category === "weapon").map((w) => {
+    const { dv, type } = parseDv(w.dv);
+    return { name: w.name, pool: poolFor(w.skill ?? "firearms"), dv, type, ar: (w.ar ?? [null, null, null, null, null]).map((v) => (v == null ? null : v)) };
+  });
+  // Unarmed: DV is half Strength rounded up, Stun; AR is Reaction + Strength, Close only
+  out.push({ name: "Unarmed strike", pool: poolFor("close-combat"), dv: Math.ceil(d.attrs.strength / 2), type: "S", ar: [d.attrs.reaction + d.attrs.strength, null, null, null, null] });
+  return out;
+}
+
 /** What a runner's owner shares with the table. */
 export function cardFor(raw: Character): Card {
   const c = withAdv(raw);
@@ -42,6 +63,9 @@ export function cardFor(raw: Character): Card {
     init: { base: d.initiative.rank, dice: d.initiative.dice },
     dr: d.defenseRating,
     pools: pools(c),
+    weapons: weaponsFor(c),
+    defend: d.attrs.reaction + d.attrs.intuition,
+    soak: d.attrs.body,
   };
 }
 
@@ -50,7 +74,7 @@ export function npcFor(raw: Character): { npc: Npc; bars: Record<BarKey, Bar> } 
   const c = withAdv(raw);
   const d = derive(c);
   return {
-    npc: { init: { base: d.initiative.rank, dice: d.initiative.dice }, dr: d.defenseRating, pools: pools(c), notes: c.concept || "" },
+    npc: { init: { base: d.initiative.rank, dice: d.initiative.dice }, dr: d.defenseRating, pools: pools(c), notes: c.concept || "", weapons: weaponsFor(c), defend: d.attrs.reaction + d.attrs.intuition, soak: d.attrs.body },
     bars: { b1: { cur: d.condition.physical, max: d.condition.physical }, b2: { cur: d.condition.stun, max: d.condition.stun }, b3: { cur: d.edge, max: d.edge } },
   };
 }
@@ -58,7 +82,14 @@ export function npcFor(raw: Character): { npc: Npc; bars: Record<BarKey, Bar> } 
 /** A plain grunt, before the GM tunes it. */
 export function blankNpc(): { npc: Npc; bars: Record<BarKey, Bar> } {
   return {
-    npc: { init: { base: 8, dice: 1 }, dr: 6, pools: [{ label: "Attack", dice: 8 }, { label: "Defend", dice: 7 }, { label: "Soak", dice: 4 }, { label: "Perception", dice: 6 }], notes: "" },
+    npc: {
+      init: { base: 8, dice: 1 }, dr: 6, notes: "", defend: 7, soak: 4,
+      pools: [{ label: "Perception", dice: 6 }, { label: "Athletics", dice: 6 }],
+      weapons: [
+        { name: "Heavy pistol", pool: 8, dv: 3, type: "P", ar: [10, 10, 8, null, null] },
+        { name: "Stun baton", pool: 7, dv: 5, type: "S", ar: [6, null, null, null, null] },
+      ],
+    },
     bars: { b1: { cur: 10, max: 10 }, b2: { cur: 10, max: 10 }, b3: { cur: 2, max: 2 } },
   };
 }

@@ -27,7 +27,7 @@ function applyOne(node: unknown, op: Op, depth = 0): unknown {
 export const getIn = (s: unknown, p: string[]): unknown => p.reduce<unknown>((n, k) => (n && typeof n === "object" ? (n as Record<string, unknown>)[k] : undefined), s);
 
 export function emptyTable(): TableState {
-  return { stamp: Date.now(), scenes: {}, order: [], playerScene: null, handouts: {}, turn: { on: false, round: 1, current: null, entries: {} }, assets: {} };
+  return { stamp: Date.now(), scenes: {}, order: [], playerScene: null, handouts: {}, turn: { on: false, round: 1, current: null, entries: {} }, assets: {}, combat: {} };
 }
 
 export function newScene(id: string, name: string): Scene {

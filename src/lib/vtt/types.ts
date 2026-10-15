@@ -22,6 +22,17 @@ export const BAR_META: Record<BarKey, { name: string; color: string }> = {
 /** A token tied to a runner that lives on its owner's device. */
 export interface RunnerLink { owner: string; runnerId: string }
 
+/** A weapon as the table uses it: attack pool, Damage Value and Attack Rating by range band. */
+export interface Weapon {
+  name: string;
+  pool: number;
+  dv: number;
+  /** Physical or Stun damage. */
+  type: "P" | "S";
+  /** Attack Rating at Close, Near, Medium, Far, Extreme; null means it cannot reach. */
+  ar: (number | null)[];
+}
+
 /** What a runner's owner publishes so the GM and the table can see the essentials. */
 export interface Card {
   sub: string;
@@ -29,6 +40,11 @@ export interface Card {
   init: { base: number; dice: number };
   dr: number;
   pools: { label: string; dice: number }[];
+  weapons?: Weapon[];
+  /** Defense test pool: Reaction + Intuition. */
+  defend?: number;
+  /** Damage resistance pool: Body. */
+  soak?: number;
 }
 
 /** A GM-run character's stat block. */
@@ -37,6 +53,36 @@ export interface Npc {
   dr: number;
   pools: { label: string; dice: number }[];
   notes: string;
+  weapons?: Weapon[];
+  defend?: number;
+  soak?: number;
+}
+
+/** One attack, from the roll through defense and damage resistance. Lives in the table state. */
+export interface Attack {
+  id: string;
+  scene: string;
+  at: number;
+  /** Handle of the attacking player (or the GM). */
+  by: string;
+  attacker: { tokenId?: string; name: string };
+  target: { tokenId: string; name: string };
+  weapon: { name: string; dv: number; type: "P" | "S" };
+  band: string;
+  meters: number;
+  ar: number;
+  dr: number;
+  /** Who gains 1 Edge from Attack Rating against Defense Rating. */
+  edgeTo: "attacker" | "defender" | null;
+  attack: { pool: number; hits: number; glitch: boolean; crit: boolean };
+  defense?: { pool: number; hits: number; glitch: boolean; crit: boolean };
+  /** miss, graze (tie: no damage), or hit. */
+  outcome?: "miss" | "graze" | "hit";
+  net?: number;
+  soak?: { pool: number; hits: number };
+  /** Boxes that landed after damage resistance. */
+  damage?: number;
+  status: "defend" | "soak" | "done" | "cancelled";
 }
 
 interface Base { id: string; layer: Layer; x: number; y: number; w: number; h: number; z: number }
@@ -128,6 +174,8 @@ export interface TableState {
   handouts: Record<string, Handout>;
   turn: Turn;
   assets: Record<string, Asset>;
+  /** Attacks in progress and recent results. */
+  combat?: Record<string, Attack>;
 }
 
 export type Op =

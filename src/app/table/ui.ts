@@ -10,6 +10,7 @@ export type Dialog =
   | { kind: "card"; id: string }
   | { kind: "sheet"; runnerId: string }
   | { kind: "handout"; id: string }
+  | { kind: "attack"; attackerId: string; targetId: string }
   | null;
 
 export interface Cam { x: number; y: number; z: number }
@@ -31,6 +32,10 @@ interface TableUi {
   /** Rolls made from NPC cards stay private. */
   secret: boolean;
   cams: Record<string, Cam>;
+  /** Token picking a target for an attack. */
+  targeting: string | null;
+  /** The GM's client rolls defense and soak for GM-run targets on its own. */
+  autoNpc: boolean;
   set: (p: Partial<Omit<TableUi, "set" | "select" | "setCam">>) => void;
   select: (ids: string[]) => void;
   setCam: (scene: string, cam: Cam) => void;
@@ -52,6 +57,8 @@ export const useTableUi = create<TableUi>((set) => ({
   follow: true,
   secret: false,
   cams: {},
+  targeting: null,
+  autoNpc: true,
   set: (p) => set(p),
   select: (ids) => set({ selected: ids }),
   setCam: (scene, cam) => set((s) => ({ cams: { ...s.cams, [scene]: cam } })),

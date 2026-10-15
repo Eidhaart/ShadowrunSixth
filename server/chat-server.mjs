@@ -106,7 +106,7 @@ function handleVtt(name, r, ws, m) {
     if (c.role === "gm") { send(c, { type: "vtt_op", ops: m.ops, from: ws.handle, id: m.id }); continue; }
     const ops = opsForPlayer(before, t, m.ops, c);
     if (ops === null) { snapshot(name, c); continue; }
-    if (hiddenMove) ops.push({ k: "set", p: ["turn"], v: viewFor(t, { role: "player" }).turn });
+    if (hiddenMove) { const v = viewFor(t, { role: "player" }); ops.push({ k: "set", p: ["turn"], v: v.turn }, { k: "set", p: ["combat"], v: v.combat }); }
     if (ops.length) send(c, { type: "vtt_op", ops, from: ws.handle, id: m.id });
   }
 }

@@ -981,3 +981,10 @@ h1 { color: var(--title, var(--fg)); background-image: var(--title-paint, none);
 .group:hover .msg-del, .msg-del:focus-visible { opacity: 1; }
 .msg-del:hover { color: var(--danger); }
 @media (hover: none) { .msg-del { opacity: .6; } }
+.vtt-targeting, .vtt-targeting svg { cursor: crosshair; }
+.vtt-targeting [data-oid] { cursor: crosshair !important; }
+.vtt-combat { display: flex; flex-direction: column; gap: .35rem; }
+.vtt-attack { background: color-mix(in oklab, var(--panel) 95%, transparent); border: 1px solid var(--line-hi); box-shadow: 0 8px 24px rgba(0, 0, 0, .45); backdrop-filter: blur(8px); }
+.vtt-attack.is-mine { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger), 0 8px 24px rgba(0, 0, 0, .45); animation: vtt-alert 1.4s ease-in-out 3; }
+@keyframes vtt-alert { 50% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--danger) 45%, transparent), 0 8px 24px rgba(0, 0, 0, .45); } }
+@media (prefers-reduced-motion: reduce) { .vtt-attack.is-mine { animation: none; } }

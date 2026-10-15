@@ -8,9 +8,11 @@ const TOKEN_KEYS = new Set(["x", "y", "rot", "bars", "markers", "card", "img", "
 const SHAPE_KEYS = new Set(["x", "y"]);
 const TURN_KEYS = new Set(["score", "base", "dice", "minors", "acted", "delayed", "tie", "name"]);
 const MAX_ASSET = 700_000;
+// what the defender writes onto an attack record
+const DEFENSE_KEYS = new Set(["defense", "outcome", "net", "soak", "damage", "status"]);
 
 export function emptyTable() {
-  return { stamp: Date.now(), scenes: {}, order: [], playerScene: null, handouts: {}, turn: { on: false, round: 1, current: null, entries: {} }, assets: {} };
+  return { stamp: Date.now(), scenes: {}, order: [], playerScene: null, handouts: {}, turn: { on: false, round: 1, current: null, entries: {} }, assets: {}, combat: {} };
 }
 
 const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
@@ -62,6 +64,25 @@ export function permitted(state, op, handle, gm) {
     if (op.k === "merge") return cur?.owner === handle && Object.keys(op.v).every((k) => TURN_KEYS.has(k));
     if (op.k === "del") return cur?.owner === handle;
   }
+  // attacks: a player attacks from a token they control at a visible token in the players' scene;
+  // whoever controls the target rolls defense and damage resistance
+  if (p0 === "combat" && p1 && op.p.length === 2) {
+    const cur = state.combat?.[p1];
+    if (op.k === "set") {
+      const v = op.v;
+      if (cur || !isObj(v) || v.by !== handle || v.scene !== state.playerScene || !isObj(v.attacker) || !isObj(v.target)) return false;
+      const objs = state.scenes[v.scene]?.objects ?? {};
+      const a = objs[v.attacker.tokenId], t = objs[v.target.tokenId];
+      return !!a && !!t && t.layer !== "gm" && controls(a, handle) && (v.status === "defend" || v.status === "done");
+    }
+    if (op.k === "merge" && cur) {
+      const keys = Object.keys(op.v);
+      const t = state.scenes[cur.scene]?.objects?.[cur.target?.tokenId];
+      if (t && controls(t, handle) && keys.every((k) => DEFENSE_KEYS.has(k))) return true;
+      return cur.by === handle && cur.status === "defend" && keys.length === 1 && op.v.status === "cancelled";
+    }
+    return false;
+  }
   // a player whose turn it is may hand it on
   if (p0 === "turn" && op.p.length === 1 && op.k === "merge") {
     const cur = state.turn?.current ? state.turn.entries?.[state.turn.current] : null;
@@ -92,6 +113,21 @@ function playerTurn(state) {
   return { ...state.turn, entries };
 }
 
+/** An attack as a player sees it: never at hidden targets, and hidden attackers stay unnamed. */
+function combatView(state, rec) {
+  if (!rec) return null;
+  const objs = state.scenes[rec.scene]?.objects ?? {};
+  if (objs[rec.target?.tokenId]?.layer === "gm") return null;
+  if (rec.attacker?.tokenId && objs[rec.attacker.tokenId]?.layer === "gm") return { ...rec, attacker: { name: "Unseen attacker" } };
+  return rec;
+}
+
+function playerCombat(state) {
+  const out = {};
+  for (const [id, rec] of Object.entries(state.combat ?? {})) { const v = combatView(state, rec); if (v) out[id] = v; }
+  return out;
+}
+
 function assetsIn(scene, handouts) {
   const ids = new Set();
   if (scene?.bg) ids.add(scene.bg);
@@ -118,6 +154,7 @@ export function viewFor(state, client) {
     handouts,
     turn: playerTurn(state),
     assets,
+    combat: playerCombat(state),
   };
 }
 
@@ -165,6 +202,12 @@ export function opsForPlayer(before, after, ops, client) {
       out.push(op);
       continue;
     }
+    if (p0 === "combat" && p1) {
+      const v = combatView(after, after.combat?.[p1]);
+      out.push(v ? { k: "set", p: ["combat", p1], v } : { k: "del", p: ["combat", p1] });
+      continue;
+    }
+    if (p0 === "combat") { out.push({ k: "set", p: ["combat"], v: playerCombat(after) }); continue; }
     if (p0 === "order" || p0 === "assets") continue;
     if (p0 === "stamp") out.push(op);
   }

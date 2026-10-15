@@ -191,6 +191,12 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
     const panLike = e.button === 1 || ui.tool === "pan" || (e.button === 0 && e.altKey && e.shiftKey);
     if (panLike) { drag.current = { mode: "pan", sx: e.clientX, sy: e.clientY, cam }; return; }
     if (e.button !== 0) return;
+    if (ui.targeting) {
+      const tid = target?.getAttribute("data-oid");
+      const hit = tid ? scene.objects[tid] : undefined;
+      if (hit?.kind === "token" && hit.id !== ui.targeting) ui.set({ dialog: { kind: "attack", attackerId: ui.targeting, targetId: hit.id }, targeting: null });
+      return;
+    }
     if (ui.tool === "ping") {
       sendFx({ kind: "ping", scene: scene.id, x: p.x, y: p.y, color: ui.color, focus: me.gm && e.shiftKey });
       return;
@@ -363,7 +369,7 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
       const tools: Record<string, typeof u.tool> = { v: "select", h: "pan", r: "ruler", p: "ping", d: "draw", f: "fog" };
       const key = e.key.toLowerCase();
       if (tools[key] && (key !== "f" || me.gm)) { u.set({ tool: tools[key] }); return; }
-      if (e.key === "Escape") { u.select([]); u.set({ tool: "select" }); return; }
+      if (e.key === "Escape") { u.select([]); u.set({ tool: "select", targeting: null }); return; }
       const mine = u.selected.map((id) => scene.objects[id]).filter((o) => o && controls(o, me));
       if ((e.key === "Delete" || e.key === "Backspace") && mine.length) {
         const ok = mine.filter((o) => me.gm || (o.kind === "token" ? o.owners.length === 1 && o.owners[0] === me.handle : o.by === me.handle));
@@ -427,7 +433,7 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
   const single = ui.selected.length === 1 ? scene.objects[ui.selected[0]] : undefined;
 
   return (
-    <div ref={wrap} className={clsx("vtt-stage relative size-full overflow-hidden select-none", ui.tool === "pan" && "cursor-grab", (ui.tool === "ruler" || ui.tool === "draw" || ui.tool === "fog") && "cursor-crosshair", ui.tool === "ping" && "cursor-cell")} style={{ background: "#05060a", touchAction: "none" }} onDragOver={onDragOver} onDrop={(e) => void onDrop(e)}>
+    <div ref={wrap} className={clsx("vtt-stage relative size-full overflow-hidden select-none", ui.tool === "pan" && "cursor-grab", (ui.tool === "ruler" || ui.tool === "draw" || ui.tool === "fog") && "cursor-crosshair", ui.tool === "ping" && "cursor-cell", ui.targeting && "vtt-targeting")} style={{ background: "#05060a", touchAction: "none" }} onDragOver={onDragOver} onDrop={(e) => void onDrop(e)}>
       <svg
         ref={svg}
         width={size.w}
@@ -485,7 +491,7 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
           </g>
         ))}
       </svg>
-      {single && ui.tool === "select" && !offset.x && !offset.y && !resize && (
+      {single && ui.tool === "select" && !ui.targeting && !offset.x && !offset.y && !resize && (
         <TokenHud o={single} scene={scene} cam={cam} />
       )}
     </div>

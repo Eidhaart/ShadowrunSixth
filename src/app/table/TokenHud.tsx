@@ -6,6 +6,7 @@ import { BAR_META, LAYERS, MARKERS, type BarKey, type Obj, type Scene, type Toke
 import { controls, seesBars, useVtt } from "@/lib/vtt/store";
 import { useTableUi, type Cam } from "./ui";
 import { rollInitFor } from "./act";
+import { weaponsOf } from "@/lib/vtt/combat";
 
 function BarInput({ t, k, can, scene }: { t: Token; k: BarKey; can: boolean; scene: string }) {
   const dispatch = useVtt((s) => s.dispatch);
@@ -72,6 +73,11 @@ export function TokenHud({ o, scene, cam }: { o: Obj; scene: Scene; cam: Cam }) 
         </div>
       )}
       <div className="flex flex-wrap items-center gap-1">
+        {t && (me.gm || mine) && weaponsOf(t).length > 0 && (
+          <button className={clsx("vtt-tool !w-auto px-2 text-xs", ui.targeting === t.id && "on")} onClick={() => ui.set({ targeting: ui.targeting === t.id ? null : t.id })} title="Attack: then click the target">
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><circle cx="12" cy="12" r="7" /><path d="M12 2v5M12 17v5M2 12h5M17 12h5" /></svg> Attack
+          </button>
+        )}
         {t && (t.card || t.npc) && <button className="vtt-tool" onClick={() => ui.set({ dialog: { kind: "card", id: t.id } })} title="Stats and rolls"><Icon name="dice" size={15} /></button>}
         {t?.runner?.owner === me.handle && <button className="vtt-tool" onClick={() => ui.set({ dialog: { kind: "sheet", runnerId: t.runner!.runnerId } })} title="Open my sheet"><Icon name="runners" size={15} /></button>}
         {t && can && <button className={clsx("vtt-tool", markers && "on")} onClick={() => setMarkers(!markers)} title="Status markers"><Icon name="spark" size={15} /></button>}
