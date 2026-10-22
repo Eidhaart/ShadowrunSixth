@@ -1,10 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
 import { useComms } from "@/lib/store/comms";
-import { useSettings } from "@/lib/store/settings";
 import { useRunners } from "@/lib/store/characters";
 import { LAYERS, type Scene, type Token } from "@/lib/vtt/types";
 import { newScene, vid } from "@/lib/vtt/ops";
@@ -16,6 +14,8 @@ import { TurnOrder } from "./TurnOrder";
 import { Dialogs } from "./Dialogs";
 import { DRAW_COLORS, useTableUi, type Tool } from "./ui";
 import { assetOps } from "./act";
+import { SeatChip, SeatGate, seatPicked } from "./Seat";
+import { useHouse } from "@/lib/house/store";
 import { CombatFeed } from "./Combat";
 
 const TOOLS: { id: Tool; icon: string; label: string; key: string; gm?: boolean }[] = [
@@ -72,7 +72,7 @@ function Toolbar() {
   );
 }
 
-function SceneBar({ viewing }: { viewing: Scene | undefined }) {
+function SceneBar({ viewing, onPick }: { viewing: Scene | undefined; onPick: () => void }) {
   const state = useVtt((s) => s.state)!;
   const me = useVtt((s) => s.me);
   const dispatch = useVtt((s) => s.dispatch);
@@ -115,12 +115,32 @@ function SceneBar({ viewing }: { viewing: Scene | undefined }) {
       ) : (
         <span className="shrink-0 font-display font-semibold">{viewing?.name ?? "Waiting for the GM"}</span>
       )}
-      <span className={clsx("vtt-conn ml-auto shrink-0", comms.status === "online" && "on")}>{me.gm ? "GM · " : ""}{status}</span>
+      <SeatChip label={status} gm={me.gm && comms.status !== "off"} onPick={onPick} />
     </div>
   );
 }
 
 /** Keeps my runners' tokens in step with their sheets, and GM edits to bars flow back to the sheet. */
+/** The GM's active house rules travel with the table; players take them from it. */
+function useHouseSync() {
+  const state = useVtt((s) => s.state);
+  const gm = useVtt((s) => s.me.gm);
+  const mine = useHouse((s) => (s.activeId ? s.sets[s.activeId] ?? null : null));
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (useHouse.persist.hasHydrated()) setReady(true); // eslint-disable-line react-hooks/set-state-in-effect
+    return useHouse.persist.onFinishHydration(() => setReady(true));
+  }, []);
+  const tableRules = state?.rules ?? null;
+  const loaded = !!state;
+  useEffect(() => {
+    if (!loaded) return;
+    if (gm) {
+      if (ready && JSON.stringify(tableRules) !== JSON.stringify(mine)) useVtt.getState().dispatch([{ k: "set", p: ["rules"], v: mine }]);
+    } else useHouse.getState().setTable(tableRules, true);
+  }, [loaded, gm, ready, mine, tableRules]);
+}
+
 function useRunnerSync() {
   const state = useVtt((s) => s.state);
   const me = useVtt((s) => s.me);
@@ -164,28 +184,6 @@ function useRunnerSync() {
   }, [state, runners, me.handle]);
 }
 
-function JoinCard() {
-  const s = useSettings();
-  const c = useComms();
-  const [handle, setHandle] = useState(s.handle);
-  const [room, setRoom] = useState(s.room || "table-1");
-  const join = (role: "gm" | "player") => {
-    s.set({ handle: handle.trim(), room: room.trim() || "table-1", role });
-    c.connect({ url: s.chatUrl.trim(), room: room.trim() || "table-1", handle: handle.trim() || "runner", role });
-  };
-  return (
-    <div className="vtt-join absolute bottom-3 left-1/2 z-20 w-[min(34rem,calc(100%-1.5rem))] -translate-x-1/2 p-3">
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="min-w-28 flex-1 text-xs text-dim">Handle<input className="field" value={handle} onChange={(e) => setHandle(e.target.value)} placeholder="Your name" /></label>
-        <label className="min-w-28 flex-1 text-xs text-dim">Room<input className="field" value={room} onChange={(e) => setRoom(e.target.value)} /></label>
-        <button className="btn primary" onClick={() => join("player")} disabled={!handle.trim()}>Join as player</button>
-        <button className="btn" onClick={() => join("gm")} disabled={!handle.trim()}>Run as GM</button>
-      </div>
-      <p className="mt-1.5 text-xs text-faint">You are prepping solo. Everything is saved on this device; join a room to play with your table. <Link className="underline" href="/comms">Relay settings</Link></p>
-    </div>
-  );
-}
-
 export function Table() {
   const start = useVtt((s) => s.start);
   const state = useVtt((s) => s.state);
@@ -198,12 +196,16 @@ export function Table() {
   const role = useComms((s) => s.role);
   const handle = useComms((s) => s.handle);
   const ui = useTableUi();
+  // ask for a seat once per visit, and whenever you are not in a room
+  const [gate, setGate] = useState(false);
+  useEffect(() => { if (!seatPicked() || useComms.getState().status === "off") setGate(true); }, []); // eslint-disable-line react-hooks/set-state-in-effect
 
   useEffect(() => { void start(); }, [start, status, role, handle]);
   // small screens start with the map, not the sidebar
   useEffect(() => { if (window.innerWidth < 1024) useTableUi.getState().set({ panel: null }); }, []);
   useEffect(() => { if (!notice) return; const t = setTimeout(() => useVtt.getState().setNotice(null), 4000); return () => clearTimeout(t); }, [notice]);
   useRunnerSync();
+  useHouseSync();
   // open the turn order when combat starts
   const entryCount = state ? Object.keys(state.turn.entries).length : 0;
   const prevCount = useRef(entryCount);
@@ -216,8 +218,8 @@ export function Table() {
   const scene = state && sceneId ? state.scenes[sceneId] : undefined;
 
   return (
-    <div className="vtt flex h-[calc(100dvh-3rem)] min-h-[24rem] flex-col max-md:h-[calc(100dvh-7rem-env(safe-area-inset-bottom))]">
-      {state && <SceneBar viewing={scene} />}
+    <div className="vtt flex overflow-clip h-[calc(100dvh-3rem)] min-h-[24rem] flex-col max-md:h-[calc(100dvh-7rem-env(safe-area-inset-bottom))]">
+      {state && <SceneBar viewing={scene} onPick={() => setGate(true)} />}
       <div className="relative flex min-h-0 flex-1">
         <div className="relative min-w-0 flex-1">
           {!loaded && <div className="grid size-full place-items-center text-dim">Loading the table…</div>}
@@ -234,7 +236,7 @@ export function Table() {
               Click the target. <button className="btn small ghost" onClick={() => ui.set({ targeting: null })}>Cancel</button>
             </div>
           )}
-          {status === "off" && loaded && <JoinCard />}
+          {gate && loaded && <SeatGate onClose={() => setGate(false)} />}
           {newerLocal && me.gm && (
             <div className="vtt-join absolute bottom-3 left-1/2 z-30 flex w-[min(34rem,calc(100%-1.5rem))] -translate-x-1/2 flex-wrap items-center gap-2 p-3 text-sm">
               <span className="flex-1">This device has a newer copy of the table than the relay.</span>

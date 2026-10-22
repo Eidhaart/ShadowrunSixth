@@ -45,6 +45,8 @@ export interface Card {
   defend?: number;
   /** Damage resistance pool: Body. */
   soak?: number;
+  /** Worn armor, for tables where armor soaks. */
+  armor?: number;
 }
 
 /** A GM-run character's stat block. */
@@ -56,6 +58,7 @@ export interface Npc {
   weapons?: Weapon[];
   defend?: number;
   soak?: number;
+  armor?: number;
 }
 
 /** One attack, from the roll through defense and damage resistance. Lives in the table state. */
@@ -107,6 +110,8 @@ export interface Token extends Base {
   card?: Card;
   locked?: boolean;
   notes?: string;
+  /** Map images: width over height of the picture, kept while resizing. */
+  aspect?: number;
 }
 
 export interface Shape extends Base {
@@ -176,6 +181,8 @@ export interface TableState {
   assets: Record<string, Asset>;
   /** Attacks in progress and recent results. */
   combat?: Record<string, Attack>;
+  /** The GM's house rules; players get them without secret notes. */
+  rules?: import("@/lib/house/rules").Ruleset | null;
 }
 
 export type Op =

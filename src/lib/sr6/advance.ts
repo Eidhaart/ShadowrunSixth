@@ -1,3 +1,4 @@
+import { rules } from "@/lib/house/rules";
 /**
  * Character advancement: spending Karma after creation.
  *
@@ -54,17 +55,19 @@ export interface Advancement {
   log: AdvLog[];
 }
 
+/** Advancement prices, scaled by the house rules' Karma cost. */
+const k = (n: number) => Math.max(1, Math.round((n * rules().karmaCostPct) / 100));
 export const ADV_COST = {
-  rating: (next: number) => 5 * next,
-  spec: 5,
-  expert: 5,
-  knowledge: 3,
-  spell: 5,
-  form: 5,
-  pp: 5,
+  rating: (next: number) => k(5 * next),
+  get spec() { return k(5); },
+  get expert() { return k(5); },
+  get knowledge() { return k(3); },
+  get spell() { return k(5); },
+  get form() { return k(5); },
+  get pp() { return k(5); },
   qualityMult: 2,
-  initiate: (grade: number) => 10 + grade,
-} as const;
+  initiate: (grade: number) => k(10 + grade),
+};
 
 export function emptyAdv(): Advancement {
   return { attr: {}, edge: 0, magic: 0, skills: {}, specs: {}, expert: {}, knowledge: [], qualities: [], boughtOff: [], spells: [], forms: [], pp: 0, grade: 0, metamagic: [], log: [] };

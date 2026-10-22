@@ -1,4 +1,5 @@
 "use client";
+import { rules } from "@/lib/house/rules";
 import { doRoll } from "@/lib/actions";
 import { useComms } from "@/lib/store/comms";
 import { useSettings } from "@/lib/store/settings";
@@ -48,13 +49,16 @@ function say(text: string) {
 
 const secretFor = (t: Token) => useVtt.getState().me.gm && !!t.npc && useTableUi.getState().secret;
 
-/** +1 Edge (max 7) on a token: on my own runner's sheet, or on the token's Edge bar. */
+/** Edge from AR against DR (house rules set how much and the cap) on a token: on my own runner's sheet, or on the token's Edge bar. */
 function gainEdge(t: Token, scene: Scene): Op[] {
   const r = myRunner(t);
-  if (r) { useRunners.getState().update(r.id, (x) => { x.edgeCurrent = Math.min(7, x.edgeCurrent + 1); }); return []; }
+  const { edgeGain, maxEdge } = rules();
+  if (edgeGain <= 0) return [];
+  if (r) { useRunners.getState().update(r.id, (x) => { x.edgeCurrent = Math.min(maxEdge, x.edgeCurrent + edgeGain); }); return []; }
   const b = t.bars.b3;
   if (!b) return [];
-  return [{ k: "merge", p: ["scenes", scene.id, "objects", t.id], v: { bars: { ...t.bars, b3: { cur: Math.min(7, b.cur + 1), max: Math.max(b.max, Math.min(7, b.cur + 1)) } } } }];
+  const cur = Math.min(maxEdge, b.cur + edgeGain);
+  return [{ k: "merge", p: ["scenes", scene.id, "objects", t.id], v: { bars: { ...t.bars, b3: { cur, max: Math.max(b.max, cur) } } } }];
 }
 
 export interface AttackPlan { weapon: Weapon; meters: number; band: string; ar: number | null; dr: number; edgeTo: Attack["edgeTo"]; pool: number }
@@ -124,7 +128,7 @@ export function soak(rec: Attack, mod = 0) {
     const d = derive(withAdv(runner));
     useRunners.getState().update(runner.id, (x) => {
       let phys = x.damage.physical, stun = x.damage.stun, over = x.damage.overflow;
-      if (rec.weapon.type === "S") { const fit = Math.min(boxes, Math.max(0, d.condition.stun - stun)); stun += fit; phys += boxes - fit; } else phys += boxes;
+      if (rec.weapon.type === "S") { const fit = Math.min(boxes, Math.max(0, d.condition.stun - stun)); stun += fit; phys += Math.floor((boxes - fit) / Math.max(1, rules().stunSpill)); } else phys += boxes;
       if (phys > d.condition.physical) { over += phys - d.condition.physical; phys = d.condition.physical; }
       x.damage = { physical: phys, stun, overflow: Math.min(over, d.condition.overflow) };
       note = over >= d.condition.overflow ? " Overflow is full: dead." : over > 0 ? ` ${over} overflow.` : phys >= d.condition.physical || stun >= d.condition.stun ? " Down." : "";

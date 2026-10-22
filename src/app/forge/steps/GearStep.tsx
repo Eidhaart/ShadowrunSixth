@@ -1,4 +1,5 @@
 "use client";
+import { rules } from "@/lib/house/rules";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRulebook } from "@/lib/store/rulebook";
@@ -35,7 +36,7 @@ export function GearStep({ c, patch }: StepProps) {
   const [contact, setContact] = useState({ name: "", role: "", connection: 1, loyalty: 1 });
   const [bought, setBought] = useState("");
   const buy = (i: CompItem, qty: number) => { patch((x) => { addToRunner(x, i, { pay: false, qty }); }); setBought(`${i.name}${qty > 1 ? ` ×${qty}` : ""} added.`); };
-  const { over, props: drop } = useGearDrop((i) => { if ((i.avail ?? 0) > 6) setBought(`${i.name} has Availability ${i.avail}: not allowed at creation.`); else buy(i, 1); });
+  const { over, props: drop } = useGearDrop((i) => { if ((i.avail ?? 0) > rules().creationAvail) setBought(`${i.name} has Availability ${i.avail}: not allowed at creation.`); else buy(i, 1); });
 
   const names = useMemo(() => (book?.sections ?? []).filter((s) => s.chapter === "Gear" && s.level >= 2 && /^[A-Z0-9]/.test(s.title) && s.title.length < 40).slice(0, 700).map((s) => s.title), [book]);
   const hits = useMemo(() => (lookup.trim().length > 1 ? search(lookup, ["gear"], 5) : []), [lookup, search, book]);
@@ -62,7 +63,7 @@ export function GearStep({ c, patch }: StepProps) {
         <div className="space-y-5">
           <section className="panel p-4">
             <h3 className="mb-1 text-lg font-semibold">Shop the compendium</h3>
-            <p className="mb-3 text-xs text-dim">Prices come off your nuyen budget automatically. Items with Availability 7 or more are locked at creation.</p>
+            <p className="mb-3 text-xs text-dim">Prices come off your nuyen budget automatically. Items with Availability {rules().creationAvail + 1} or more are locked at creation.</p>
             <div className="flex max-h-[34rem] min-h-80 flex-col">
               <GearBrowser compact creation onAdd={buy} addLabel="Buy" nuyen={b.nuyen.left} />
             </div>

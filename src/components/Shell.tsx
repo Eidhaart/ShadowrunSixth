@@ -15,6 +15,7 @@ import { MODULE_LIST } from "@/lib/academy/modules";
 import { useAcademy } from "@/lib/academy/progress";
 import { doRoll } from "@/lib/actions";
 import { useCatalog } from "@/lib/compendium/catalog";
+import { useHouse } from "@/lib/house/store";
 import { VOICES, fontVars } from "@/lib/style/catalog";
 
 const NAV = [
@@ -26,6 +27,7 @@ const NAV = [
   { href: "/learn", label: "Academy", icon: "learn" },
   { href: "/runners", label: "Runners", icon: "runners" },
   { href: "/table", label: "Table", icon: "map" },
+  { href: "/house", label: "House", icon: "gavel" },
   { href: "/comms", label: "Comms", icon: "comms" },
   { href: "/link", label: "Foundry", icon: "link" },
   { href: "/settings", label: "Settings", icon: "settings" },
@@ -322,8 +324,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     useSettings.persist.rehydrate();
     useRunners.persist.rehydrate();
+    void useHouse.persist.rehydrate();
     useRolls.persist.rehydrate();
   }, []);
+  // at someone else's table as a player, the GM's house rules apply on this device
+  useEffect(() => {
+    const asPlayer = (comms.status === "online" || comms.status === "local") && comms.role === "player";
+    const h = useHouse.getState();
+    h.setTable(h.tableRules, asPlayer);
+  }, [comms.status, comms.role]);
   useEffect(() => {
     const t = setTimeout(() => {
       const st = useSettings.getState();

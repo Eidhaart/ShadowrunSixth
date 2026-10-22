@@ -7,6 +7,8 @@ import { COMMLINKS, CYBERDECKS, CYBERJACKS, RCCS } from "@/lib/sr6/rules6";
 import { editExt } from "@/lib/sr6/ext";
 import { uid, type Character, type GearItem } from "@/lib/sr6/character";
 import type { CompItem } from "./types";
+import { effective, useHouse } from "@/lib/house/store";
+import type { HouseItem } from "@/lib/house/rules";
 import { readXlsx } from "./xlsx";
 import { normalize } from "./normalize";
 
@@ -60,15 +62,34 @@ export const useGearList = create<GearListState>()(
   ),
 );
 
-/** Every item: the bundled stats, with an imported list layered over it (adding its text and any new rows). */
+const GEAR_CAT: Record<HouseItem["cat"], GearItem["category"]> = {
+  weapons: "weapon", armor: "armor", augmentations: "cyberware", electronics: "misc", tools: "misc", magic: "magic", vehicles: "vehicle", ammo: "ammo", identity: "misc", matrix: "commlink",
+};
+
+/** A homebrew item from the GM's house rules, shaped like any other catalog entry. */
+export function houseToComp(h: HouseItem): CompItem {
+  const stats: [string, string][] = [];
+  if (h.dv) stats.push(["DV", h.dv]);
+  if (h.ar?.some((v) => v != null)) stats.push(["AR", h.ar.map((v) => v ?? "–").join("/")]);
+  if (h.armor) stats.push(["Defense", `+${h.armor}`]);
+  if (h.essence) stats.push(["Essence", String(h.essence)]);
+  return {
+    id: `house-${h.id}`, name: h.name, cat: h.cat, group: h.group || "House", cost: h.cost, avail: h.avail, legal: h.legal, stats,
+    dv: h.dv, ar: h.ar, skill: h.skill, essence: h.essence, note: h.note, book: "House rules", source: "house",
+    gear: { name: h.name, category: GEAR_CAT[h.cat], cost: h.cost ?? 0, qty: 1, dv: h.dv, ar: h.ar as GearItem["ar"], skill: h.skill, armor: h.armor, worn: h.cat === "armor" ? true : undefined, essence: h.essence, notes: h.note },
+  };
+}
+
+/** Every item: the bundled stats, with an imported list layered over it (adding its text and any new rows), plus house items. */
 export function useCatalog(): CoreItem[] {
   const imported = useGearList((s) => s.imported);
+  const house = useHouse((s) => effective(s)?.items);
   return useMemo(() => {
-    if (!imported?.length) return BUILT_IN;
     const map = new Map<string, CoreItem>(BUILT_IN.map((i) => [i.id, i]));
-    for (const i of imported) map.set(i.id, { ...i, equip: i.equip ?? map.get(i.id)?.equip });
+    for (const i of imported ?? []) map.set(i.id, { ...i, equip: i.equip ?? map.get(i.id)?.equip });
+    for (const h of house ?? []) { const c = houseToComp(h); map.set(c.id, c); }
     return [...map.values()];
-  }, [imported]);
+  }, [imported, house]);
 }
 
 export function findItem(list: CompItem[], id: string): CompItem | undefined {

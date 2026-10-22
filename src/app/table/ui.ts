@@ -4,7 +4,7 @@ import type { Layer } from "@/lib/vtt/types";
 
 export type Tool = "select" | "pan" | "ruler" | "ping" | "draw" | "fog";
 export type DrawKind = "path" | "rect" | "ellipse" | "text";
-export type Panel = "chat" | "journal" | "compendium" | "scene";
+export type Panel = "chat" | "journal" | "compendium" | "house" | "scene";
 export type Dialog =
   | { kind: "token"; id: string }
   | { kind: "card"; id: string }

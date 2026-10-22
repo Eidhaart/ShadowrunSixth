@@ -66,6 +66,7 @@ export function cardFor(raw: Character): Card {
     weapons: weaponsFor(c),
     defend: d.attrs.reaction + d.attrs.intuition,
     soak: d.attrs.body,
+    armor: d.armor,
   };
 }
 
@@ -74,7 +75,7 @@ export function npcFor(raw: Character): { npc: Npc; bars: Record<BarKey, Bar> } 
   const c = withAdv(raw);
   const d = derive(c);
   return {
-    npc: { init: { base: d.initiative.rank, dice: d.initiative.dice }, dr: d.defenseRating, pools: pools(c), notes: c.concept || "", weapons: weaponsFor(c), defend: d.attrs.reaction + d.attrs.intuition, soak: d.attrs.body },
+    npc: { init: { base: d.initiative.rank, dice: d.initiative.dice }, dr: d.defenseRating, pools: pools(c), notes: c.concept || "", weapons: weaponsFor(c), defend: d.attrs.reaction + d.attrs.intuition, soak: d.attrs.body, armor: d.armor },
     bars: { b1: { cur: d.condition.physical, max: d.condition.physical }, b2: { cur: d.condition.stun, max: d.condition.stun }, b3: { cur: d.edge, max: d.edge } },
   };
 }

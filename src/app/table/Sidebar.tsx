@@ -17,8 +17,11 @@ import { PREMADES, TEMPLATES, portraitUrl } from "@/lib/sr6/premades";
 import { useVtt } from "@/lib/vtt/store";
 import { loadImage } from "@/lib/vtt/images";
 import { vid } from "@/lib/vtt/ops";
-import type { Handout, Scene } from "@/lib/vtt/types";
+import type { Handout, Scene, Token } from "@/lib/vtt/types";
+import { placeMap } from "./act";
 import { useTableUi, type Panel } from "./ui";
+import { useHouse } from "@/lib/house/store";
+import { BOOK, diffs, show } from "@/lib/house/rules";
 
 export const DRAG_RUNNER = "application/x-sixthdeck-runner";
 export const DRAG_NPC = "application/x-sixthdeck-npc";
@@ -27,6 +30,7 @@ const TABS: { id: Panel; label: string; icon: string; gm?: boolean }[] = [
   { id: "chat", label: "Chat", icon: "comms" },
   { id: "journal", label: "Journal", icon: "runners" },
   { id: "compendium", label: "Compendium", icon: "crate" },
+  { id: "house", label: "House", icon: "gavel" },
   { id: "scene", label: "Scene", icon: "settings", gm: true },
 ];
 
@@ -181,9 +185,18 @@ function RulesSearch() {
   const [q, setQ] = useState("");
   useEffect(() => { void rb.init(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const hits = q.trim().length > 1 && rb.status === "ready" ? rb.search(q, [], 6) : [];
+  const houseNotes = useVtt((s) => s.state?.rules?.notes ?? []);
+  const words = q.toLowerCase().split(/\s+/).filter((w) => w.length > 1);
+  const houseHits = words.length ? houseNotes.filter((n) => words.every((w) => `${n.title} ${n.text} ${n.tags.join(" ")}`.toLowerCase().includes(w))).slice(0, 4) : [];
   return (
     <div className="space-y-1.5">
-      <input className="field" value={q} onChange={(e) => setQ(e.target.value)} placeholder={rb.status === "ready" ? "Search the rules: cover, drain, called shot" : "Import the core rulebook in the Library to search it"} disabled={rb.status !== "ready"} aria-label="Search rules" />
+      <input className="field" value={q} onChange={(e) => setQ(e.target.value)} placeholder={rb.status === "ready" ? "Search the rules: cover, drain, called shot" : houseNotes.length ? "Search house rules" : "Import the core rulebook in the Library to search it"} disabled={rb.status !== "ready" && !houseNotes.length} aria-label="Search rules" />
+      {houseHits.map((n) => (
+        <details key={n.id} className="border border-astral/40 bg-bg2 p-2 text-sm" open={houseHits.length === 1}>
+          <summary className="cursor-pointer"><b>{n.title}</b> <span className="house-badge">House</span></summary>
+          <p className="mt-1 max-h-60 overflow-y-auto whitespace-pre-wrap text-xs text-dim">{n.text}</p>
+        </details>
+      ))}
       {hits.map((h) => (
         <details key={h.section.id} className="border border-line bg-bg2 p-2 text-sm">
           <summary className="cursor-pointer"><b>{h.section.title}</b> <span className="text-xs text-faint">p. {h.section.page}</span></summary>
@@ -232,6 +245,8 @@ function ScenePanel({ scene }: { scene: Scene }) {
   const p = ["scenes", scene.id];
   const merge = (v: Partial<Scene>) => dispatch([{ k: "merge", p, v }]);
   const [busy, setBusy] = useState(false);
+  const ui = useTableUi();
+  const maps = Object.values(scene.objects).filter((o): o is Token => o.kind === "token" && o.layer === "map" && !!o.img);
 
   const bg = async (f?: File) => {
     if (!f) return;
@@ -239,9 +254,7 @@ function ScenePanel({ scene }: { scene: Scene }) {
     try {
       const a = await loadImage(f, "map");
       const id = vid("a");
-      // fit the grid to the image at 70 px per square
-      const cols = Math.max(4, Math.round(a.w / 70)), rows = Math.max(4, Math.round(a.h / 70));
-      dispatch([{ k: "set", p: ["assets", id], v: { id, ...a } }, { k: "merge", p, v: { bg: id, cols, rows } }]);
+      placeMap(scene, { id, w: a.w, h: a.h }, undefined, f.name.replace(/\.[^.]+$/, ""), [{ k: "set", p: ["assets", id], v: { id, ...a } }]);
     } finally { setBusy(false); }
   };
 
@@ -297,11 +310,21 @@ function ScenePanel({ scene }: { scene: Scene }) {
       <div className="space-y-1.5">
         <div className="font-semibold">Map image</div>
         <div className="flex flex-wrap gap-1.5">
-          <label className="btn small cursor-pointer"><Icon name="upload" size={14} /> {busy ? "Loading…" : scene.bg ? "Replace" : "Upload"}<input type="file" accept="image/*" className="sr-only" onChange={(e) => void bg(e.target.files?.[0])} /></label>
-          {scene.bg && <button className="btn small ghost" onClick={() => merge({ bg: undefined })}>Remove</button>}
+          <label className="btn small cursor-pointer"><Icon name="upload" size={14} /> {busy ? "Loading…" : "Add a map image"}<input type="file" accept="image/*" className="sr-only" onChange={(e) => { void bg(e.target.files?.[0]); e.target.value = ""; }} /></label>
           <label className="flex items-center gap-1.5 text-xs text-dim">Backdrop <input type="color" value={scene.bgColor} onChange={(e) => merge({ bgColor: e.target.value })} /></label>
         </div>
-        <p className="text-xs text-faint">The grid resizes to the image at one square per 70 px. You can also drop an image file on the map: with the Map layer active it becomes the background.</p>
+        {maps.length > 0 && (
+          <ul className="space-y-1">
+            {maps.map((m) => (
+              <li key={m.id} className="flex items-center gap-2 border border-line bg-bg2 p-1.5">
+                <span className="min-w-0 flex-1 truncate">{m.name || "Map"}</span>
+                <span className="num text-xs text-faint">{+(m.w / 70).toFixed(1)}×{+(m.h / 70).toFixed(1)} sq</span>
+                <button className="btn small ghost !px-2" onClick={() => { ui.set({ layer: "map", tool: "select" }); ui.select([m.id]); }}>Adjust</button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-xs text-faint">Maps sit on the Map layer. Select one there to drag it, pull its handles to resize (they snap to the grid; hold Shift to stretch, Alt to place freely) or line its grid up with the table&apos;s. You can also drop image files on the map with the Map layer active.</p>
       </div>
       <div className="space-y-1.5">
         <label className="flex items-center gap-1.5 font-semibold"><input type="checkbox" checked={scene.fog} onChange={(e) => merge({ fog: e.target.checked })} /> Fog of war</label>
@@ -331,6 +354,60 @@ function ScenePanel({ scene }: { scene: Scene }) {
   );
 }
 
+/** The rules in force at this table: what differs from the book, house rules and statuses. */
+function HousePanel() {
+  const rs = useVtt((s) => s.state?.rules ?? null);
+  const me = useVtt((s) => s.me);
+  const h = useHouse();
+  const sets = Object.values(h.sets).sort((a, b) => b.updatedAt - a.updatedAt);
+  const changed = rs ? diffs(rs.mech) : [];
+  return (
+    <div className="h-full space-y-4 overflow-y-auto p-3 text-sm">
+      {me.gm && (
+        <label className="block text-xs text-dim">Rules at this table
+          <select className="field mt-1" value={h.activeId ?? ""} onChange={(e) => h.setActive(e.target.value || null)}>
+            <option value="">By the book</option>
+            {sets.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </select>
+        </label>
+      )}
+      <div>
+        <h3 className="font-display text-lg font-semibold">{rs?.name ?? "By the book"}</h3>
+        {rs?.blurb && <p className="text-dim">{rs.blurb}</p>}
+      </div>
+      <section>
+        <h4 className="mb-1 font-semibold">{changed.length ? `${changed.length} change${changed.length === 1 ? "" : "s"} from the book` : "No changes to the mechanics"}</h4>
+        <ul className="space-y-1">
+          {changed.map((f) => (
+            <li key={f.key} className="border-l-2 border-accent pl-2">
+              <span className="text-dim">{f.label}:</span> <b>{show(f, { ...BOOK, ...rs!.mech }[f.key])}</b> <span className="text-xs text-faint">(book {show(f, BOOK[f.key])})</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+      {rs && rs.notes.length > 0 && (
+        <section className="space-y-1">
+          <h4 className="font-semibold">House rules</h4>
+          {rs.notes.map((n) => (
+            <details key={n.id} className="border border-line bg-bg2 p-2">
+              <summary className="cursor-pointer">{n.title}{n.secret && <span className="ml-1 text-xs text-astral">GM only</span>}</summary>
+              <p className="mt-1 whitespace-pre-wrap text-xs text-dim">{n.text}</p>
+            </details>
+          ))}
+        </section>
+      )}
+      {rs && rs.statuses.length > 0 && (
+        <section>
+          <h4 className="mb-1 font-semibold">Statuses</h4>
+          <ul className="space-y-0.5">{rs.statuses.map((s) => <li key={s.id}><b>{s.name}</b> <span className="text-dim">{s.text}</span></li>)}</ul>
+        </section>
+      )}
+      {rs && rs.items.length > 0 && <p className="text-dim">{rs.items.length} house item{rs.items.length === 1 ? "" : "s"} in the Compendium tab.</p>}
+      {me.gm && <Link className="btn small" href="/house" target="_blank"><Icon name="gavel" size={14} /> Edit house rules</Link>}
+    </div>
+  );
+}
+
 export function Sidebar({ scene }: { scene: Scene | undefined }) {
   const ui = useTableUi();
   const me = useVtt((s) => s.me);
@@ -353,6 +430,7 @@ export function Sidebar({ scene }: { scene: Scene | undefined }) {
           {panel === "chat" && <ChatPanel />}
           {panel === "journal" && <JournalPanel />}
           {panel === "compendium" && <CompendiumPanel />}
+          {panel === "house" && <HousePanel />}
           {panel === "scene" && scene && <ScenePanel key={scene.id} scene={scene} />}
         </div>
       )}

@@ -1,3 +1,4 @@
+import { rules } from "@/lib/house/rules";
 /**
  * Core Shadowrun: Sixth World creation data.
  * These are game mechanics (numbers and names) taken from the Priority Table,
@@ -258,9 +259,10 @@ export function skillAvailable(skill: SkillDef, magic: MagicType): boolean {
 
 /** Karma costs from the Advancement Costs table. */
 export const KARMA = {
-  customization: 50,
-  maxUnspent: 5,
-  nuyenPerKarma: 2000,
+  /** House rules can change these three. */
+  get customization() { return rules().startKarma; },
+  get maxUnspent() { return rules().maxUnspent; },
+  get nuyenPerKarma() { return rules().nuyenPerKarma; },
   skillRank: (newRank: number) => 5 * newRank,
   attributeRank: (newRank: number) => 5 * newRank,
   specialization: 5,

@@ -1,4 +1,5 @@
 "use client";
+import { rules } from "@/lib/house/rules";
 import { doInitiative, doRoll } from "@/lib/actions";
 import { useRunners } from "@/lib/store/characters";
 import { CELL, type Op, type Scene, type TableState, type Token, type TurnEntry } from "@/lib/vtt/types";
@@ -72,10 +73,10 @@ export function rollInitFor(t: Token, edgeBoost = false) {
   const existing = Object.values(state.turn.entries).find((e) => e.tokenId === t.id);
   const owner = t.runner?.owner ?? (t.owners.length === 1 && t.owners[0] !== "*" ? t.owners[0] : undefined);
   if (existing) {
-    dispatch([{ k: "merge", p: ["turn", "entries", existing.id], v: { score: r.score, base: init.base, dice: init.dice, minors: 1 + init.dice, acted: false, delayed: false, tie: Math.random() } }]);
+    dispatch([{ k: "merge", p: ["turn", "entries", existing.id], v: { score: r.score, base: init.base, dice: init.dice, minors: rules().minorBase + init.dice, acted: false, delayed: false, tie: Math.random() } }]);
     return;
   }
-  const e: TurnEntry = { id: vid("i"), name: t.name, tokenId: t.id, owner: owner ?? (me.gm ? undefined : me.handle), score: r.score, base: init.base, dice: init.dice, minors: 1 + init.dice, acted: false, delayed: false, tie: Math.random() };
+  const e: TurnEntry = { id: vid("i"), name: t.name, tokenId: t.id, owner: owner ?? (me.gm ? undefined : me.handle), score: r.score, base: init.base, dice: init.dice, minors: rules().minorBase + init.dice, acted: false, delayed: false, tie: Math.random() };
   if (!me.gm && e.owner !== me.handle) return;
   const ops: Op[] = [{ k: "set", p: ["turn", "entries", e.id], v: e }];
   if (me.gm && !state.turn.on) ops.push({ k: "merge", p: ["turn"], v: { on: true } });
@@ -105,9 +106,9 @@ export function newRound(reroll: boolean) {
   const ops: Op[] = [];
   const updated: Record<string, TurnEntry> = {};
   for (const e of Object.values(state.turn.entries)) {
-    const v: Partial<TurnEntry> = { acted: false, delayed: false, minors: 1 + e.dice };
+    const v: Partial<TurnEntry> = { acted: false, delayed: false, minors: rules().minorBase + e.dice };
     // the GM rerolls NPCs; runners roll their own
-    if (reroll && me.gm && !e.owner) v.score = e.base + Array.from({ length: Math.min(5, e.dice) }, () => 1 + Math.floor(Math.random() * 6)).reduce((a, b) => a + b, 0);
+    if (reroll && rules().rerollRounds && me.gm && !e.owner) v.score = e.base + Array.from({ length: Math.min(5, e.dice) }, () => 1 + Math.floor(Math.random() * 6)).reduce((a, b) => a + b, 0);
     updated[e.id] = { ...e, ...v };
     ops.push({ k: "merge", p: ["turn", "entries", e.id], v });
   }
@@ -131,4 +132,30 @@ export function rollPool(t: Token, label: string, dice: number) {
   const { me } = useVtt.getState();
   const secret = me.gm && !!t.npc && useTableUi.getState().secret;
   doRoll({ label: `${t.name}: ${label}`, pool: dice }, 0, t.name, !secret);
+}
+
+/**
+ * A map picture as a movable, resizable object on the Map layer, like Roll20. It lands at its own
+ * size rounded to whole squares (or fitted to the scene when it is far bigger), and the scene grows
+ * to hold it.
+ */
+export function placeMap(scene: Scene, asset: { id: string; w: number; h: number }, at?: { x: number; y: number }, name = "Map", extraOps: Op[] = []) {
+  const { dispatch } = useVtt.getState();
+  const aspect = asset.w / Math.max(1, asset.h);
+  // one image pixel per map pixel, in whole squares
+  let w = Math.max(CELL, Math.round(asset.w / CELL) * CELL);
+  const sceneW = scene.cols * CELL;
+  if (w > sceneW * 2) w = Math.max(CELL, Math.round(sceneW / CELL) * CELL);
+  const h = Math.round(w / aspect);
+  const x = at ? Math.round(at.x / CELL) * CELL : 0, y = at ? Math.round(at.y / CELL) * CELL : 0;
+  const t = baseToken(name, x, y, "map", []);
+  Object.assign(t, { x, y, w, h, img: asset.id, showName: false, aspect, z: -Date.now() });
+  const cols = Math.max(scene.cols, Math.ceil((x + w) / CELL)), rows = Math.max(scene.rows, Math.ceil((y + h) / CELL));
+  const ops: Op[] = [...extraOps, { k: "set", p: ["scenes", scene.id, "objects", t.id], v: t }];
+  if (cols !== scene.cols || rows !== scene.rows) ops.push({ k: "merge", p: ["scenes", scene.id], v: { cols, rows } });
+  dispatch(ops);
+  const ui = useTableUi.getState();
+  ui.set({ layer: "map", tool: "select" });
+  ui.select([t.id]);
+  return t.id;
 }

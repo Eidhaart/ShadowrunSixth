@@ -1,4 +1,6 @@
 "use client";
+import { rules } from "@/lib/house/rules";
+import { effective, useHouse } from "@/lib/house/store";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -128,8 +130,12 @@ function TabBar({ tab, setTab, awakened, sustained, karma }: { tab: string; setT
   );
 }
 
+const NO_STATUSES: { id: string; name: string; text: string }[] = [];
+
 export function Sheet({ id }: { id: string }) {
   const raw = useRunners((s) => s.runners[id]);
+  const house = useHouse((h) => effective(h)?.statuses ?? NO_STATUSES);
+  useHouse((h) => JSON.stringify(effective(h)?.mech ?? {})); // redraw when the house rules change
   // The sheet shows the runner with every Karma purchase applied; edits still go to the stored character.
   const c = useMemo(() => (raw ? withAdv(raw) : raw), [raw]);
   const update = useRunners((s) => s.update);
@@ -195,7 +201,7 @@ export function Sheet({ id }: { id: string }) {
         const room = Math.max(0, d.condition.stun - stun);
         const toStun = Math.min(boxes, room);
         stun += toStun;
-        phys += boxes - toStun; // a full Stun monitor spills into Physical
+        phys += Math.floor((boxes - toStun) / Math.max(1, rules().stunSpill)); // a full Stun monitor spills into Physical
       } else phys += boxes;
       if (phys > d.condition.physical) {
         over += phys - d.condition.physical;
@@ -232,7 +238,7 @@ export function Sheet({ id }: { id: string }) {
     });
   };
 
-  const statusDesc = (name: string) => book?.sections.find((s) => s.chapter === "Game Concepts" && s.parent === "Status List" && s.title.replace(/\s*[IV#, ]+$/g, "").toLowerCase().startsWith(name.toLowerCase()))?.text.replace(/\s+/g, " ").slice(0, 280);
+  const statusDesc = (name: string) => house.find((h) => h.name === name)?.text || book?.sections.find((s) => s.chapter === "Game Concepts" && s.parent === "Status List" && s.title.replace(/\s*[IV#, ]+$/g, "").toLowerCase().startsWith(name.toLowerCase()))?.text.replace(/\s+/g, " ").slice(0, 280);
 
   const poolBreakdown = (() => {
     const def = SKILL_BY_ID[builder.skill];
@@ -422,10 +428,10 @@ export function Sheet({ id }: { id: string }) {
                         <div>
                           <div className="font-display font-semibold">{w.name}</div>
                           <div className="num text-xs text-dim">DV {w.dv || "?"} · AR {(w.ar ?? []).map((v) => (v == null ? "—" : v)).join("/")}</div>
-                          {ar == null ? <div className="text-xs text-danger">Cannot attack at {RANGES[target.range]} range.</div> : diff >= 4 ? <div className="text-xs text-ok">AR beats DR by {diff}: you gain 1 Edge.</div> : diff <= -4 ? <div className="text-xs text-danger">DR beats AR by {-diff}: the target gains 1 Edge.</div> : null}
+                          {ar == null ? <div className="text-xs text-danger">Cannot attack at {RANGES[target.range]} range.</div> : diff >= rules().edgeGap ? <div className="text-xs text-ok">AR beats DR by {diff}: you gain {rules().edgeGain} Edge.</div> : diff <= -rules().edgeGap ? <div className="text-xs text-danger">DR beats AR by {-diff}: the target gains {rules().edgeGain} Edge.</div> : null}
                         </div>
                         <div className="no-print flex shrink-0 gap-1.5">
-                          {diff >= 4 && <button className="btn small ghost" onClick={() => upd((x) => { x.edgeCurrent = Math.min(7, x.edgeCurrent + 1); })}>+1 Edge</button>}
+                          {diff >= rules().edgeGap && rules().edgeGain > 0 && <button className="btn small ghost" onClick={() => upd((x) => { x.edgeCurrent = Math.min(rules().maxEdge, x.edgeCurrent + rules().edgeGain); })}>+{rules().edgeGain} Edge</button>}
                           <button className="btn small primary" disabled={ar == null} onClick={() => rollPool(`${w.name} (${SKILL_BY_ID[sk]?.name ?? "Attack"})`, Math.max(0, base))}>Attack {poolOf(base)}</button>
                         </div>
                       </div>
@@ -459,7 +465,7 @@ export function Sheet({ id }: { id: string }) {
 
           <Box title="Statuses" className="no-print">
             <div className="flex flex-wrap gap-1.5">
-              {STATUSES.map((s) => {
+              {[...STATUSES, ...house.map((h) => h.name).filter((n) => !STATUSES.includes(n))].map((s) => {
                 const on = c.statuses.includes(s);
                 return <button key={s} className={clsx("chip", on && "on")} aria-pressed={on} title={statusDesc(s)} onClick={() => upd((x) => { x.statuses = on ? x.statuses.filter((y) => y !== s) : [...x.statuses, s]; })}>{s}</button>;
               })}

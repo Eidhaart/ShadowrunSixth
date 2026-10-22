@@ -1,3 +1,4 @@
+import { rules } from "@/lib/house/rules";
 import { CELL, rangeBand, type Attack, type Bar, type BarKey, type Obj, type Scene, type Token, type Weapon } from "./types";
 
 /**
@@ -25,23 +26,24 @@ export function distanceMeters(a: Obj, b: Obj, scene: Scene): number {
 
 export const bandIndex = (m: number) => BANDS.indexOf(rangeBand(m) as (typeof BANDS)[number]);
 
-export function edgeFromRatings(ar: number, dr: number): Attack["edgeTo"] {
-  if (ar - dr >= 4) return "attacker";
-  if (dr - ar >= 4) return "defender";
+export function edgeFromRatings(ar: number, dr: number, gap = rules().edgeGap): Attack["edgeTo"] {
+  if (ar - dr >= gap) return "attacker";
+  if (dr - ar >= gap) return "defender";
   return null;
 }
 
-export function outcomeOf(attackHits: number, defenseHits: number): { outcome: NonNullable<Attack["outcome"]>; net: number } {
-  if (attackHits <= 0) return { outcome: "miss", net: 0 };
+export function outcomeOf(attackHits: number, defenseHits: number, r = rules()): { outcome: NonNullable<Attack["outcome"]>; net: number } {
+  if (attackHits <= 0 && r.zeroHitsMiss) return { outcome: "miss", net: 0 };
   const net = attackHits - defenseHits;
-  return { outcome: net > 0 ? "hit" : net === 0 ? "graze" : "miss", net: Math.max(0, net) };
+  if (net === 0) return { outcome: r.tie, net: 0 };
+  return { outcome: net > 0 ? "hit" : "miss", net: Math.max(0, net) };
 }
 
 export const damageAfter = (dv: number, net: number, soakHits: number) => Math.max(0, dv + net - soakHits);
 
 /** -1 die per 3 boxes filled on each monitor. */
-export function woundPenalty(bars: Token["bars"]): number {
-  const rows = (b?: Bar) => (b && b.max > 0 ? Math.floor(Math.max(0, b.max - b.cur) / 3) : 0);
+export function woundPenalty(bars: Token["bars"], every = rules().woundEvery): number {
+  const rows = (b?: Bar) => (b && b.max > 0 ? Math.floor(Math.max(0, b.max - b.cur) / every) : 0);
   return rows(bars.b1) + rows(bars.b2);
 }
 
@@ -49,14 +51,14 @@ export function woundPenalty(bars: Token["bars"]): number {
  * Damage onto token bars (boxes left). Stun that does not fit spills into Physical; Physical past
  * the monitor is overflow. Returns the new bars, overflow boxes and whether the target is down.
  */
-export function damageBars(bars: Token["bars"], boxes: number, type: "P" | "S"): { bars: Token["bars"]; overflow: number; down: boolean } {
+export function damageBars(bars: Token["bars"], boxes: number, type: "P" | "S", spill = rules().stunSpill): { bars: Token["bars"]; overflow: number; down: boolean } {
   const b1 = bars.b1 ? { ...bars.b1 } : { cur: 0, max: 0 };
   const b2 = bars.b2 ? { ...bars.b2 } : undefined;
   let phys = boxes;
   if (type === "S" && b2) {
     const take = Math.min(boxes, b2.cur);
     b2.cur -= take;
-    phys = boxes - take;
+    phys = Math.floor((boxes - take) / Math.max(1, spill));
   }
   const take = Math.min(phys, b1.cur);
   b1.cur -= take;
@@ -66,13 +68,14 @@ export function damageBars(bars: Token["bars"], boxes: number, type: "P" | "S"):
   return { bars: out, overflow, down: b1.cur <= 0 || (!!b2 && b2.cur <= 0) };
 }
 
-export const statsOf = (t: Token) => (t.npc ?? t.card) as { dr: number; weapons?: Weapon[]; defend?: number; soak?: number; pools: { label: string; dice: number }[] } | undefined;
+export const statsOf = (t: Token) => (t.npc ?? t.card) as { dr: number; weapons?: Weapon[]; defend?: number; soak?: number; armor?: number; pools: { label: string; dice: number }[] } | undefined;
 
-/** Defense and soak pools, falling back to pools named like them on older tokens. */
-export function defensePools(t: Token): { defend: number; soak: number } {
+/** Defense and soak pools, falling back to pools named like them on older tokens. House rules may add armor to soak. */
+export function defensePools(t: Token, armorSoaks = rules().armorSoaks): { defend: number; soak: number } {
   const s = statsOf(t);
   const find = (re: RegExp) => s?.pools.find((p) => re.test(p.label))?.dice;
-  return { defend: s?.defend ?? find(/defen/i) ?? 6, soak: s?.soak ?? find(/soak|body/i) ?? 4 };
+  const soak = s?.soak ?? find(/soak|body/i) ?? 4;
+  return { defend: s?.defend ?? find(/defen/i) ?? 6, soak: soak + (armorSoaks ? s?.armor ?? 0 : 0) };
 }
 
 export function weaponsOf(t: Token): Weapon[] {

@@ -988,3 +988,30 @@ h1 { color: var(--title, var(--fg)); background-image: var(--title-paint, none);
 .vtt-attack.is-mine { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger), 0 8px 24px rgba(0, 0, 0, .45); animation: vtt-alert 1.4s ease-in-out 3; }
 @keyframes vtt-alert { 50% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--danger) 45%, transparent), 0 8px 24px rgba(0, 0, 0, .45); } }
 @media (prefers-reduced-motion: reduce) { .vtt-attack.is-mine { animation: none; } }
+
+/* ───────────────────────── House rules ───────────────────────── */
+.house-switch { position: relative; width: 2.75rem; height: 1.5rem; border: 1px solid var(--line-hi); background: var(--bg-2); border-radius: 999px; transition: background .15s, border-color .15s; flex: none; }
+.house-switch span { position: absolute; top: 2px; left: 2px; width: calc(1.5rem - 6px); height: calc(1.5rem - 6px); border-radius: 50%; background: var(--fg-dim); transition: transform .15s, background .15s; }
+.house-switch.on { background: color-mix(in oklab, var(--accent) 30%, var(--bg-2)); border-color: var(--accent); }
+.house-switch.on span { transform: translateX(1.25rem); background: var(--accent); }
+.house-switch:disabled { opacity: .6; }
+.house-preset, .house-set { border: 1px solid var(--line); background: var(--panel); transition: border-color .12s, background .12s; }
+.house-preset:hover, .house-set:hover { border-color: var(--line-hi); }
+.house-preset.on, .house-set.on { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 9%, var(--panel)); }
+.house-row.changed { background: linear-gradient(90deg, color-mix(in oklab, var(--accent) 8%, transparent), transparent 60%); box-shadow: inset 3px 0 0 var(--accent); }
+.house-inforce { border: 1px solid var(--line-hi); background: var(--panel); }
+.house-badge { font-family: var(--font-ui); font-size: .62rem; letter-spacing: .04em; padding: 0 .35rem; border: 1px solid var(--astral); color: var(--astral); }
+.house-title { border-bottom: 1px dashed transparent; }
+.house-title:hover, .house-title:focus { border-bottom-color: var(--line-hi); }
+
+/* ───────────────────────── Seat gate ───────────────────────── */
+.seat-gate { background: var(--panel); border: 1px solid var(--line-hi); box-shadow: 0 24px 60px rgba(0, 0, 0, .6); }
+.seat-card { border: 1px solid var(--line); background: var(--bg-2); transition: border-color .15s, background .15s, transform .15s; }
+.seat-card:hover { border-color: var(--line-hi); }
+.seat-card.on { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, var(--bg-2)); box-shadow: inset 0 0 0 1px var(--accent); }
+.seat-art { width: 100%; height: 5.5rem; fill: none; stroke: var(--fg-dim); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.seat-card.on .seat-art { stroke: var(--fg); }
+.seat-art .seat-accent { stroke: var(--accent); }
+.seat-art .seat-line { stroke: var(--line-hi); stroke-width: 1.4; }
+.vtt-conn { cursor: pointer; }
+.vtt-conn:hover { color: var(--fg); }

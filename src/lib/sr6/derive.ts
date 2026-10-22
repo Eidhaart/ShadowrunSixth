@@ -1,4 +1,5 @@
 import type { Character, QualityEffect } from "./character";
+import { rules } from "@/lib/house/rules";
 import {
   ATTRIBUTES,
   KARMA,
@@ -138,9 +139,10 @@ export function derive(c: Character): Derived {
   const edgeMax = Math.min(meta.ranges.edge[1] + eff.edge, 1 + c.adjEdge + c.karEdge + eff.edge);
   const edge = Math.max(0, 1 + c.adjEdge + c.karEdge + eff.edge - (c.edgeBurned ?? 0));
 
-  const physicalBoxes = 8 + Math.ceil(attrs.body / 2) + meta.builtTough + eff.physicalBoxes;
-  const stunBoxes = 8 + Math.ceil(attrs.willpower / 2) + eff.stunBoxes;
-  const overflowBoxes = attrs.body * 2 + eff.overflowBoxes;
+  const R = rules();
+  const physicalBoxes = R.physBase + Math.ceil(attrs.body / 2) + meta.builtTough + eff.physicalBoxes;
+  const stunBoxes = R.stunBase + Math.ceil(attrs.willpower / 2) + eff.stunBoxes;
+  const overflowBoxes = attrs.body * R.overflowMult + eff.overflowBoxes;
 
   const wearArmor = c.gear
     .filter((g) => g.category === "armor" && g.worn !== false)
@@ -148,8 +150,8 @@ export function derive(c: Character): Derived {
   const defenseRating = attrs.body + wearArmor + meta.dermalDefense + eff.defense;
 
   const woundRows = {
-    physical: Math.floor(c.damage.physical / 3),
-    stun: Math.floor(c.damage.stun / 3),
+    physical: Math.floor(c.damage.physical / R.woundEvery),
+    stun: Math.floor(c.damage.stun / R.woundEvery),
   };
   const rawRows = woundRows.physical + woundRows.stun;
   const reduce = c.qualities.reduce((m, q) => m + (q.effect?.woundReduce ?? 0), 0);
@@ -180,7 +182,7 @@ export function derive(c: Character): Derived {
   }
 
   const initRank = attrs.reaction + attrs.intuition + eff.initiative;
-  const initDice = Math.min(5, 1 + eff.initiativeDice);
+  const initDice = Math.min(R.initDiceCap, 1 + eff.initiativeDice);
 
   const spells = awakened && c.magicType !== "adept"
     ? c.magicType === "mystic"

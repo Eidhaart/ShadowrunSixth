@@ -7,14 +7,14 @@ import { vid } from "@/lib/vtt/ops";
 import { useTableUi, type Cam } from "./ui";
 import { TokenHud } from "./TokenHud";
 import { DRAG_NPC, DRAG_RUNNER } from "./Sidebar";
-import { placeNpc, placeRunner, baseToken } from "./act";
+import { placeNpc, placeRunner, baseToken, placeMap } from "./act";
 import { loadImage } from "@/lib/vtt/images";
 import { BUILDS, PREMADES, fromBuild, fromPremade, portraitUrl } from "@/lib/sr6/premades";
 
 type Pt = { x: number; y: number };
 type Drag =
   | { mode: "move"; ids: string[]; start: Pt; moved: boolean }
-  | { mode: "resize"; id: string; start: Pt; w0: number; h0: number }
+  | { mode: "resize"; id: string; dir: string; start: Pt; box: Box; aspect?: number }
   | { mode: "pan"; sx: number; sy: number; cam: Cam }
   | { mode: "marquee"; start: Pt }
   | { mode: "ruler"; start: Pt }
@@ -26,6 +26,45 @@ const LAYER_ORDER = { map: 0, token: 1, gm: 2 } as const;
 const BAR_COLORS = { b1: "var(--danger)", b2: "var(--cyan)", b3: "var(--accent)" } as const;
 const initials = (s: string) => s.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "?";
 const snapTo = (v: number) => Math.round(v / CELL) * CELL;
+type Box = { x: number; y: number; w: number; h: number };
+const HANDLES: { dir: string; fx: number; fy: number; cursor: string }[] = [
+  { dir: "nw", fx: 0, fy: 0, cursor: "nwse-resize" }, { dir: "n", fx: 0.5, fy: 0, cursor: "ns-resize" }, { dir: "ne", fx: 1, fy: 0, cursor: "nesw-resize" },
+  { dir: "e", fx: 1, fy: 0.5, cursor: "ew-resize" }, { dir: "se", fx: 1, fy: 1, cursor: "nwse-resize" }, { dir: "s", fx: 0.5, fy: 1, cursor: "ns-resize" },
+  { dir: "sw", fx: 0, fy: 1, cursor: "nesw-resize" }, { dir: "w", fx: 0, fy: 0.5, cursor: "ew-resize" },
+];
+
+/**
+ * Drag a handle: the opposite edge stays put. Edges snap to the grid; pictures keep their shape
+ * unless Shift is held, Roll20 style.
+ */
+export function resizeBox(b: Box, dir: string, dx: number, dy: number, o: { snap: boolean; aspect?: number; min?: number }): Box {
+  const min = o.min ?? 10;
+  let l = b.x, t = b.y, r = b.x + b.w, btm = b.y + b.h;
+  if (dir.includes("w")) l += dx;
+  if (dir.includes("e")) r += dx;
+  if (dir.includes("n")) t += dy;
+  if (dir.includes("s")) btm += dy;
+  if (o.snap) {
+    if (dir.includes("w")) l = snapTo(l);
+    if (dir.includes("e")) r = snapTo(r);
+    if (dir.includes("n")) t = snapTo(t);
+    if (dir.includes("s")) btm = snapTo(btm);
+  }
+  if (r - l < min) { if (dir.includes("w")) l = r - min; else r = l + min; }
+  if (btm - t < min) { if (dir.includes("n")) t = btm - min; else btm = t + min; }
+  let w = r - l, h = btm - t;
+  if (o.aspect) {
+    // the dragged side leads; the other follows the picture's shape
+    const horizontal = dir === "e" || dir === "w" || (dir.length === 2 && Math.abs(dx) >= Math.abs(dy) * o.aspect);
+    if (horizontal) h = w / o.aspect; else w = h * o.aspect;
+    if (dir.includes("w")) l = r - w;
+    if (dir.includes("n")) t = btm - h;
+    if (dir === "e" || dir === "w") t = b.y + (b.h - h) / 2;
+    if (dir === "n" || dir === "s") l = b.x + (b.w - w) / 2;
+  }
+  return { x: Math.round(l), y: Math.round(t), w: Math.round(w), h: Math.round(h) };
+}
+
 const norm = (a: Pt, b: Pt) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) });
 
 /** The fog mask: white is fogged, regions apply in order. */
@@ -90,7 +129,10 @@ function TokenView({ t, state, sel, current, me, offset, zoom }: { t: Token; sta
         </g>
       )}
       {sel && <rect x={-3} y={-3} width={t.w + 6} height={t.h + 6} fill="none" stroke="var(--accent)" strokeWidth={2} strokeDasharray="6 4" pointerEvents="none" />}
-      {sel && me.gm && <rect data-resize={t.id} x={t.w - 4} y={t.h - 4} width={12} height={12} fill="var(--accent)" stroke="var(--bg)" style={{ cursor: "nwse-resize" }} />}
+      {sel && me.gm && HANDLES.map((hd) => {
+        const s = 11 / zoom;
+        return <rect key={hd.dir} data-resize={t.id} data-dir={hd.dir} x={hd.fx * t.w - s / 2} y={hd.fy * t.h - s / 2} width={s} height={s} fill="var(--accent)" stroke="var(--bg)" strokeWidth={1.5 / zoom} style={{ cursor: hd.cursor }} />;
+      })}
     </g>
   );
 }
@@ -131,7 +173,7 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
   const [rubber, setRubber] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [ruler, setRuler] = useState<{ a: Pt; b: Pt } | null>(null);
   const [stroke, setStroke] = useState<{ start: Pt; pts: number[]; cur: Pt } | null>(null);
-  const [resize, setResize] = useState<{ id: string; w: number; h: number } | null>(null);
+  const [resize, setResize] = useState<{ id: string } & Box | null>(null);
   const touches = useRef(new Map<number, Pt>());
   const pinch = useRef<{ d: number; cam: Cam; mid: Pt } | null>(null);
   const lastRulerFx = useRef(0);
@@ -221,7 +263,11 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
     const rid = target?.getAttribute("data-resize");
     if (rid && me.gm) {
       const o = scene.objects[rid];
-      if (o) { drag.current = { mode: "resize", id: rid, start: p, w0: o.w, h0: o.h }; setResize({ id: rid, w: o.w, h: o.h }); }
+      if (o) {
+        const aspect = o.kind === "token" && o.img ? o.aspect ?? (o.layer === "map" ? o.w / o.h : 1) : undefined;
+        drag.current = { mode: "resize", id: rid, dir: target?.getAttribute("data-dir") ?? "se", start: p, box: { x: o.x, y: o.y, w: o.w, h: o.h }, aspect };
+        setResize({ id: rid, x: o.x, y: o.y, w: o.w, h: o.h });
+      }
       return;
     }
     const oid = target?.getAttribute("data-oid");
@@ -259,7 +305,7 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
     if (d.mode === "pan") { setCam({ x: d.cam.x - (e.clientX - d.sx) / d.cam.z, y: d.cam.y - (e.clientY - d.sy) / d.cam.z, z: d.cam.z }); return; }
     const p = toWorld(e.clientX, e.clientY);
     if (d.mode === "move") { d.moved = true; setOffset({ x: p.x - d.start.x, y: p.y - d.start.y }); return; }
-    if (d.mode === "resize") { setResize({ id: d.id, w: Math.max(10, d.w0 + p.x - d.start.x), h: Math.max(10, d.h0 + p.y - d.start.y) }); return; }
+    if (d.mode === "resize") { setResize({ id: d.id, ...resizeBox(d.box, d.dir, p.x - d.start.x, p.y - d.start.y, { snap: ui.snap && !e.altKey, aspect: e.shiftKey ? undefined : d.aspect }) }); return; }
     if (d.mode === "marquee" || d.mode === "fog") { setRubber(norm(d.start, p)); return; }
     if (d.mode === "ruler") {
       const a = ui.snap && !e.altKey ? { x: snapTo(d.start.x - CELL / 2) + CELL / 2, y: snapTo(d.start.y - CELL / 2) + CELL / 2 } : d.start;
@@ -300,12 +346,14 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
       return;
     }
     if (d.mode === "resize") {
-      const r = resize;
       setResize(null);
-      if (!r) return;
-      const snapW = ui.snap && !e.altKey ? Math.max(CELL, snapTo(r.w)) : Math.round(r.w);
-      const snapH = ui.snap && !e.altKey ? Math.max(CELL, snapTo(r.h)) : Math.round(r.h);
-      dispatch([{ k: "merge", p: ["scenes", scene.id, "objects", r.id], v: { w: snapW, h: snapH } }]);
+      const r = resizeBox(d.box, d.dir, p.x - d.start.x, p.y - d.start.y, { snap: ui.snap && !e.altKey, aspect: e.shiftKey ? undefined : d.aspect });
+      if (r.x === d.box.x && r.y === d.box.y && r.w === d.box.w && r.h === d.box.h) return;
+      const o = scene.objects[d.id];
+      const v: Record<string, unknown> = { ...r };
+      // freeform stretching of a picture becomes its new shape
+      if (e.shiftKey && o?.kind === "token" && o.img) v.aspect = r.w / Math.max(1, r.h);
+      dispatch([{ k: "merge", p: ["scenes", scene.id, "objects", d.id], v }]);
       return;
     }
     if (d.mode === "marquee") {
@@ -355,7 +403,7 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
   const onDouble = (e: React.MouseEvent) => {
     const t = (e.target as Element).closest?.("[data-oid]");
     const o = t ? scene.objects[t.getAttribute("data-oid")!] : undefined;
-    if (o?.kind !== "token") return;
+    if (o?.kind !== "token" || o.layer === "map") return;
     if (o.runner && o.runner.owner === me.handle) ui.set({ dialog: { kind: "sheet", runnerId: o.runner.runnerId } });
     else ui.set({ dialog: { kind: "card", id: o.id } });
   };
@@ -390,6 +438,18 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
     return () => window.removeEventListener("keydown", k);
   }, [scene, me, dispatch]);
 
+  // older tables kept the map as a fixed background: turn it into a resizable map object once
+  useEffect(() => {
+    if (!me.gm || !scene.bg) return;
+    const a = state.assets[scene.bg];
+    const t = baseToken("Map", 0, 0, "map", []);
+    const W0 = scene.cols * CELL, H0 = scene.rows * CELL, aspect = a ? a.w / Math.max(1, a.h) : W0 / H0;
+    // same picture as before: cover the scene, centered
+    const w = Math.round(Math.max(W0, H0 * aspect)), h = Math.round(w / aspect);
+    Object.assign(t, { x: Math.round((W0 - w) / 2), y: Math.round((H0 - h) / 2), w, h, img: scene.bg, showName: false, aspect, z: -Date.now() });
+    dispatch([{ k: "set", p: ["scenes", scene.id, "objects", t.id], v: t }, { k: "del", p: ["scenes", scene.id, "bg"] }]);
+  }, [me.gm, scene.bg]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const onDragOver = (e: React.DragEvent) => {
     const t = e.dataTransfer.types;
     if (t.includes(DRAG_RUNNER) || t.includes(DRAG_NPC) || t.includes("Files")) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }
@@ -411,20 +471,18 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
     const f = [...e.dataTransfer.files].find((x) => x.type.startsWith("image/"));
     if (!f) return;
     const u = useTableUi.getState();
-    if (me.gm && u.layer === "map" && !scene.bg) {
+    if (me.gm && u.layer === "map") {
       const a = await loadImage(f, "map");
       const id = vid("a");
-      dispatch([{ k: "set", p: ["assets", id], v: { id, ...a } }, { k: "merge", p: ["scenes", scene.id], v: { bg: id, cols: Math.max(4, Math.round(a.w / CELL)), rows: Math.max(4, Math.round(a.h / CELL)) } }]);
+      placeMap(scene, { id, w: a.w, h: a.h }, { x: p.x - a.w / 2, y: p.y - a.h / 2 }, f.name.replace(/\.[^.]+$/, ""), [{ k: "set", p: ["assets", id], v: { id, ...a } }]);
       return;
     }
-    const big = me.gm && u.layer === "map";
-    const a = await loadImage(f, big ? "map" : "token");
+    const a = await loadImage(f, "token");
     const aid = vid("a");
     const layer = me.gm ? u.layer : "token";
     const t = baseToken(f.name.replace(/\.[^.]+$/, ""), x, y, layer, me.gm ? [] : [me.handle]);
     t.img = aid;
     t.showName = false;
-    if (big) { t.w = Math.round(a.w / CELL) * CELL || CELL; t.h = Math.round(a.h / CELL) * CELL || CELL; }
     dispatch([{ k: "set", p: ["assets", aid], v: { id: aid, ...a } }, { k: "set", p: ["scenes", scene.id, "objects", t.id], v: t }]);
   };
 
@@ -433,7 +491,7 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
   const single = ui.selected.length === 1 ? scene.objects[ui.selected[0]] : undefined;
 
   return (
-    <div ref={wrap} className={clsx("vtt-stage relative size-full overflow-hidden select-none", ui.tool === "pan" && "cursor-grab", (ui.tool === "ruler" || ui.tool === "draw" || ui.tool === "fog") && "cursor-crosshair", ui.tool === "ping" && "cursor-cell", ui.targeting && "vtt-targeting")} style={{ background: "#05060a", touchAction: "none" }} onDragOver={onDragOver} onDrop={(e) => void onDrop(e)}>
+    <div ref={wrap} className={clsx("vtt-stage relative size-full overflow-clip select-none", ui.tool === "pan" && "cursor-grab", (ui.tool === "ruler" || ui.tool === "draw" || ui.tool === "fog") && "cursor-crosshair", ui.tool === "ping" && "cursor-cell", ui.targeting && "vtt-targeting")} style={{ background: "#05060a", touchAction: "none" }} onDragOver={onDragOver} onDrop={(e) => void onDrop(e)}>
       <svg
         ref={svg}
         width={size.w}
@@ -457,7 +515,7 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
         </defs>
         <rect x={0} y={0} width={W} height={H} fill={scene.bgColor} />
         {scene.bg && state.assets[scene.bg] && <image href={state.assets[scene.bg].data} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" />}
-        {objs.filter((o) => o.layer === "map").map((o) => (o.kind === "token" ? <TokenView key={o.id} t={resize?.id === o.id ? { ...o, w: resize.w, h: resize.h } : o} state={state} sel={sel.has(o.id)} current={false} me={me} zoom={cam.z} offset={sel.has(o.id) ? offset : { x: 0, y: 0 }} /> : <ShapeView key={o.id} s={o} sel={sel.has(o.id)} offset={sel.has(o.id) ? offset : { x: 0, y: 0 }} />))}
+        {objs.filter((o) => o.layer === "map").map((o) => (o.kind === "token" ? <TokenView key={o.id} t={resize?.id === o.id ? { ...o, x: resize.x, y: resize.y, w: resize.w, h: resize.h } : o} state={state} sel={sel.has(o.id)} current={false} me={me} zoom={cam.z} offset={sel.has(o.id) ? offset : { x: 0, y: 0 }} /> : <ShapeView key={o.id} s={o} sel={sel.has(o.id)} offset={sel.has(o.id) ? offset : { x: 0, y: 0 }} />))}
         {scene.grid && <rect x={0} y={0} width={W} height={H} fill="url(#vtt-grid)" pointerEvents="none" />}
         {objs.filter((o) => o.kind === "token" && o.aura && o.layer !== "map").map((o) => {
           const t = o as Token;
@@ -465,7 +523,7 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
           return <circle key={`aura-${t.id}`} cx={t.x + t.w / 2 + (sel.has(t.id) ? offset.x : 0)} cy={t.y + t.h / 2 + (sel.has(t.id) ? offset.y : 0)} r={rad} fill={t.auraColor ?? "#1fe3f0"} fillOpacity={0.12} stroke={t.auraColor ?? "#1fe3f0"} strokeOpacity={0.5} pointerEvents="none" />;
         })}
         {objs.filter((o) => o.layer !== "map").map((o) => (o.kind === "token"
-          ? <TokenView key={o.id} t={resize?.id === o.id ? { ...o, w: resize.w, h: resize.h } : o} state={state} sel={sel.has(o.id)} current={o.id === currentToken} me={me} zoom={cam.z} offset={sel.has(o.id) ? offset : { x: 0, y: 0 }} />
+          ? <TokenView key={o.id} t={resize?.id === o.id ? { ...o, x: resize.x, y: resize.y, w: resize.w, h: resize.h } : o} state={state} sel={sel.has(o.id)} current={o.id === currentToken} me={me} zoom={cam.z} offset={sel.has(o.id) ? offset : { x: 0, y: 0 }} />
           : <ShapeView key={o.id} s={o} sel={sel.has(o.id)} offset={sel.has(o.id) ? offset : { x: 0, y: 0 }} />))}
         {scene.fog && <rect x={0} y={0} width={W} height={H} fill="#03040a" fillOpacity={me.gm ? 0.5 : 1} mask="url(#vtt-fog)" pointerEvents="none" />}
         <rect x={0} y={0} width={W} height={H} fill="none" stroke="var(--line-hi)" strokeWidth={2 / cam.z} pointerEvents="none" />

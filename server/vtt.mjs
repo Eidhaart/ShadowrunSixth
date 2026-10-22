@@ -128,6 +128,9 @@ function playerCombat(state) {
   return out;
 }
 
+/** House rules as players see them: secret notes stay with the GM. */
+const publicRules = (r) => (r && typeof r === "object" ? { ...r, notes: (r.notes ?? []).filter((n) => !n.secret) } : null);
+
 function assetsIn(scene, handouts) {
   const ids = new Set();
   if (scene?.bg) ids.add(scene.bg);
@@ -155,6 +158,7 @@ export function viewFor(state, client) {
     turn: playerTurn(state),
     assets,
     combat: playerCombat(state),
+    rules: publicRules(state.rules),
   };
 }
 
@@ -208,6 +212,7 @@ export function opsForPlayer(before, after, ops, client) {
       continue;
     }
     if (p0 === "combat") { out.push({ k: "set", p: ["combat"], v: playerCombat(after) }); continue; }
+    if (p0 === "rules") { out.push({ k: "set", p: ["rules"], v: publicRules(after.rules) }); continue; }
     if (p0 === "order" || p0 === "assets") continue;
     if (p0 === "stamp") out.push(op);
   }

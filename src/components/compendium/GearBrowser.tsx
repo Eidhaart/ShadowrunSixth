@@ -1,4 +1,5 @@
 "use client";
+import { rules } from "@/lib/house/rules";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -124,7 +125,7 @@ export interface BrowserProps {
   onAdd?: (item: CompItem, qty: number) => void;
   /** Button text, e.g. "Add to Cipher". */
   addLabel?: string;
-  /** Character creation: Availability above 6 cannot be bought. */
+  /** Character creation: Availability above the cap (6 by the book) cannot be bought. */
   creation?: boolean;
   /** Nuyen on hand, for the "I can afford it" filter. */
   nuyen?: number;
@@ -166,7 +167,8 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
     return out;
   }, [list, q, cat, group, legalOnly, afford, nuyen, sort]);
 
-  const blockedFor = (i: CompItem) => (creation && (i.avail ?? 0) > 6 ? "Availability 7 or more: not allowed at creation" : undefined);
+  const cap = rules().creationAvail;
+  const blockedFor = (i: CompItem) => (creation && (i.avail ?? 0) > cap ? `Availability ${cap + 1} or more: not allowed at creation` : undefined);
 
   return (
     <div className={clsx("flex min-h-0 flex-col", compact ? "flex-1 gap-2" : "gap-3")}>
@@ -215,6 +217,7 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
                   <div className="flex items-baseline gap-2">
                     <span className={clsx("font-display font-semibold group-hover:text-accent", !compact && "truncate")}>{i.name}</span>
                     {i.source === "imported" && i.wireless && <Icon name="wifi" size={12} className="shrink-0 text-cyan" />}
+                    {i.source === "house" && <span className="house-badge shrink-0" title="From the GM's house rules">House</span>}
                   </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-dim">
                     <span>{i.group}</span>
