@@ -181,12 +181,14 @@ function JournalPanel() {
   );
 }
 
+const NO_NOTES: { id: string; title: string; text: string; tags: string[]; secret?: boolean }[] = [];
+
 function RulesSearch() {
   const rb = useRulebook();
   const [q, setQ] = useState("");
   useEffect(() => { void rb.init(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const hits = q.trim().length > 1 && rb.status === "ready" ? rb.search(q, [], 6) : [];
-  const houseNotes = useVtt((s) => s.state?.rules?.notes ?? []);
+  const houseNotes = useVtt((s) => s.state?.rules?.notes) ?? NO_NOTES;
   const words = q.toLowerCase().split(/\s+/).filter((w) => w.length > 1);
   const houseHits = words.length ? houseNotes.filter((n) => words.every((w) => `${n.title} ${n.text} ${n.tags.join(" ")}`.toLowerCase().includes(w))).slice(0, 4) : [];
   return (
