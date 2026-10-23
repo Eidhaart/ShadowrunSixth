@@ -27,10 +27,10 @@ import { BOOK, diffs, show } from "@/lib/house/rules";
 export const DRAG_RUNNER = "application/x-sixthdeck-runner";
 export const DRAG_NPC = "application/x-sixthdeck-npc";
 
-const TABS: { id: Panel; label: string; icon: string; gm?: boolean }[] = [
+const TABS: { id: Panel; label: string; icon: string; gm?: boolean; full?: string }[] = [
   { id: "chat", label: "Chat", icon: "comms" },
   { id: "journal", label: "Journal", icon: "runners" },
-  { id: "compendium", label: "Compendium", icon: "crate" },
+  { id: "compendium", label: "Gear", full: "Compendium: gear and rules", icon: "crate" },
   { id: "house", label: "House", icon: "gavel" },
   { id: "scene", label: "Scene", icon: "settings", gm: true },
 ];
@@ -76,7 +76,7 @@ function ChatPanel() {
           <button type="button" className={clsx("btn small", dice && "primary")} onClick={() => setDice(!dice)} aria-pressed={dice} title="Dice roller"><Icon name="dice" size={15} /></button>
         </div>
         <div className="flex gap-1.5">
-          <input className="field flex-1" value={text} onChange={(e) => setText(e.target.value)} placeholder={live ? "Say something, or /r 12 Perception" : "/r 8 rolls dice offline"} aria-label="Message" />
+          <input className="field flex-1" value={text} onChange={(e) => setText(e.target.value)} placeholder={live ? "Say something, /r 12 to roll" : "/r 8 rolls dice"} aria-label="Message" />
           <button className="btn primary" disabled={!text.trim()}>Send</button>
         </div>
       </form>
@@ -424,9 +424,9 @@ export function Sidebar({ scene }: { scene: Scene | undefined }) {
     <aside className={clsx("vtt-side flex min-h-0 flex-col border-l border-line bg-panel", panel ? "w-[22rem] max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-30 max-lg:w-[min(22rem,100%)] max-lg:shadow-2xl" : "w-auto")}>
       <nav className={clsx("flex border-b border-line", !panel && "flex-col border-b-0")} role="tablist">
         {tabs.map((t) => (
-          <button key={t.id} role="tab" aria-selected={panel === t.id} className={clsx("vtt-tab relative flex items-center justify-center gap-1 px-2 py-2.5 text-xs", panel ? "flex-1" : "", panel === t.id && "on")} onClick={() => ui.set({ panel: panel === t.id ? null : t.id })} title={t.label}>
+          <button key={t.id} role="tab" aria-selected={panel === t.id} className={clsx("vtt-tab relative flex items-center justify-center", panel ? "min-w-0 flex-1 flex-col gap-0.5 px-1 py-1.5 text-[11px] leading-tight" : "px-2 py-2.5", panel === t.id && "on")} onClick={() => ui.set({ panel: panel === t.id ? null : t.id })} title={t.full ?? t.label} aria-label={t.full ?? t.label}>
             <Icon name={t.icon} size={16} />
-            {panel && <span className="max-sm:sr-only">{t.label}</span>}
+            {panel && <span className="block max-w-full truncate">{t.label}</span>}
             {t.id === "chat" && unread > 0 && panel !== "chat" && <span className="absolute right-1 top-1 size-2 rounded-full bg-accent" />}
           </button>
         ))}
