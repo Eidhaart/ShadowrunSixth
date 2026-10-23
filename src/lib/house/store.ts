@@ -1,7 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { emptyRuleset, PRESETS, sanitize, setActiveRules, type Ruleset } from "./rules";
+import { emptyRuleset, PRESETS, sanitize, setActiveRules, type HouseItem, type Ruleset } from "./rules";
 
 interface HouseState {
   /** The GM's own rulesets on this device. */
@@ -12,6 +12,11 @@ interface HouseState {
   tableRules: Ruleset | null;
   /** True while this device sits at a table as a player, so the GM's rules win. */
   asPlayer: boolean;
+  /** Items this person made for themselves; always in their Compendium. */
+  mine: HouseItem[];
+  addMine: (it: HouseItem) => void;
+  updateMine: (it: HouseItem) => void;
+  removeMine: (id: string) => void;
   create: (name?: string, from?: string) => string;
   update: (id: string, fn: (r: Ruleset) => void) => void;
   remove: (id: string) => void;
@@ -35,6 +40,10 @@ export const useHouse = create<HouseState>()(
       activeId: null,
       tableRules: null,
       asPlayer: false,
+      mine: [],
+      addMine: (it) => set((s) => ({ mine: [it, ...s.mine.filter((x) => x.id !== it.id)] })),
+      updateMine: (it) => set((s) => ({ mine: s.mine.map((x) => (x.id === it.id ? it : x)) })),
+      removeMine: (id) => set((s) => ({ mine: s.mine.filter((x) => x.id !== id) })),
       create: (name, from) => {
         const r = emptyRuleset(name ?? "My table");
         const preset = PRESETS.find((p) => p.id === from);

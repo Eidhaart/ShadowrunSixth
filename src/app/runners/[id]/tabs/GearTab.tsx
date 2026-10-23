@@ -1,4 +1,5 @@
 "use client";
+import { ItemMaker } from "@/components/compendium/ItemMaker";
 import { useEffect, useState } from "react";
 import { GearBrowser, useGearDrop } from "@/components/compendium/GearBrowser";
 import { addToRunner, type AddResult } from "@/lib/compendium/catalog";
@@ -91,6 +92,7 @@ export function GearTab({ ctx }: { ctx: SheetCtx }) {
   }, [shop]);
   const items = c.gear.filter((g) => cat === "all" || g.category === cat);
   const total = c.gear.reduce((s, g) => s + g.cost * (g.qty || 1), 0);
+  const [maker, setMaker] = useState(false);
   const addItem = () => {
     if (!name.trim()) return;
     const base: GearItem = { id: uid("g"), name: name.trim(), category: kind, cost: 0, qty: 1 };
@@ -101,10 +103,12 @@ export function GearTab({ ctx }: { ctx: SheetCtx }) {
   };
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      {maker && <ItemMaker onClose={() => setMaker(false)} runnerId={c.id} />}
       <div {...drop} className={clsx("transition-colors", over && "drop-over")}>
       <Box title="Inventory" right={<span className="num text-xs text-dim">{c.gear.length} items · {total.toLocaleString()}¥ · essence {d.essence}</span>}>
         <div className="no-print mb-3 flex flex-wrap items-center gap-2">
           <button className="btn small primary" onClick={() => setShop(true)} aria-expanded={shop}><Icon name="crate" size={15} /> Browse the compendium</button>
+          <button className="btn small" onClick={() => setMaker(true)}><Icon name="plus" size={15} /> Make your own item</button>
           <span className="text-xs text-faint max-md:hidden">Drag items from it straight onto this list.</span>
         </div>
         {last && !shop && <p className={clsx("mb-2 text-sm", last.ok ? "text-ok" : "text-danger")} role="status">{last.msg}</p>}
@@ -117,7 +121,7 @@ export function GearTab({ ctx }: { ctx: SheetCtx }) {
           {items.length === 0 && <li className="py-2"><Empty>Nothing here yet.</Empty></li>}
         </ul>
         <form className="no-print mt-3 flex flex-wrap gap-2" onSubmit={(ev) => { ev.preventDefault(); addItem(); }}>
-          <input className="field min-w-40 flex-1" value={name} onChange={(ev) => setName(ev.target.value)} placeholder="Add an item" aria-label="New item name" />
+          <input className="field min-w-40 flex-1" value={name} onChange={(ev) => setName(ev.target.value)} placeholder="Quick add by name" aria-label="New item name" />
           <select className="field !w-36" aria-label="Category" value={kind} onChange={(ev) => setKind(ev.target.value as GearItem["category"])}>{CATS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}</select>
           <button className="btn small primary" disabled={!name.trim()}><Icon name="plus" size={14} /> Add</button>
         </form>

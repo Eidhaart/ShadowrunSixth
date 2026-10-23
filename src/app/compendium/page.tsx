@@ -10,6 +10,9 @@ import { GearBrowser, useGearDrop } from "@/components/compendium/GearBrowser";
 import { useRunners } from "@/lib/store/characters";
 import { addToRunner, useGearList, type AddResult } from "@/lib/compendium/catalog";
 import type { CompItem } from "@/lib/compendium/types";
+import { ItemMaker } from "@/components/compendium/ItemMaker";
+import { useHouse } from "@/lib/house/store";
+import type { HouseItem } from "@/lib/house/rules";
 
 function Dock({ runnerId, setRunnerId, pay, setPay, last, onItem }: {
   runnerId: string; setRunnerId: (id: string) => void; pay: boolean; setPay: (b: boolean) => void; last: AddResult | null; onItem: (i: CompItem, qty: number) => void;
@@ -86,6 +89,35 @@ function Source() {
   );
 }
 
+/** The items you made, to edit, hand out or delete. */
+function MyItems({ onMake, onEdit }: { onMake: () => void; onEdit: (it: HouseItem) => void }) {
+  const mine = useHouse((s) => s.mine);
+  const remove = useHouse((s) => s.removeMine);
+  return (
+    <section className="panel mt-4 p-4">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="font-semibold">My items</h2>
+        <button className="btn small primary" onClick={onMake}><Icon name="plus" size={14} /> Make one</button>
+      </div>
+      {mine.length === 0 ? (
+        <p className="text-sm text-dim">Your own weapons, armor, implants and gear. They show up in this list and the Compendium marked Mine, and you can drag them onto any runner.</p>
+      ) : (
+        <ul className="divide-y divide-line text-sm">
+          {mine.map((it) => (
+            <li key={it.id} className="flex items-center gap-2 py-1.5">
+              <button className="min-w-0 flex-1 text-left" onClick={() => onEdit(it)} title="Edit">
+                <span className="block truncate font-display font-semibold">{it.name}</span>
+                <span className="num block text-xs text-dim">{it.group}{it.dv ? ` · DV ${it.dv}` : ""}{it.armor ? ` · +${it.armor} DR` : ""}{it.essence ? ` · ${it.essence} Ess` : ""}</span>
+              </button>
+              <button className="btn small ghost !px-1.5" onClick={() => { if (confirm(`Delete ${it.name}? Runners who have it keep their copy.`)) remove(it.id); }} aria-label={`Delete ${it.name}`}><Icon name="trash" size={14} /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function Compendium() {
   const q = useSearchParams().get("q") ?? "";
   const map = useRunners((s) => s.runners);
@@ -96,6 +128,7 @@ function Compendium() {
   const [pay, setPay] = useState(true);
   const [last, setLast] = useState<AddResult | null>(null);
   const r = map[runnerId];
+  const [maker, setMaker] = useState<{ initial?: HouseItem } | null>(null);
 
   const add = (i: CompItem, qty: number) => {
     if (!r) { setLast({ ok: false, msg: "Pick a runner first." }); return; }
@@ -105,7 +138,9 @@ function Compendium() {
   };
 
   return (
-    <Page wide title="Compendium" kicker="Every piece of gear on the street, with prices, availability and stats. Drag an item onto a runner, or tap + to add it.">
+    <Page wide title="Compendium" kicker="Every piece of gear on the street, with prices, availability and stats. Drag an item onto a runner, or tap + to add it."
+      actions={<button className="btn primary" onClick={() => setMaker({})}><Icon name="plus" size={15} /> Make your own item</button>}>
+      {maker && <ItemMaker onClose={() => setMaker(null)} runnerId={maker.initial ? undefined : r?.id} initial={maker.initial} payDefault={pay} />}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="order-2 min-w-0 xl:order-1">
           <section className="panel p-4">
@@ -116,6 +151,7 @@ function Compendium() {
         <aside className="order-1 xl:order-2">
           <div className="xl:sticky xl:top-16">
             <Dock runnerId={runnerId} setRunnerId={setPicked} pay={pay} setPay={setPay} last={last} onItem={add} />
+            <MyItems onMake={() => setMaker({})} onEdit={(it) => setMaker({ initial: it })} />
           </div>
         </aside>
       </div>

@@ -84,12 +84,14 @@ export function houseToComp(h: HouseItem): CompItem {
 export function useCatalog(): CoreItem[] {
   const imported = useGearList((s) => s.imported);
   const house = useHouse((s) => effective(s)?.items);
+  const mine = useHouse((s) => s.mine);
   return useMemo(() => {
     const map = new Map<string, CoreItem>(BUILT_IN.map((i) => [i.id, i]));
     for (const i of imported ?? []) map.set(i.id, { ...i, equip: i.equip ?? map.get(i.id)?.equip });
     for (const h of house ?? []) { const c = houseToComp(h); map.set(c.id, c); }
+    for (const h of mine ?? []) { const c = { ...houseToComp(h), id: `mine-${h.id}`, book: "My items", source: "mine" as const }; map.set(c.id, c); }
     return [...map.values()];
-  }, [imported, house]);
+  }, [imported, house, mine]);
 }
 
 export function findItem(list: CompItem[], id: string): CompItem | undefined {

@@ -218,6 +218,7 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
                     <span className={clsx("font-display font-semibold group-hover:text-accent", !compact && "truncate")}>{i.name}</span>
                     {i.source === "imported" && i.wireless && <Icon name="wifi" size={12} className="shrink-0 text-cyan" />}
                     {i.source === "house" && <span className="house-badge shrink-0" title="From the GM's house rules">House</span>}
+                    {i.source === "mine" && <span className="house-badge shrink-0" title="An item you made">Mine</span>}
                   </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-dim">
                     <span>{i.group}</span>

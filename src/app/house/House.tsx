@@ -4,8 +4,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
 import { useCatalog } from "@/lib/compendium/catalog";
-import { COMP_CATS } from "@/lib/compendium/types";
-import { SKILLS } from "@/lib/sr6/data";
+import { ItemFields } from "@/components/compendium/ItemMaker";
 import { useComms } from "@/lib/store/comms";
 import { effective, useHouse } from "@/lib/house/store";
 import { BOOK, FIELDS, GROUPS, PRESETS, diffs, show, type Field, type HouseItem, type Mechanics, type Ruleset } from "@/lib/house/rules";
@@ -168,60 +167,11 @@ function Mechanic({ rs, readOnly }: { rs: Ruleset; readOnly?: boolean }) {
 
 // ───────────────────────── items ─────────────────────────
 
-const ITEM_CATS = COMP_CATS.filter((c) => c.id !== "matrix").map((c) => c.id) as HouseItem["cat"][];
-const COMBAT_SKILLS = SKILLS.filter((s) => s.group === "combat");
 
 function ItemEditor({ it, onChange, onRemove }: { it: HouseItem; onChange: (p: Partial<HouseItem>) => void; onRemove: () => void }) {
-  const ar = it.ar ?? [null, null, null, null, null];
   return (
     <div className="space-y-3 p-3.5">
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        <label className="text-xs text-dim">Name<input className="field" value={it.name} onChange={(e) => onChange({ name: e.target.value })} /></label>
-        <label className="text-xs text-dim">Category
-          <select className="field" value={it.cat} onChange={(e) => onChange({ cat: e.target.value as HouseItem["cat"] })}>
-            {ITEM_CATS.map((c) => <option key={c} value={c}>{COMP_CATS.find((x) => x.id === c)?.name}</option>)}
-          </select>
-        </label>
-        <label className="text-xs text-dim">Type<input className="field" value={it.group} onChange={(e) => onChange({ group: e.target.value })} placeholder="Heavy Pistol, Blade…" /></label>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        <label className="text-xs text-dim">Cost (¥)<input className="field num" type="number" min={0} value={it.cost ?? ""} onChange={(e) => onChange({ cost: e.target.value === "" ? null : Math.max(0, Number(e.target.value)) })} /></label>
-        <label className="text-xs text-dim">Availability<input className="field num" type="number" min={0} value={it.avail ?? ""} onChange={(e) => onChange({ avail: e.target.value === "" ? undefined : Math.max(0, Number(e.target.value)) })} /></label>
-        <label className="text-xs text-dim">Legality
-          <select className="field" value={it.legal ?? ""} onChange={(e) => onChange({ legal: (e.target.value || undefined) as HouseItem["legal"] })}>
-            <option value="">Legal</option><option value="L">Licensed</option><option value="I">Illegal</option>
-          </select>
-        </label>
-      </div>
-      {it.cat === "weapons" && (
-        <div className="space-y-2 border-l-2 border-accent/40 pl-3">
-          <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-2">
-            <label className="text-xs text-dim">Damage<input className="field num" value={it.dv ?? ""} onChange={(e) => onChange({ dv: e.target.value.toUpperCase().slice(0, 8) })} placeholder="4P" /></label>
-            <label className="text-xs text-dim">Skill
-              <select className="field" value={it.skill ?? "firearms"} onChange={(e) => onChange({ skill: e.target.value })}>
-                {COMBAT_SKILLS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </label>
-          </div>
-          <div>
-            <div className="mb-1 text-xs text-dim">Attack Rating by range (empty: cannot reach)</div>
-            <div className="grid grid-cols-5 gap-1">
-              {["Close", "Near", "Medium", "Far", "Extreme"].map((b, i) => (
-                <label key={b} className="text-center text-[10px] text-faint">{b}
-                  <input className="field num !min-h-0 !py-1 text-center" type="number" min={0} value={ar[i] ?? ""} onChange={(e) => { const next = [...ar]; next[i] = e.target.value === "" ? null : Math.max(0, Number(e.target.value)); onChange({ ar: next }); }} />
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-      {it.cat === "armor" && (
-        <label className="block border-l-2 border-accent/40 pl-3 text-xs text-dim">Defense Rating bonus<input className="field num !w-28" type="number" min={0} value={it.armor ?? 0} onChange={(e) => onChange({ armor: Math.max(0, Number(e.target.value) || 0) })} /></label>
-      )}
-      {it.cat === "augmentations" && (
-        <label className="block border-l-2 border-accent/40 pl-3 text-xs text-dim">Essence cost<input className="field num !w-28" type="number" min={0} step={0.05} value={it.essence ?? 0} onChange={(e) => onChange({ essence: Math.max(0, Number(e.target.value) || 0) })} /></label>
-      )}
-      <label className="block text-xs text-dim">Notes, wireless bonus, special rules<textarea className="field min-h-16" value={it.note ?? ""} onChange={(e) => onChange({ note: e.target.value })} /></label>
+      <ItemFields it={it} onChange={onChange} />
       <button className="btn small ghost text-danger" onClick={onRemove}><Icon name="trash" size={14} /> Remove item</button>
     </div>
   );
@@ -233,6 +183,7 @@ function Items({ rs, readOnly }: { rs: Ruleset; readOnly?: boolean }) {
   const [open, setOpen] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const hits = q.trim().length > 1 ? catalog.filter((i) => i.source !== "house" && i.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
+  const mine = useHouse((s) => s.mine);
   const add = (it: HouseItem) => { update(rs.id, (r) => { r.items.unshift(it); }); setOpen(it.id); setQ(""); };
   const patch = (id: string, p: Partial<HouseItem>) => update(rs.id, (r) => { const i = r.items.findIndex((x) => x.id === id); if (i >= 0) r.items[i] = { ...r.items[i], ...p }; });
 
@@ -246,6 +197,12 @@ function Items({ rs, readOnly }: { rs: Ruleset; readOnly?: boolean }) {
               <button className="btn small" onClick={() => add({ id: uid("hi"), name: "New armor", cat: "armor", group: "Armor", cost: 500, avail: 2, armor: 2 })}><Icon name="plus" size={14} /> Armor</button>
               <button className="btn small" onClick={() => add({ id: uid("hi"), name: "New implant", cat: "augmentations", group: "Cyberware", cost: 5000, avail: 4, essence: 0.2 })}><Icon name="plus" size={14} /> Augmentation</button>
               <button className="btn small" onClick={() => add({ id: uid("hi"), name: "New gear", cat: "tools", group: "Gear", cost: 100, avail: 1 })}><Icon name="plus" size={14} /> Other</button>
+              {mine.length > 0 && (
+                <select className="field !min-h-0 !w-auto !py-1 text-sm" value="" onChange={(e) => { const m = mine.find((x) => x.id === e.target.value); if (m) add({ ...m, id: uid("hi") }); }} aria-label="Add one of my items">
+                  <option value="">From my items…</option>
+                  {mine.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              )}
             </div>
             <div className="relative">
               <input className="field" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Or start from a book item: Ares Predator, armor jacket…" aria-label="Copy a book item" />

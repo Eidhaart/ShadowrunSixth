@@ -44,7 +44,7 @@ export interface CompItem {
   /** Template for the sheet item created when this is added to a runner. */
   gear: Omit<GearItem, "id">;
   equip?: Equip;
-  source: "built-in" | "imported" | "house";
+  source: "built-in" | "imported" | "house" | "mine";
 }
 
 export const RANGE_NAMES = ["Close", "Near", "Medium", "Far", "Extreme"] as const;

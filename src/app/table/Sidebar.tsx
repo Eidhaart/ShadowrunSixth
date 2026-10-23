@@ -6,6 +6,7 @@ import { Icon } from "@/components/Icon";
 import { Roller } from "@/components/Dice";
 import { ChatMessage } from "@/components/comms/ChatMessage";
 import { GearBrowser } from "@/components/compendium/GearBrowser";
+import { ItemMaker } from "@/components/compendium/ItemMaker";
 import { useComms } from "@/lib/store/comms";
 import { useSettings } from "@/lib/store/settings";
 import { useRunners } from "@/lib/store/characters";
@@ -215,6 +216,7 @@ function CompendiumPanel() {
   const [picked, setPicked] = useState("");
   const r = map[picked] ?? list[0];
   const [last, setLast] = useState<AddResult | null>(null);
+  const [maker, setMaker] = useState(false);
   const add = (i: CompItem, qty: number) => {
     if (!r) return;
     const res = addToRunner(JSON.parse(JSON.stringify(r)), i, { pay: true, qty });
@@ -232,6 +234,8 @@ function CompendiumPanel() {
         </label>
       )}
       {last && <p className={clsx("text-xs", last.ok ? "text-ok" : "text-danger")}>{last.msg}</p>}
+      <button className="btn small w-full" onClick={() => setMaker(true)}><Icon name="plus" size={14} /> Make your own item</button>
+      {maker && <ItemMaker onClose={() => setMaker(false)} runnerId={r?.id} />}
       <GearBrowser compact onAdd={r ? add : undefined} addLabel={r ? `Buy for ${runnerName(r)}` : "Add"} nuyen={r?.nuyen} />
     </div>
   );
