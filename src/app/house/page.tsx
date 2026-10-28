@@ -1,8 +1,6 @@
-import type { Metadata } from "next";
-import { House } from "./House";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "House rules" };
-
+/** House rules now live behind the GM screen. */
 export default function HousePage() {
-  return <House />;
+  redirect("/gm?tab=house");
 }

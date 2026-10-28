@@ -22,6 +22,7 @@ import type { Handout, Scene, Token } from "@/lib/vtt/types";
 import { placeMap } from "./act";
 import { useTableUi, type Panel } from "./ui";
 import { useHouse } from "@/lib/house/store";
+import { useBinder } from "@/lib/gm/binder";
 import { BOOK, diffs, show } from "@/lib/house/rules";
 
 export const DRAG_RUNNER = "application/x-sixthdeck-runner";
@@ -92,6 +93,8 @@ function JournalPanel() {
   const runnersMap = useRunners((r) => r.runners);
   const runners = useMemo(() => Object.values(runnersMap).sort((a, b) => b.updatedAt - a.updatedAt), [runnersMap]);
   const handouts = Object.values(state.handouts);
+  const entries = useBinder((b) => b.entries);
+  const binderNpcs = useMemo(() => Object.values(entries).filter((e) => e.kind === "npc").sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || a.title.localeCompare(b.title)), [entries]);
 
   const newHandout = async (f?: File) => {
     const id = vid("h");
@@ -129,8 +132,15 @@ function JournalPanel() {
       {me.gm && (
         <section>
           <h3 className="mb-1 text-sm font-semibold">NPCs</h3>
-          <p className="mb-2 text-xs text-dim">Drag onto the map. New NPCs go on the GM layer when it is active, so players never see them arrive.</p>
+          <p className="mb-2 text-xs text-dim">Drag onto the map. New NPCs go on the GM layer when it is active, so players never see them arrive. Your binder NPCs come first.</p>
           <div className="grid grid-cols-2 gap-1">
+            {binderNpcs.map((e) => (
+              <div key={e.id} draggable onDragStart={drag(DRAG_NPC, JSON.stringify({ kind: "binder", id: e.id }))} className="vtt-drag flex cursor-grab items-center gap-1.5 border border-accent/40 bg-bg2 p-1 text-sm" title={e.sub || "From your binder"}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {e.img ? <img src={e.img} alt="" className="size-7 object-cover object-top" /> : <span className="grid size-7 place-items-center bg-panel-hi"><Icon name="star" size={12} /></span>}
+                <span className="truncate">{e.title}</span>
+              </div>
+            ))}
             <div draggable onDragStart={drag(DRAG_NPC, JSON.stringify({ kind: "blank" }))} className="vtt-drag cursor-grab border border-dashed border-line p-1.5 text-sm">+ Blank grunt</div>
             {PREMADES.map((p) => (
               <div key={p.alias} draggable onDragStart={drag(DRAG_NPC, JSON.stringify({ kind: "premade", id: p.alias }))} className="vtt-drag flex cursor-grab items-center gap-1.5 border border-line bg-bg2 p-1 text-sm" title={p.concept}>
@@ -409,7 +419,7 @@ function HousePanel() {
         </section>
       )}
       {rs && rs.items.length > 0 && <p className="text-dim">{rs.items.length} house item{rs.items.length === 1 ? "" : "s"} in the Compendium tab.</p>}
-      {me.gm && <Link className="btn small" href="/house" target="_blank"><Icon name="gavel" size={14} /> Edit house rules</Link>}
+      {me.gm && <Link className="btn small" href="/gm?tab=house" target="_blank"><Icon name="gavel" size={14} /> Edit house rules</Link>}
     </div>
   );
 }

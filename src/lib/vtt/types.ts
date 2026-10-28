@@ -181,6 +181,8 @@ export interface TableState {
   assets: Record<string, Asset>;
   /** Attacks in progress and recent results. */
   combat?: Record<string, Attack>;
+  /** What the GM is playing for the table. */
+  music?: MusicState;
   /** The GM's house rules; players get them without secret notes. */
   rules?: import("@/lib/house/rules").Ruleset | null;
 }
@@ -208,3 +210,22 @@ export function rangeBand(m: number): string {
 }
 
 export const MARKERS = ["Burning", "Chilled", "Corrosive", "Dazed", "Deafened", "Fatigued", "Frightened", "Hazed", "Hobbled", "Immobilized", "Nauseated", "Panicked", "Poisoned", "Prone", "Stilled", "Wet", "Zapped", "Blinded", "Invisible", "Cover", "Sustaining", "Astral", "Down"];
+
+/** A piece of sound the GM can play: a built-in soundscape, an audio file link or a YouTube video. */
+export interface MusicTrack { id: string; title: string; kind: "ambient" | "audio" | "youtube"; src: string }
+
+/**
+ * The table's sound. One music channel (a track that every client plays from the same start time)
+ * and an ambience layer of soundscapes mixed under it.
+ */
+export interface MusicState {
+  track: MusicTrack | null;
+  /** Wall-clock ms when the track was at 0 s; clients seek to now minus this. */
+  startedAt: number;
+  paused: boolean;
+  /** Seconds into the track when paused. */
+  pos: number;
+  volume: number;
+  /** Soundscape id → volume 0..1. */
+  ambience: Record<string, number>;
+}

@@ -38,7 +38,7 @@ function findToken(state: TableState, id: string): { t: Token; scene: Scene } | 
   return null;
 }
 
-function NpcEditor({ npc, onChange }: { npc: Npc; onChange: (n: Npc) => void }) {
+export function NpcEditor({ npc, onChange }: { npc: Npc; onChange: (n: Npc) => void }) {
   const set = (p: Partial<Npc>) => onChange({ ...npc, ...p });
   return (
     <div className="space-y-2">

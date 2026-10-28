@@ -9,6 +9,7 @@ import { TokenHud } from "./TokenHud";
 import { DRAG_NPC, DRAG_RUNNER } from "./Sidebar";
 import { placeNpc, placeRunner, baseToken, placeMap } from "./act";
 import { loadImage } from "@/lib/vtt/images";
+import { useBinder } from "@/lib/gm/binder";
 import { BUILDS, PREMADES, fromBuild, fromPremade, portraitUrl } from "@/lib/sr6/premades";
 
 type Pt = { x: number; y: number };
@@ -465,6 +466,7 @@ export function Stage({ scene, state }: { scene: Scene; state: TableState }) {
       const d = JSON.parse(npc) as { kind: string; id?: string };
       if (d.kind === "premade") { const pm = PREMADES.find((q) => q.alias === d.id); if (pm) placeNpc(scene, x, y, { name: pm.alias, char: fromPremade(pm), portrait: await dataUrl(portraitUrl(pm)) }); }
       else if (d.kind === "template") { const b = BUILDS.find((q) => q.id === d.id); if (b) placeNpc(scene, x, y, { name: b.archetype, char: fromBuild(b) }); }
+      else if (d.kind === "binder") { const e = useBinder.getState().entries[d.id ?? ""]; if (e) placeNpc(scene, x, y, { name: e.title, portrait: e.img, npc: e.npc, monitor: e.monitor }); }
       else placeNpc(scene, x, y);
       return;
     }

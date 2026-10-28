@@ -16,6 +16,8 @@ import { useAcademy } from "@/lib/academy/progress";
 import { doRoll } from "@/lib/actions";
 import { useCatalog } from "@/lib/compendium/catalog";
 import { useHouse } from "@/lib/house/store";
+import { MusicHost } from "@/components/audio/MusicHost";
+import { useBinder } from "@/lib/gm/binder";
 import { VOICES, fontVars } from "@/lib/style/catalog";
 
 const NAV = [
@@ -27,7 +29,7 @@ const NAV = [
   { href: "/learn", label: "Academy", icon: "learn" },
   { href: "/runners", label: "Runners", icon: "runners" },
   { href: "/table", label: "Table", icon: "map" },
-  { href: "/house", label: "House", icon: "gavel" },
+  { href: "/gm", label: "GM", icon: "gavel" },
   { href: "/comms", label: "Comms", icon: "comms" },
   { href: "/link", label: "Foundry", icon: "link" },
   { href: "/settings", label: "Settings", icon: "settings" },
@@ -325,6 +327,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     useSettings.persist.rehydrate();
     useRunners.persist.rehydrate();
     void useHouse.persist.rehydrate();
+    void useBinder.persist.rehydrate();
     useRolls.persist.rehydrate();
   }, []);
   // at someone else's table as a player, the GM's house rules apply on this device
@@ -389,6 +392,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
           <div className="flex-1" />
+          <MusicHost />
           <button className="btn small ghost" onClick={() => setPalette(true)} aria-label="Open command bar">
             <Icon name="search" size={15} /> <span className="hidden sm:inline">Search or command</span> <span className="kbd hidden md:inline">Ctrl K</span>
           </button>

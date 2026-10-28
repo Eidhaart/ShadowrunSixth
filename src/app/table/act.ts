@@ -44,13 +44,16 @@ export function placeRunner(runnerId: string, scene: Scene, x: number, y: number
 }
 
 /** A GM-run copy of a character (or a blank grunt) on the GM or token layer. */
-export function placeNpc(scene: Scene, x: number, y: number, from?: { name: string; portrait?: string; char?: Parameters<typeof npcFor>[0] }) {
+export function placeNpc(scene: Scene, x: number, y: number, from?: { name: string; portrait?: string; char?: Parameters<typeof npcFor>[0]; npc?: import("@/lib/vtt/types").Npc; monitor?: { physical: number; stun: number; edge: number } }) {
   const { state, dispatch } = useVtt.getState();
   if (!state) return;
   const layer = useTableUi.getState().layer === "gm" ? "gm" : "token";
   const name = from?.name ?? "Grunt";
   const t = baseToken(name, x, y, layer, []);
-  const block = from?.char ? npcFor(from.char) : blankNpc();
+  const mon = from?.monitor;
+  const block = from?.char ? npcFor(from.char) : from?.npc
+    ? { npc: structuredClone(from.npc), bars: { b1: { cur: mon?.physical ?? 10, max: mon?.physical ?? 10 }, b2: { cur: mon?.stun ?? 10, max: mon?.stun ?? 10 }, b3: { cur: mon?.edge ?? 2, max: mon?.edge ?? 2 } } }
+    : blankNpc();
   t.npc = block.npc;
   t.bars = block.bars;
   t.showName = layer === "gm";
