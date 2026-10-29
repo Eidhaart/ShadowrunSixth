@@ -42,10 +42,19 @@ export function startWindowSync() {
   });
 }
 
-/** Open the GM screen in its own window, or bring it forward if it is already open. */
-export function openScreenWindow(): boolean {
-  const w = window.open("/screen", "sixthdeck-gm-screen", "popup,width=1440,height=900");
-  if (!w) return false;
-  w.focus();
-  return true;
+export const SCREEN_WINDOW = "sixthdeck-gm-screen";
+let screenWin: Window | null = null;
+
+/**
+ * Open the GM screen in its own window. If it is already open it is brought forward (some browsers
+ * will not raise a window, so the caller says where it is). "blocked" means the browser refused.
+ */
+export function openScreenWindow(): "opened" | "already" | "blocked" {
+  if (screenWin && !screenWin.closed) { screenWin.focus(); return "already"; }
+  let w: Window | null = null;
+  try { w = window.open("/screen", SCREEN_WINDOW, "popup=yes,width=1440,height=900,resizable=yes,scrollbars=yes"); } catch { w = null; }
+  if (!w) return "blocked";
+  screenWin = w;
+  try { w.focus(); } catch { /* cross-window focus can be refused */ }
+  return "opened";
 }
