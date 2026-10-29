@@ -26,3 +26,26 @@ test("buying a weapon brings its built-in parts", () => {
   assert.equal(c.nuyen, 6600);
   assert.deepEqual(c.gear.map((g) => g.name), ["Ares Alpha", "Ares Alpha: Grenade Launcher"]);
 });
+
+import { ARMOR, BIOWARE, CYBERWARE, DRONES, VEHICLES } from "../src/data/core-gear";
+
+test("core tables are complete and priced", () => {
+  assert.equal(ARMOR.length, 13);
+  assert.equal(VEHICLES.length, 30);
+  assert.equal(DRONES.length, 21);
+  assert.ok([...CYBERWARE, ...BIOWARE].every((r) => r.cost > 0 && r.avail));
+  assert.ok([...VEHICLES, ...DRONES].every((v) => v[12] > 0));
+});
+
+test("buying a drone puts it on the Rigging tab", () => {
+  const c = newCharacter();
+  c.nuyen = 20000;
+  const d = DRONES.find((x) => x[0] === "MCT-Nissan Roto-Drone")!;
+  const item = { id: "drones-roto", name: d[0], cat: "drones" as const, group: d[1], cost: d[12], stats: [], source: "built-in" as const,
+    gear: { name: d[0], category: "vehicle" as const, cost: d[12], qty: 1 },
+    vehicle: { kind: "drone" as const, handlingOn: 3, handlingOff: 3, accel: 20, speedInterval: 30, topSpeed: 160, body: 5, armor: 6, pilot: 3, sensor: 2, seats: 0 } };
+  const r = addToRunner(c, item, { pay: true });
+  assert.equal(r.ok, true);
+  assert.equal(c.ext?.vehicles?.[0]?.name, "MCT-Nissan Roto-Drone");
+  assert.equal(c.ext?.vehicles?.[0]?.body, 5);
+});

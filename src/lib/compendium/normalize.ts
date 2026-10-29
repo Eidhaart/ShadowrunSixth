@@ -78,12 +78,12 @@ const SHEETS: Record<string, SheetSpec> = {
   "Breaking & Entering": { cat: "tools", gear: "misc", group: "Breaking and entering" },
   "Survival": { cat: "tools", gear: "misc", group: "Survival" },
   "Biotech": { cat: "tools", gear: "misc", group: "Biotech" },
-  "Augmentations": { cat: "augmentations", gear: "cyberware" },
-  "Cyberlimbs": { cat: "augmentations", gear: "cyberware", group: "Cyberlimb" },
-  "Implant Weapons": { cat: "augmentations", gear: "cyberware", group: "Implant weapon" },
-  "Cyberlimb Acessories": { cat: "augmentations", gear: "cyberware", group: "Cyberlimb accessory" },
+  "Augmentations": { cat: "cyberware", gear: "cyberware" },
+  "Cyberlimbs": { cat: "cyberware", gear: "cyberware", group: "Cyberlimb" },
+  "Implant Weapons": { cat: "cyberware", gear: "cyberware", group: "Implant weapon" },
+  "Cyberlimb Acessories": { cat: "cyberware", gear: "cyberware", group: "Cyberlimb accessory" },
   "Vehicles": { cat: "vehicles", gear: "vehicle", group: "Vehicle" },
-  "Drones": { cat: "vehicles", gear: "vehicle", group: "Drone" },
+  "Drones": { cat: "drones", gear: "vehicle", group: "Drone" },
   "Vehicles Accessories": { cat: "vehicles", gear: "misc", group: "Vehicle accessory" },
   "Vehicles Mods": { cat: "vehicles", gear: "misc", group: "Vehicle mod" },
 };
@@ -166,9 +166,9 @@ const CHARTS: Record<string, ChartSpec> = {
   "DocWagon Contracts": { cat: "identity", gear: "misc", group: "DocWagon", name: (r) => `DocWagon ${r.replace(/ (Month|Year)$/, "").toLowerCase()} contract, 1 ${/Year$/.test(r) ? "year" : "month"}` },
   "Magical Supplies": { cat: "magic", gear: "magic", group: "Supplies", name: (r) => r.replace(/,\s*per dram/i, "") },
   "Ammos": { cat: "ammo", gear: "ammo", group: "Regular ammo", name: (r) => `${r} rounds`, per: "per 10" },
-  "Cyberjacks": { cat: "augmentations", gear: "cyberware", group: "Headware", name: (r) => `Cyberjack ${r.replace(/^Rating\s*/i, "")}` },
-  "Bone Lacing": { cat: "augmentations", gear: "cyberware", group: "Bodyware", name: (r) => `Bone lacing, ${r.toLowerCase().replace("alumiun", "aluminum")}` },
-  "Bone Density": { cat: "augmentations", gear: "bioware", group: "Bioware", name: (r) => `Bone density augmentation, rating ${r}` },
+  "Cyberjacks": { cat: "cyberware", gear: "cyberware", group: "Headware", name: (r) => `Cyberjack ${r.replace(/^Rating\s*/i, "")}` },
+  "Bone Lacing": { cat: "cyberware", gear: "cyberware", group: "Bodyware", name: (r) => `Bone lacing, ${r.toLowerCase().replace("alumiun", "aluminum")}` },
+  "Bone Density": { cat: "bioware", gear: "bioware", group: "Bioware", name: (r) => `Bone density augmentation, rating ${r}` },
 };
 
 const CHART_STATS: Record<string, string> = {

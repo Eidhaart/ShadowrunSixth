@@ -10,7 +10,7 @@ import { useRunners } from "@/lib/store/characters";
 import { useHouse } from "@/lib/house/store";
 import type { HouseItem } from "@/lib/house/rules";
 
-const ITEM_CATS = COMP_CATS.filter((c) => c.id !== "matrix").map((c) => c.id) as HouseItem["cat"][];
+const ITEM_CATS = COMP_CATS.filter((c) => c.id !== "matrix" && c.id !== "vehicles" && c.id !== "drones").map((c) => c.id) as HouseItem["cat"][];
 const WEAPON_SKILLS = SKILLS.filter((s) => s.group === "combat" || s.id === "athletics");
 const BANDS = ["Close", "Near", "Medium", "Far", "Extreme"];
 const n = (v: string) => (v === "" ? null : Math.max(0, Number(v)));
@@ -34,7 +34,8 @@ export function blankItem(cat: HouseItem["cat"] = "weapons"): HouseItem {
   const base = { id: uid("hi"), name: "", cat, group: "", cost: 100, avail: 2 } as HouseItem;
   if (cat === "weapons") { const t = WEAPON_TYPES[2]; Object.assign(base, { group: t.group, dv: t.dv, ar: [...t.ar], skill: t.skill, cost: t.cost, avail: t.avail, legal: t.legal }); }
   if (cat === "armor") Object.assign(base, { group: "Armor", armor: 2, cost: 500 });
-  if (cat === "augmentations") Object.assign(base, { group: "Cyberware", essence: 0.2, cost: 5000, avail: 4 });
+  if (cat === "cyberware" || cat === "augmentations") Object.assign(base, { group: "Bodyware", essence: 0.2, cost: 5000, avail: 4 });
+  if (cat === "bioware") Object.assign(base, { group: "Bioware", essence: 0.2, cost: 8000, avail: 4 });
   return base;
 }
 
@@ -92,7 +93,7 @@ export function ItemFields({ it, onChange }: { it: HouseItem; onChange: (p: Part
       {it.cat === "armor" && (
         <label className="block border-l-2 border-accent/40 pl-3 text-xs text-dim">Defense Rating bonus while worn<input className="field num !w-28" type="number" min={0} max={30} value={it.armor ?? 0} onChange={(e) => onChange({ armor: Math.max(0, Number(e.target.value) || 0) })} /></label>
       )}
-      {it.cat === "augmentations" && (
+      {(it.cat === "cyberware" || it.cat === "bioware" || it.cat === "augmentations") && (
         <label className="block border-l-2 border-accent/40 pl-3 text-xs text-dim">Essence cost<input className="field num !w-28" type="number" min={0} max={6} step={0.05} value={it.essence ?? 0} onChange={(e) => onChange({ essence: Math.max(0, Number(e.target.value) || 0) })} /></label>
       )}
 

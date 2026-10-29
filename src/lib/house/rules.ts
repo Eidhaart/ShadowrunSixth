@@ -40,7 +40,8 @@ export interface Mechanics {
 export interface HouseItem {
   id: string;
   name: string;
-  cat: "weapons" | "armor" | "augmentations" | "electronics" | "tools" | "magic" | "vehicles" | "ammo" | "identity" | "matrix";
+  /** "augmentations" is the old name for cyberware, still found in saved items. */
+  cat: "weapons" | "armor" | "cyberware" | "bioware" | "augmentations" | "electronics" | "tools" | "magic" | "vehicles" | "drones" | "ammo" | "identity" | "matrix";
   group: string;
   cost: number | null;
   avail?: number;

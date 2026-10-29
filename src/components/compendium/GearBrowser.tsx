@@ -150,13 +150,17 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
     for (const i of list) m[i.cat] = (m[i.cat] ?? 0) + 1;
     return m;
   }, [list]);
-  const groups = useMemo(() => (cat === "all" ? [] : [...new Set(list.filter((i) => i.cat === cat).map((i) => i.group))].sort()), [list, cat]);
+  /** Every type, grouped under its category, for the type dropdown. */
+  // every category stays in the list so you can jump straight from one type to another
+  const typeTree = useMemo(() => COMP_CATS.filter((c) => counts[c.id]).map((c) => ({
+    cat: c, groups: [...new Set(list.filter((i) => i.cat === c.id).map((i) => i.group || "Other"))].sort(),
+  })), [list, counts]);
 
   const shown = useMemo(() => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     const out = list.filter((i) => {
       if (cat !== "all" && i.cat !== cat) return false;
-      if (group && i.group !== group) return false;
+      if (group && `${i.cat}|${i.group || "Other"}` !== group) return false;
       if (legalOnly && i.legal) return false;
       if (afford && nuyen != null && (i.cost ?? 0) > nuyen) return false;
       if (!words.length) return true;
@@ -191,12 +195,15 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-dim">
-        {groups.length > 1 && (
-          <select className="field !min-h-0 !w-auto !py-1 text-xs" value={group} onChange={(e) => setGroup(e.target.value)} aria-label="Type">
-            <option value="">Every type</option>
-            {groups.map((g) => <option key={g}>{g}</option>)}
-          </select>
-        )}
+        <select className={clsx("field !min-h-0 !w-auto max-w-[14rem] !py-1 text-xs", group && "!border-accent")} value={group} aria-label="Type"
+          onChange={(e) => { const v = e.target.value; setGroup(v); if (v) setCat(v.split("|")[0] as CompCat); }}>
+          <option value="">{cat === "all" ? "Every type" : `Every type of ${COMP_CATS.find((c) => c.id === cat)?.name.toLowerCase()}`}</option>
+          {typeTree.map(({ cat: c, groups }) => (
+            <optgroup key={c.id} label={c.name}>
+              {groups.map((g) => <option key={g} value={`${c.id}|${g}`}>{g}</option>)}
+            </optgroup>
+          ))}
+        </select>
         <select className="field !min-h-0 !w-auto !py-1 text-xs" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort by">
           <option value="name">Sort by name</option><option value="type">Sort by type</option><option value="cost">Sort by price</option><option value="avail">Sort by availability</option>
         </select>

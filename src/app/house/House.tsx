@@ -195,7 +195,7 @@ function Items({ rs, readOnly }: { rs: Ruleset; readOnly?: boolean }) {
             <div className="flex flex-wrap gap-2">
               <button className="btn small primary" onClick={() => add({ id: uid("hi"), name: "New weapon", cat: "weapons", group: "Heavy Pistol", cost: 500, avail: 3, dv: "3P", ar: [10, 10, 8, null, null], skill: "firearms" })}><Icon name="plus" size={14} /> Weapon</button>
               <button className="btn small" onClick={() => add({ id: uid("hi"), name: "New armor", cat: "armor", group: "Armor", cost: 500, avail: 2, armor: 2 })}><Icon name="plus" size={14} /> Armor</button>
-              <button className="btn small" onClick={() => add({ id: uid("hi"), name: "New implant", cat: "augmentations", group: "Cyberware", cost: 5000, avail: 4, essence: 0.2 })}><Icon name="plus" size={14} /> Augmentation</button>
+              <button className="btn small" onClick={() => add({ id: uid("hi"), name: "New implant", cat: "cyberware", group: "Bodyware", cost: 5000, avail: 4, essence: 0.2 })}><Icon name="plus" size={14} /> Augmentation</button>
               <button className="btn small" onClick={() => add({ id: uid("hi"), name: "New gear", cat: "tools", group: "Gear", cost: 100, avail: 1 })}><Icon name="plus" size={14} /> Other</button>
               {mine.length > 0 && (
                 <select className="field !min-h-0 !w-auto !py-1 text-sm" value="" onChange={(e) => { const m = mine.find((x) => x.id === e.target.value); if (m) add({ ...m, id: uid("hi") }); }} aria-label="Add one of my items">
