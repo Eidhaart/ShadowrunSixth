@@ -10,7 +10,7 @@ import { useRulebook } from "@/lib/store/rulebook";
 import { useRunners } from "@/lib/store/characters";
 import { useRolls } from "@/lib/store/rolls";
 import { useUi } from "@/lib/store/ui";
-import { useComms } from "@/lib/store/comms";
+import { setClientSource, useComms } from "@/lib/store/comms";
 import { MODULE_LIST } from "@/lib/academy/modules";
 import { useAcademy } from "@/lib/academy/progress";
 import { doRoll } from "@/lib/actions";
@@ -18,6 +18,7 @@ import { useCatalog } from "@/lib/compendium/catalog";
 import { useHouse } from "@/lib/house/store";
 import { MusicHost } from "@/components/audio/MusicHost";
 import { useBinder } from "@/lib/gm/binder";
+import { startWindowSync } from "@/lib/sync";
 import { VOICES, fontVars } from "@/lib/style/catalog";
 
 const NAV = [
@@ -329,6 +330,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     void useHouse.persist.rehydrate();
     void useBinder.persist.rehydrate();
     useRolls.persist.rehydrate();
+    startWindowSync();
   }, []);
   // at someone else's table as a player, the GM's house rules apply on this device
   useEffect(() => {
@@ -336,6 +338,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
     const h = useHouse.getState();
     h.setTable(h.tableRules, asPlayer);
   }, [comms.status, comms.role]);
+  // the pop-out GM screen is a second window for the same seat
+  const bare = pathname === "/screen";
+  useEffect(() => { setClientSource(bare ? "screen" : "deck"); }, [bare]);
   useEffect(() => {
     const t = setTimeout(() => {
       const st = useSettings.getState();
@@ -348,6 +353,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [more, setMore] = useState(false);
   const moreActive = NAV.some((n) => !MOBILE_PRIMARY.includes(n.href) && active(n.href));
   useEffect(() => { setMore(false); }, [pathname]); // eslint-disable-line react-hooks/set-state-in-effect
+
+  if (bare)
+    return (
+      <div className="isolate min-h-dvh">
+        <div className="motif" aria-hidden="true" />
+        <ApplySettings />
+        <Boot />
+        {children}
+        <DiceTray />
+      </div>
+    );
 
   return (
     <div className="isolate flex min-h-dvh">

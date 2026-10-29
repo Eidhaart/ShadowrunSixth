@@ -15,6 +15,7 @@ import { Dialogs } from "./Dialogs";
 import { DRAW_COLORS, useTableUi, type Tool } from "./ui";
 import { assetOps } from "./act";
 import { SeatChip, SeatGate, seatPicked } from "./Seat";
+import { openScreenWindow } from "@/lib/sync";
 import { useHouse } from "@/lib/house/store";
 import { CombatFeed } from "./Combat";
 
@@ -106,6 +107,9 @@ function SceneBar({ viewing, onPick }: { viewing: Scene | undefined; onPick: () 
             <button className="btn small primary shrink-0" onClick={() => { dispatch([{ k: "set", p: ["playerScene"], v: viewing.id }]); ui.select([]); }}>Move players here</button>
           )}
           <span className="mx-1 h-5 w-px shrink-0 bg-line" />
+          <button className="btn small ghost shrink-0 !px-2" onClick={() => { if (!openScreenWindow()) window.open("/screen", "_blank"); }} title="Open your GM screen in its own window">
+            <Icon name="gavel" size={14} /> <span className="max-lg:hidden">GM screen</span>
+          </button>
           <div className="flex shrink-0 overflow-hidden border border-line" role="radiogroup" aria-label="Active layer">
             {LAYERS.map((l) => (
               <button key={l.id} role="radio" aria-checked={ui.layer === l.id} className={clsx("px-2 py-1 text-xs", ui.layer === l.id ? "bg-accent text-bg" : "text-dim hover:text-fg")} onClick={() => { ui.set({ layer: l.id }); ui.select([]); }} title={l.blurb}>{l.name}</button>

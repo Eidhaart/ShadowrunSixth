@@ -56,7 +56,8 @@ const room = (name) => {
 };
 const send = (ws, m) => ws.readyState === 1 && ws.send(JSON.stringify(m));
 const presence = (r) => {
-  const users = [...r.clients].map((c) => ({ handle: c.handle, source: c.source, role: c.role }));
+  // a GM's pop-out screen is the same person in a second window: not listed twice
+  const users = [...r.clients].filter((c) => c.source !== "screen").map((c) => ({ handle: c.handle, source: c.source, role: c.role }));
   for (const c of r.clients) send(c, { type: "presence", users });
 };
 const sys = (r, text) => {
@@ -121,7 +122,7 @@ wss.on("connection", (ws) => {
       if (m?.type !== "hello") return;
       const name = clean(m.room, 40).trim() || "lobby";
       ws.handle = clean(m.handle, 32).trim() || "runner";
-      ws.source = m.source === "foundry" ? "foundry" : "deck";
+      ws.source = m.source === "foundry" ? "foundry" : m.source === "screen" ? "screen" : "deck";
       joined = room(name);
       // One GM seat per room. A second claimant (other than a reconnect under the same handle) plays instead.
       const seated = [...joined.clients].find((c) => c.role === "gm" && c.handle !== ws.handle);
@@ -132,7 +133,7 @@ wss.on("connection", (ws) => {
       send(ws, { type: "history", messages: joined.log });
       ws.roomName = name;
       snapshot(name, ws);
-      sys(joined, `${ws.handle} jacked in${ws.source === "foundry" ? " from Foundry" : ""}`);
+      if (ws.source !== "screen") sys(joined, `${ws.handle} jacked in${ws.source === "foundry" ? " from Foundry" : ""}`);
       presence(joined);
       return;
     }
@@ -170,7 +171,7 @@ wss.on("connection", (ws) => {
     clearTimeout(timer);
     if (!joined) return;
     joined.clients.delete(ws);
-    sys(joined, `${ws.handle} jacked out`);
+    if (ws.source !== "screen") sys(joined, `${ws.handle} jacked out`);
     presence(joined);
   });
   ws.on("error", () => ws.close());

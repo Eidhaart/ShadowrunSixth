@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
+import { openScreenWindow } from "@/lib/sync";
 import { GRID, PRESET_SCREENS, WIDGETS, useScreens, type Panel, type WidgetType } from "@/lib/gm/screen";
 import { DiceWidget, EntryWidget, HouseWidget, MusicWidget, NamesWidget, NotesWidget, NpcsWidget, PartyWidget, RulesWidget, TimerWidget, TurnWidget, type WidgetProps } from "./widgets";
 
@@ -75,12 +76,13 @@ function PanelView({ screen, p, stacked }: { screen: string; p: Panel; stacked: 
 }
 
 /** The GM screen: boards of panels, one per situation. */
-export function ScreenBoard() {
+export function ScreenBoard({ popped }: { popped?: boolean } = {}) {
   const s = useScreens();
   const [ready, setReady] = useState(false);
   const [menu, setMenu] = useState<"add" | "new" | null>(null);
   const [stacked, setStacked] = useState(false);
   const [renaming, setRenaming] = useState(false);
+  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
     void Promise.resolve(useScreens.persist.rehydrate()).then(() => {
@@ -137,6 +139,11 @@ export function ScreenBoard() {
               </div>
             )}
           </div>
+          {!popped && (
+            <button className="btn small" onClick={() => { if (!openScreenWindow()) setBlocked(true); }} title="Open the GM screen in its own window, for a second monitor">
+              <Icon name="copy" size={14} /> Pop out
+            </button>
+          )}
           <button className="btn small ghost" onClick={() => setRenaming(true)} title="Rename this screen"><Icon name="forge" size={14} /></button>
           {s.screens.length > 1 && <button className="btn small ghost text-danger" onClick={() => { if (confirm(`Delete the screen "${cur.name}"?`)) s.removeScreen(cur.id); }} title="Delete this screen"><Icon name="trash" size={14} /></button>}
         </div>
@@ -151,6 +158,7 @@ export function ScreenBoard() {
           </div>
         </div>
       )}
+      {blocked && <p role="alert" className="text-sm text-danger">Your browser blocked the new window. Allow pop-ups for this site, or open <a className="underline" href="/screen" target="_blank">the GM screen</a> in a new tab.</p>}
       <p className="text-xs text-faint">Drag panels by their title, resize from the right and bottom edges, double-click a title to rename it. Each screen keeps its own layout on this device.</p>
     </div>
   );

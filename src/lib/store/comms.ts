@@ -35,6 +35,9 @@ let bc: BroadcastChannel | null = null;
 let retry = 0;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let wanted = false;
+/** "screen" when this window is the GM's pop-out screen: same seat, a second window. */
+let source: ClientHello["source"] = "deck";
+export function setClientSource(s: ClientHello["source"]) { source = s; }
 
 const seen = new Set<string>();
 const cap = (arr: WireMsg[]) => arr.slice(-300);
@@ -74,7 +77,7 @@ export const useComms = create<CommsState>((set, get) => {
     ws = sock;
     sock.onopen = () => {
       retry = 0;
-      const hello: ClientHello = { type: "hello", room, handle, source: "deck", role };
+      const hello: ClientHello = { type: "hello", room, handle, source, role };
       sock.send(JSON.stringify(hello));
       set({ status: "online" });
     };

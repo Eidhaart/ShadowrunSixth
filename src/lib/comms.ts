@@ -64,4 +64,4 @@ export type ServerMsg =
   | { type: "presence"; users: { handle: string; source: string; role?: "gm" | "player" }[] }
   | WireMsg;
 
-export type ClientHello = { type: "hello"; room: string; handle: string; source: "deck" | "foundry"; role?: "gm" | "player" };
+export type ClientHello = { type: "hello"; room: string; handle: string; source: "deck" | "foundry" | "screen"; role?: "gm" | "player" };
