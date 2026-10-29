@@ -43,6 +43,8 @@ import { FONT_BOOT } from "@/lib/style/catalog";
 export const metadata: Metadata = {
   title: "Sixthdeck",
   description: "A cyberdeck for the Sixth World: searchable rules, a proper dice roller, guided runner creation and automated character sheets.",
+  // embedded players (YouTube music) need to know which site is asking
+  referrer: "strict-origin-when-cross-origin",
 };
 
 export const viewport: Viewport = {

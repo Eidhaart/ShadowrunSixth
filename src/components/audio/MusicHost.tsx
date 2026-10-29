@@ -115,7 +115,7 @@ export function MusicHost() {
           <Icon name="bolt" size={14} /> <span className="max-sm:hidden">Tap to hear the table</span><span className="sm:hidden">Listen</span>
         </button>
       ) : (
-        <button className={clsx("music-pill", listen.muted && "muted")} onClick={() => setOpen(!open)} aria-expanded={open} title={describe(m)}>
+        <button className={clsx("music-pill", listen.muted && "muted", problem && "trouble")} onClick={() => setOpen(!open)} aria-expanded={open} title={problem ?? describe(m)}>
           <span className={clsx("music-eq", (listen.muted || !anything) && "still")} aria-hidden="true"><i /><i /><i /></span>
           <span className="max-w-[12rem] truncate max-sm:hidden">{describe(m)}</span>
         </button>
