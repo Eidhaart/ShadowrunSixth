@@ -49,3 +49,15 @@ test("buying a drone puts it on the Rigging tab", () => {
   assert.equal(c.ext?.vehicles?.[0]?.name, "MCT-Nissan Roto-Drone");
   assert.equal(c.ext?.vehicles?.[0]?.body, 5);
 });
+
+import { sectionFor } from "../src/lib/compendium/section";
+
+test("library links go to the item's own section, not just its page", () => {
+  const sec = (id: string, title: string, page: number, text = "") => ({ id, title, page, text, chapter: "Gear" });
+  const sections = [sec("a", "Wheeled", 301, "the Pursuit V outruns everything"), sec("b", "Ares Venture", 299), sec("c", "Cyberlimbs", 289), sec("d", "Cyberjacks", 284), sec("e", "vehicles table", 301)];
+  const it = (name: string, cat: string, group: string, page: number) => ({ name, cat, group, page }) as never;
+  assert.equal(sectionFor(sections, it("Ares Venture", "vehicles", "VTOL/VSTOL", 301))?.id, "b");
+  assert.equal(sectionFor(sections, it("Chrysler-Nissan Pursuit V", "drones", "Small drone", 301))?.id, "a");
+  assert.equal(sectionFor(sections, it("Cyberarm, obvious", "cyberware", "Cyberlimb", 285))?.id, "c");
+  assert.equal(sectionFor(sections, it("Cyberjack 3", "cyberware", "Headware", 285))?.id, "d");
+});

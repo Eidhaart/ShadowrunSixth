@@ -1,6 +1,7 @@
 "use client";
 import { rules } from "@/lib/house/rules";
 import { Fragment, useMemo, useState } from "react";
+import { sectionFor } from "@/lib/compendium/section";
 import Link from "next/link";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
@@ -84,7 +85,7 @@ function Detail({ item, onAdd, addLabel, blocked }: { item: CompItem & { hasText
   const book = useRulebook((s) => s.book);
   const imported = useGearList((s) => !!s.imported);
   const [qty, setQty] = useState(1);
-  const sec = item.book === "Core" && item.page ? book?.sections.find((s) => s.page === item.page && s.chapter === "Gear") ?? book?.sections.find((s) => s.page === item.page) : undefined;
+  const sec = useMemo(() => (item.book === "Core" ? sectionFor(book?.sections ?? [], item) : undefined), [book, item]);
   const ar = item.gear.ar;
   const stackable = item.cat === "ammo" || item.cat === "tools" || item.cat === "electronics" || item.cat === "magic";
   return (

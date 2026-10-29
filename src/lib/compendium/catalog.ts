@@ -122,6 +122,8 @@ function coreTables(): CompItem[] {
 const coreOnly = (items: CoreItem[]) => items.filter((i) => !i.book || i.book === "Core").map((i) => ({ ...i, cat: fixCat(i.cat, i.group) }));
 
 const BUILT_IN: CoreItem[] = foldParts([...coreOnly(core as unknown as CoreItem[]), ...MATRIX, ...coreTables()]);
+/** The bundled catalog, for tests and scripts. */
+export const BUILT_IN_ITEMS: readonly CompItem[] = BUILT_IN;
 
 interface GearListState {
   imported: CompItem[] | null;
