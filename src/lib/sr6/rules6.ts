@@ -51,23 +51,25 @@ export const MATRIX_ACTIONS: MatrixAction[] = [
 /** Actions with no roll, shown as a reminder. */
 export const MATRIX_FREE_ACTIONS = ["Change Icon", "Enter/Exit Host", "Reconfigure Matrix Attribute", "Send Message", "Switch Interface Mode", "Full Matrix Defense (add Firewall to every defense test this round)"];
 
-export interface Commlink { name: string; rating: number; d: number; f: number; slots: number }
+/** Price and Availability from the core rulebook's Commlinks and Cyberdecks tables (p. 267). */
+export interface Commlink { name: string; rating: number; d: number; f: number; slots: number; avail: number; cost: number }
 export const COMMLINKS: Commlink[] = [
-  { name: "Meta Link", rating: 1, d: 1, f: 0, slots: 0 },
-  { name: "Sony Emperor", rating: 2, d: 1, f: 1, slots: 1 },
-  { name: "Renraku Sensei", rating: 3, d: 2, f: 0, slots: 1 },
-  { name: "Erika Elite", rating: 4, d: 2, f: 1, slots: 2 },
-  { name: "Hermes Ikon", rating: 5, d: 3, f: 0, slots: 2 },
-  { name: "Transys Avalon", rating: 6, d: 3, f: 1, slots: 3 },
+  { name: "Meta Link", rating: 1, d: 1, f: 0, slots: 0, avail: 2, cost: 100 },
+  { name: "Sony Emperor", rating: 2, d: 1, f: 1, slots: 1, avail: 2, cost: 700 },
+  { name: "Renraku Sensei", rating: 3, d: 2, f: 0, slots: 1, avail: 2, cost: 1000 },
+  { name: "Erika Elite", rating: 4, d: 2, f: 1, slots: 2, avail: 2, cost: 2500 },
+  { name: "Hermes Ikon", rating: 5, d: 3, f: 0, slots: 2, avail: 3, cost: 5000 },
+  { name: "Transys Avalon", rating: 6, d: 3, f: 1, slots: 3, avail: 3, cost: 8000 },
 ];
-export interface Cyberdeck { name: string; rating: number; a: number; s: number; slots: number }
+/** Cyberdecks are illegal (I) at every rating. */
+export interface Cyberdeck { name: string; rating: number; a: number; s: number; slots: number; avail: number; cost: number }
 export const CYBERDECKS: Cyberdeck[] = [
-  { name: "Erika MCD-6", rating: 1, a: 4, s: 3, slots: 2 },
-  { name: "Spinrad Falcon", rating: 2, a: 5, s: 4, slots: 4 },
-  { name: "MCT 360", rating: 3, a: 6, s: 5, slots: 6 },
-  { name: "Renraku Kitsune", rating: 4, a: 7, s: 6, slots: 8 },
-  { name: "Shiawase Cyber-6", rating: 5, a: 8, s: 7, slots: 10 },
-  { name: "Fairlight Excalibur", rating: 6, a: 9, s: 8, slots: 12 },
+  { name: "Erika MCD-6", rating: 1, a: 4, s: 3, slots: 2, avail: 3, cost: 24750 },
+  { name: "Spinrad Falcon", rating: 2, a: 5, s: 4, slots: 4, avail: 3, cost: 61500 },
+  { name: "MCT 360", rating: 3, a: 6, s: 5, slots: 6, avail: 3, cost: 95000 },
+  { name: "Renraku Kitsune", rating: 4, a: 7, s: 6, slots: 8, avail: 4, cost: 107000 },
+  { name: "Shiawase Cyber-6", rating: 5, a: 8, s: 7, slots: 10, avail: 5, cost: 172500 },
+  { name: "Fairlight Excalibur", rating: 6, a: 9, s: 8, slots: 12, avail: 6, cost: 410600 },
 ];
 export interface Cyberjack { rating: number; d: number; f: number; dice: number }
 export const CYBERJACKS: Cyberjack[] = [
@@ -225,18 +227,19 @@ export const SPIRITS: SpiritType[] = [
 
 export const SPIRIT_ATTR_LABELS = ["Body", "Agility", "Reaction", "Strength", "Willpower", "Logic", "Intuition", "Charisma"] as const;
 
-export interface Rcc { name: string; rating: number; d: number; f: number }
+/** Rigger Command Console table (core rulebook p. 197); every RCC needs a license (L). */
+export interface Rcc { name: string; rating: number; d: number; f: number; avail: number; cost: number }
 export const RCCS: Rcc[] = [
-  { name: "Scratch-built junk", rating: 1, d: 3, f: 2 },
-  { name: "Allegiance Control Center", rating: 2, d: 3, f: 3 },
-  { name: "Essy Motors DroneMaster", rating: 3, d: 4, f: 4 },
-  { name: "Horizon Overseer", rating: 4, d: 5, f: 4 },
-  { name: "Maersk Spider", rating: 4, d: 4, f: 5 },
-  { name: "Vulcan Liegelord", rating: 5, d: 6, f: 5 },
-  { name: "Proteus Poseidon", rating: 5, d: 5, f: 6 },
-  { name: "Transys Eidolon", rating: 6, d: 6, f: 5 },
-  { name: "Ares Red Dog", rating: 6, d: 7, f: 6 },
-  { name: "Aztechnology Tlaloc", rating: 6, d: 8, f: 7 },
+  { name: "Scratch-built junk", rating: 1, d: 3, f: 2, avail: 1, cost: 1400 },
+  { name: "Allegiance Control Center", rating: 2, d: 3, f: 3, avail: 3, cost: 8000 },
+  { name: "Essy Motors DroneMaster", rating: 3, d: 4, f: 4, avail: 3, cost: 16000 },
+  { name: "Horizon Overseer", rating: 4, d: 5, f: 4, avail: 4, cost: 32000 },
+  { name: "Maersk Spider", rating: 4, d: 4, f: 5, avail: 5, cost: 34000 },
+  { name: "Vulcan Liegelord", rating: 5, d: 6, f: 5, avail: 5, cost: 66000 },
+  { name: "Proteus Poseidon", rating: 5, d: 5, f: 6, avail: 6, cost: 68000 },
+  { name: "Transys Eidolon", rating: 6, d: 6, f: 5, avail: 7, cost: 75000 },
+  { name: "Ares Red Dog", rating: 6, d: 7, f: 6, avail: 8, cost: 95000 },
+  { name: "Aztechnology Tlaloc", rating: 6, d: 8, f: 7, avail: 9, cost: 140000 },
 ];
 
 /** Regular attribute -> jumped-in attribute when a rigger is jacked into a vehicle or drone. */

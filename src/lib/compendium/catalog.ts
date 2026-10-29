@@ -14,26 +14,52 @@ import { normalize } from "./normalize";
 
 type CoreItem = CompItem & { hasText?: boolean };
 
-/** Matrix hardware the sheet already knows from rules6. Prices are not in the gear list yet. */
+/** Matrix hardware the sheet already knows from rules6, with core rulebook prices and Availability. */
 const MATRIX: CompItem[] = [
   ...COMMLINKS.map((l, i): CompItem => ({
-    id: `matrix-${l.name.toLowerCase().replace(/\W+/g, "-")}`, name: l.name, cat: "matrix", group: "Commlink", cost: null, source: "built-in",
+    id: `matrix-${l.name.toLowerCase().replace(/\W+/g, "-")}`, name: l.name, cat: "matrix", group: "Commlink", cost: l.cost, avail: l.avail, source: "built-in",
     stats: [["Rating", String(l.rating)], ["Data Proc.", String(l.d)], ["Firewall", String(l.f)], ["Programs", String(l.slots)]],
-    gear: { name: l.name, category: "commlink", cost: 0, qty: 1 }, equip: { kind: "commlink", index: i }, book: "Core",
+    gear: { name: l.name, category: "commlink", cost: l.cost, qty: 1 }, equip: { kind: "commlink", index: i }, book: "Core", page: 267,
   })),
   ...CYBERDECKS.map((d, i): CompItem => ({
-    id: `matrix-${d.name.toLowerCase().replace(/\W+/g, "-")}`, name: d.name, cat: "matrix", group: "Cyberdeck", cost: null, source: "built-in",
+    id: `matrix-${d.name.toLowerCase().replace(/\W+/g, "-")}`, name: d.name, cat: "matrix", group: "Cyberdeck", cost: d.cost, avail: d.avail, legal: "I", source: "built-in",
     stats: [["Rating", String(d.rating)], ["Attack", String(d.a)], ["Sleaze", String(d.s)], ["Programs", String(d.slots)]],
-    gear: { name: d.name, category: "commlink", cost: 0, qty: 1 }, equip: { kind: "deck", index: i }, book: "Core",
+    gear: { name: d.name, category: "commlink", cost: d.cost, qty: 1 }, equip: { kind: "deck", index: i }, book: "Core", page: 267,
   })),
   ...RCCS.map((r, i): CompItem => ({
-    id: `matrix-${r.name.toLowerCase().replace(/\W+/g, "-")}`, name: r.name, cat: "matrix", group: "Rigger console", cost: null, source: "built-in",
+    id: `matrix-${r.name.toLowerCase().replace(/\W+/g, "-")}`, name: r.name, cat: "matrix", group: "Rigger console", cost: r.cost, avail: r.avail, legal: "L", source: "built-in",
     stats: [["Rating", String(r.rating)], ["Data Proc.", String(r.d)], ["Firewall", String(r.f)], ["Drones", String(r.rating * 3)]],
-    gear: { name: r.name, category: "commlink", cost: 0, qty: 1 }, equip: { kind: "rcc", index: i }, book: "Core",
+    gear: { name: r.name, category: "commlink", cost: r.cost, qty: 1 }, equip: { kind: "rcc", index: i }, book: "Core", page: 197,
   })),
 ];
 
-const BUILT_IN: CoreItem[] = [...(core as unknown as CoreItem[]), ...MATRIX];
+/**
+ * The gear list prints integrated parts (the Ares Alpha's grenade launcher, the Raiden's underbarrel
+ * shotgun) as their own rows with no price, because they are never sold alone. Fold each into the
+ * weapon it belongs to: shown with it, and added to a sheet with it.
+ */
+function foldParts(items: CoreItem[]): CoreItem[] {
+  const parts = items.filter((i) => !i.cost && i.cat === "weapons");
+  const out = items.filter((i) => !parts.includes(i)).map((i) => ({ ...i }));
+  for (const p of parts) {
+    const words = p.name.split(" ");
+    let parent: CoreItem | undefined;
+    for (let n = words.length - 1; n > 0 && !parent; n--) {
+      const base = words.slice(0, n).join(" ");
+      parent = out.filter((o) => o.cat === "weapons" && (o.name === base || o.name.endsWith(` ${base}`))).sort((a, b) => b.name.length - a.name.length)[0];
+    }
+    if (!parent) continue; // a priceless part we cannot place is left out rather than sold for nothing
+    const what = p.name.slice(p.name.lastIndexOf(parent.name.split(" ").pop()!) + parent.name.split(" ").pop()!.length).trim() || p.group;
+    const ar = p.stats.find(([k]) => k === "AR")?.[1];
+    const dv = p.stats.find(([k]) => k === "DV")?.[1];
+    parent.stats = [...parent.stats.slice(0, 2), ["Built in", what], ...parent.stats.slice(2)];
+    parent.note = [parent.note, `Built-in ${what.toLowerCase()}: DV ${dv ?? "by ammo"}, AR ${ar ?? "–"}${p.stats.find(([k]) => k === "Ammo") ? `, ammo ${p.stats.find(([k]) => k === "Ammo")![1]}` : ""}. Comes with the ${parent.name}.`].filter(Boolean).join(" ");
+    parent.parts = [...(parent.parts ?? []), { ...p.gear, name: `${parent.name}: ${what}`, cost: 0, notes: `Built into the ${parent.name}.` }];
+  }
+  return out;
+}
+
+const BUILT_IN: CoreItem[] = foldParts([...(core as unknown as CoreItem[]), ...MATRIX]);
 
 interface GearListState {
   imported: CompItem[] | null;
@@ -111,6 +137,11 @@ export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; 
   const same = c.gear.find((g) => g.name === item.gear.name && g.category === item.gear.category && g.cost === item.gear.cost);
   if (same && item.cat !== "augmentations") same.qty += qty;
   else c.gear.push({ ...(JSON.parse(JSON.stringify(item.gear)) as Omit<GearItem, "id">), id: uid("g"), qty });
+  // integrated parts come with the weapon, one set per weapon
+  for (const part of item.parts ?? []) {
+    const have = c.gear.find((g) => g.name === part.name);
+    if (have) have.qty += qty; else c.gear.push({ ...(JSON.parse(JSON.stringify(part)) as Omit<GearItem, "id">), id: uid("g"), qty });
+  }
   if (opts.pay) c.nuyen -= price;
   let equipped = "";
   if (item.equip) {

@@ -44,6 +44,8 @@ export interface CompItem {
   /** Template for the sheet item created when this is added to a runner. */
   gear: Omit<GearItem, "id">;
   equip?: Equip;
+  /** Built-in parts sold only with this item (an underbarrel launcher); they come along when it is added. */
+  parts?: Omit<GearItem, "id">[];
   source: "built-in" | "imported" | "house" | "mine";
 }
 

@@ -1,6 +1,6 @@
 "use client";
 import { rules } from "@/lib/house/rules";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
@@ -140,7 +140,7 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
   const [q, setQ] = useState(initialQuery ?? "");
   const [cat, setCat] = useState<CompCat | "all">("all");
   const [group, setGroup] = useState("");
-  const [sort, setSort] = useState<"name" | "cost" | "avail">("name");
+  const [sort, setSort] = useState<"name" | "type" | "cost" | "avail">("name");
   const [legalOnly, setLegalOnly] = useState(false);
   const [afford, setAfford] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
@@ -163,7 +163,13 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
       const hay = `${i.name} ${i.group} ${i.stats.map((s) => s.join(" ")).join(" ")}`.toLowerCase();
       return words.every((w) => hay.includes(w));
     });
-    out.sort((a, b) => (sort === "cost" ? (a.cost ?? Infinity) - (b.cost ?? Infinity) : sort === "avail" ? (a.avail ?? 0) - (b.avail ?? 0) : 0) || a.name.localeCompare(b.name));
+    const catOrder = (c: string) => COMP_CATS.findIndex((x) => x.id === c);
+    out.sort((a, b) => (
+      sort === "cost" ? (a.cost ?? Infinity) - (b.cost ?? Infinity)
+      : sort === "avail" ? (a.avail ?? 0) - (b.avail ?? 0)
+      // by type: category, then sub-type, cheapest first within each
+      : sort === "type" ? catOrder(a.cat) - catOrder(b.cat) || a.group.localeCompare(b.group) || (a.cost ?? Infinity) - (b.cost ?? Infinity)
+      : 0) || a.name.localeCompare(b.name));
     return out;
   }, [list, q, cat, group, legalOnly, afford, nuyen, sort]);
 
@@ -192,7 +198,7 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
           </select>
         )}
         <select className="field !min-h-0 !w-auto !py-1 text-xs" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort by">
-          <option value="name">Sort by name</option><option value="cost">Sort by price</option><option value="avail">Sort by availability</option>
+          <option value="name">Sort by name</option><option value="type">Sort by type</option><option value="cost">Sort by price</option><option value="avail">Sort by availability</option>
         </select>
         <label className="flex items-center gap-1.5"><input type="checkbox" className="accent-[var(--accent)]" checked={legalOnly} onChange={(e) => setLegalOnly(e.target.checked)} /> No license needed</label>
         {nuyen != null && <label className="flex items-center gap-1.5"><input type="checkbox" className="accent-[var(--accent)]" checked={afford} onChange={(e) => setAfford(e.target.checked)} /> Within {nuyen.toLocaleString("en-US")}¥</label>}
@@ -200,10 +206,13 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
       </div>
       {hint && <p className="text-xs text-faint">{hint}</p>}
       <ul className={clsx("min-h-0 divide-y divide-line overflow-y-auto border-y border-line", compact && "flex-1")}>
-        {shown.map((i) => {
+        {shown.map((i, n) => {
           const isOpen = open === i.id;
           const blocked = blockedFor(i);
+          const head = sort === "type" && (n === 0 || shown[n - 1].group !== i.group || shown[n - 1].cat !== i.cat) ? i.group || "Other" : null;
           return (
+            <Fragment key={i.id}>
+            {head && <li className="gear-type-head sticky top-0 z-[1] px-1 py-1 text-[11px] font-semibold text-accent" aria-hidden="true">{head}</li>}
             <li
               key={i.id}
               draggable={!!onAdd}
@@ -237,6 +246,7 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
               </div>
               {isOpen && <Detail item={i} onAdd={onAdd} addLabel={addLabel} blocked={blocked} />}
             </li>
+            </Fragment>
           );
         })}
         {shown.length === 0 && <li className="py-6 text-center text-sm text-dim">Nothing matches. Try another word or clear the filters.</li>}
