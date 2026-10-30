@@ -162,7 +162,7 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
             <datalist id="spell-names">{suggestions.slice(0, 250).map((n) => <option key={n} value={n} />)}</datalist>
             <button className="btn small" disabled={!newSpell.trim() || karmaAvail < KARMA.spell}>Learn</button>
           </form>
-          <p className="mt-2 text-xs text-faint">Casting is Sorcery + Magic. Each sustained spell costs 2 dice on every test. Spells whose drain is not in the table (Animate and Shape, for one) take a value you type in.</p>
+          <p className="mt-2 text-xs text-faint">Casting is Sorcery + Magic. Each sustained spell costs 2 dice on every test. Spells from outside the core book take a drain value you type in.</p>
         </Box>
 
         <Box title="Spirits" right={<span className={clsx("num text-xs", forceTotal > forceCap ? "text-danger" : "text-dim")}>Force {forceTotal} / {forceCap}</span>}>
