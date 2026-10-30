@@ -14,7 +14,7 @@ const withRules = (mech, fn) => { const r = emptyRuleset(); r.mech = mech; setAc
 test("an empty ruleset plays by the book", () => {
   setActiveRules(null);
   assert.deepEqual(rules(), BOOK);
-  assert.equal(outcomeOf(3, 3).outcome, "graze");
+  assert.equal(outcomeOf(3, 3).outcome, "hit");
   assert.equal(ADV_COST.spec, 5);
   assert.equal(KARMA.customization, 50);
 });

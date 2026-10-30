@@ -6,7 +6,7 @@
 
 const TOKEN_KEYS = new Set(["x", "y", "rot", "bars", "markers", "card", "img", "runner"]);
 const SHAPE_KEYS = new Set(["x", "y"]);
-const TURN_KEYS = new Set(["score", "base", "dice", "minors", "acted", "delayed", "tie", "name"]);
+const TURN_KEYS = new Set(["score", "base", "dice", "minors", "acted", "delayed", "tie", "name", "edgeGained"]);
 const MAX_ASSET = 700_000;
 // what the defender writes onto an attack record
 const DEFENSE_KEYS = new Set(["defense", "outcome", "net", "soak", "damage", "status"]);

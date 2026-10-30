@@ -6,7 +6,7 @@ import { useSettings } from "@/lib/store/settings";
 import { useRunners } from "@/lib/store/characters";
 import { derive } from "@/lib/sr6/derive";
 import { withAdv } from "@/lib/sr6/advance";
-import { vid } from "@/lib/vtt/ops";
+import { EDGE_PER_ROUND, vid } from "@/lib/vtt/ops";
 import { useVtt } from "@/lib/vtt/store";
 import { BAR_META, type Attack, type Op, type Scene, type Token, type Weapon } from "@/lib/vtt/types";
 import { BANDS, bandIndex, controllerOf, damageAfter, damageBars, defensePools, distanceMeters, edgeFromRatings, outcomeOf, statsOf, woundPenalty } from "@/lib/vtt/combat";
@@ -53,12 +53,16 @@ const secretFor = (t: Token) => useVtt.getState().me.gm && !!t.npc && useTableUi
 function gainEdge(t: Token, scene: Scene): Op[] {
   const r = myRunner(t);
   const { edgeGain, maxEdge } = rules();
-  if (edgeGain <= 0) return [];
-  if (r) { useRunners.getState().update(r.id, (x) => { x.edgeCurrent = Math.min(maxEdge, x.edgeCurrent + edgeGain); }); return []; }
+  // Nobody gains more than 2 Edge in a combat round (p. 105); tracked on the token's turn entry.
+  const entry = Object.values(useVtt.getState().state?.turn.entries ?? {}).find((e) => e.tokenId === t.id);
+  const gain = Math.min(edgeGain, entry ? Math.max(0, EDGE_PER_ROUND - (entry.edgeGained ?? 0)) : edgeGain);
+  if (gain <= 0) return [];
+  const track: Op[] = entry ? [{ k: "merge", p: ["turn", "entries", entry.id], v: { edgeGained: (entry.edgeGained ?? 0) + gain } }] : [];
+  if (r) { useRunners.getState().update(r.id, (x) => { x.edgeCurrent = Math.min(maxEdge, x.edgeCurrent + gain); }); return track; }
   const b = t.bars.b3;
-  if (!b) return [];
-  const cur = Math.min(maxEdge, b.cur + edgeGain);
-  return [{ k: "merge", p: ["scenes", scene.id, "objects", t.id], v: { bars: { ...t.bars, b3: { cur, max: Math.max(b.max, cur) } } } }];
+  if (!b) return track;
+  const cur = Math.min(maxEdge, b.cur + gain);
+  return [...track, { k: "merge", p: ["scenes", scene.id, "objects", t.id], v: { bars: { ...t.bars, b3: { cur, max: Math.max(b.max, cur) } } } }];
 }
 
 export interface AttackPlan { weapon: Weapon; meters: number; band: string; ar: number | null; dr: number; edgeTo: Attack["edgeTo"]; pool: number }

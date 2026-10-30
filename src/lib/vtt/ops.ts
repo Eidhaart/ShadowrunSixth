@@ -34,6 +34,18 @@ export function newScene(id: string, name: string): Scene {
   return { id, name, cols: 30, rows: 20, scale: 1.5, grid: true, gridColor: "#ffffff", gridOpacity: 0.12, bgColor: "#0b0d12", fog: false, fogRegions: [], objects: {}, notes: "" };
 }
 
+/** Minor actions at the start of a turn: 1 plus 1 per Initiative Die, never more than 5 (p. 107). */
+export const minorsFor = (dice: number, base: number) => Math.min(5, base + dice);
+
+/** Most Edge anyone may gain in one combat round (p. 105). */
+export const EDGE_PER_ROUND = 2;
+
+/** Initiative tie-break value: Edge, then Reaction, then Intuition, then a coin flip (p. 106). */
+export function ericTie(attrs?: [string, number][]): number {
+  const v = (k: string) => attrs?.find(([a]) => a === k)?.[1] ?? 0;
+  return v("EDG") * 10000 + v("REA") * 100 + v("INT") + Math.random();
+}
+
 /** Turn order as acted: highest score first, ties broken by the tie value. */
 export function sortedTurn(entries: Record<string, TurnEntry>): TurnEntry[] {
   return Object.values(entries).sort((a, b) => b.score - a.score || b.tie - a.tie || a.name.localeCompare(b.name));

@@ -3,7 +3,7 @@ import { rules } from "@/lib/house/rules";
 import { doInitiative, doRoll } from "@/lib/actions";
 import { useRunners } from "@/lib/store/characters";
 import { CELL, type Op, type Scene, type TableState, type Token, type TurnEntry } from "@/lib/vtt/types";
-import { nextUp, sortedTurn, vid } from "@/lib/vtt/ops";
+import { ericTie, minorsFor, nextUp, sortedTurn, vid } from "@/lib/vtt/ops";
 import { useVtt } from "@/lib/vtt/store";
 import { barsFor, blankNpc, cardFor, npcFor } from "@/lib/vtt/runner";
 import { useTableUi } from "./ui";
@@ -76,10 +76,10 @@ export function rollInitFor(t: Token, edgeBoost = false) {
   const existing = Object.values(state.turn.entries).find((e) => e.tokenId === t.id);
   const owner = t.runner?.owner ?? (t.owners.length === 1 && t.owners[0] !== "*" ? t.owners[0] : undefined);
   if (existing) {
-    dispatch([{ k: "merge", p: ["turn", "entries", existing.id], v: { score: r.score, base: init.base, dice: init.dice, minors: rules().minorBase + init.dice, acted: false, delayed: false, tie: Math.random() } }]);
+    dispatch([{ k: "merge", p: ["turn", "entries", existing.id], v: { score: r.score, base: init.base, dice: init.dice, minors: minorsFor(init.dice, rules().minorBase), acted: false, delayed: false, tie: ericTie(t.card?.attrs), edgeGained: 0 } }]);
     return;
   }
-  const e: TurnEntry = { id: vid("i"), name: t.name, tokenId: t.id, owner: owner ?? (me.gm ? undefined : me.handle), score: r.score, base: init.base, dice: init.dice, minors: rules().minorBase + init.dice, acted: false, delayed: false, tie: Math.random() };
+  const e: TurnEntry = { id: vid("i"), name: t.name, tokenId: t.id, owner: owner ?? (me.gm ? undefined : me.handle), score: r.score, base: init.base, dice: init.dice, minors: minorsFor(init.dice, rules().minorBase), acted: false, delayed: false, tie: ericTie(t.card?.attrs), edgeGained: 0 };
   if (!me.gm && e.owner !== me.handle) return;
   const ops: Op[] = [{ k: "set", p: ["turn", "entries", e.id], v: e }];
   if (me.gm && !state.turn.on) ops.push({ k: "merge", p: ["turn"], v: { on: true } });
@@ -109,7 +109,7 @@ export function newRound(reroll: boolean) {
   const ops: Op[] = [];
   const updated: Record<string, TurnEntry> = {};
   for (const e of Object.values(state.turn.entries)) {
-    const v: Partial<TurnEntry> = { acted: false, delayed: false, minors: rules().minorBase + e.dice };
+    const v: Partial<TurnEntry> = { acted: false, delayed: false, minors: minorsFor(e.dice, rules().minorBase), edgeGained: 0 };
     // the GM rerolls NPCs; runners roll their own
     if (reroll && rules().rerollRounds && me.gm && !e.owner) v.score = e.base + Array.from({ length: Math.min(5, e.dice) }, () => 1 + Math.floor(Math.random() * 6)).reduce((a, b) => a + b, 0);
     updated[e.id] = { ...e, ...v };

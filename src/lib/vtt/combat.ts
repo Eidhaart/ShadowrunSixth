@@ -3,8 +3,8 @@ import { CELL, rangeBand, type Attack, type Bar, type BarKey, type Obj, type Sce
 
 /**
  * Sixth World combat math for the table. An attack is an opposed test: the attack pool against
- * the target's Defense (Reaction + Intuition). More attacker hits is a hit, a tie is a graze (it
- * connects but deals no damage), fewer is a miss. Damage is DV plus net hits, minus the hits on the
+ * the target's Defense (Reaction + Intuition). More attacker hits is a hit, a tie hits for the base
+ * DV (house rules may make it a graze or a miss), fewer is a miss. Damage is DV plus net hits, minus the hits on the
  * damage resistance test (Body). Attack Rating against Defense Rating: a side 4 or more ahead gains 1 Edge.
  */
 

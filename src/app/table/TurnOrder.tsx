@@ -2,7 +2,7 @@
 import { rules } from "@/lib/house/rules";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
-import { sortedTurn } from "@/lib/vtt/ops";
+import { minorsFor, sortedTurn } from "@/lib/vtt/ops";
 import { useVtt } from "@/lib/vtt/store";
 import type { Token, TurnEntry } from "@/lib/vtt/types";
 import { useTableUi } from "./ui";
@@ -62,7 +62,7 @@ export function TurnOrder() {
                 <div className="truncate text-sm font-semibold">{e.name}{e.delayed && <span className="ml-1 text-xs font-normal text-cyan">delaying</span>}</div>
                 <div className="flex items-center gap-0.5" title={`${e.minors} Minor actions left`}>
                   <span className="mr-1 text-[10px] text-faint">Minor</span>
-                  {Array.from({ length: rules().minorBase + e.dice }, (_, i) => (
+                  {Array.from({ length: minorsFor(e.dice, rules().minorBase) }, (_, i) => (
                     <button key={i} disabled={!can(e)} className={clsx("vtt-pip", i < e.minors && "on")} onClick={() => merge(e, { minors: i < e.minors ? i : i + 1 })} aria-label={`Minor action ${i + 1}`} />
                   ))}
                 </div>
