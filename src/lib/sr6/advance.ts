@@ -77,6 +77,10 @@ export function getAdv(c: Character): Advancement {
   return { ...emptyAdv(), ...(c.adv ?? {}) };
 }
 
+/** The initiation option that grants a Power Point instead of a metamagic. */
+export const POWER_POINT = "Power Point";
+export const isPowerPoint = (m: string) => /^power point$/i.test(m.trim());
+
 export const qualityKey = (q: Pick<QualityPick, "name" | "note">) => `${q.name}|${q.note ?? ""}`;
 
 /** A copy of the character with every advancement applied, for derive() and display. */
@@ -100,7 +104,10 @@ export function withAdv(c: Character): Character {
   x.qualities = [...x.qualities.filter((q) => !a.boughtOff.includes(qualityKey(q))), ...a.qualities];
   x.spells = [...x.spells, ...a.spells.filter((s) => !x.spells.includes(s))];
   x.complexForms = [...x.complexForms, ...a.forms.filter((s) => !x.complexForms.includes(s))];
-  x.extraPP = (x.extraPP ?? 0) + a.pp;
+  // Power Points after creation come from taking the Power Point option at initiation.
+  // a.pp only holds purchases from older saves, when the deck sold them for Karma.
+  const ppGrades = x.magicType === "adept" || x.magicType === "mystic" ? a.metamagic.filter(isPowerPoint).length : 0;
+  x.extraPP = (x.extraPP ?? 0) + a.pp + ppGrades;
   x.initiateGrade = a.grade;
   x.metamagic = a.metamagic;
   return x;

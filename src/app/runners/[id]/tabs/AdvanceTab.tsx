@@ -9,7 +9,7 @@ import { uid } from "@/lib/sr6/character";
 import { parseQualities } from "@/lib/sr6/qualities";
 import { COMPLEX_FORMS, SPELLS } from "@/lib/sr6/rules6";
 import {
-  ADV_COST, advance, attrMax, getAdv, learnableSkills, offers, qualityKey, skillName, undoLast,
+  ADV_COST, POWER_POINT, advance, attrMax, getAdv, learnableSkills, offers, qualityKey, skillName, undoLast,
   type AdvOp, type Offer,
 } from "@/lib/sr6/advance";
 import { Box, Empty } from "./ui";
@@ -275,11 +275,8 @@ export function AdvanceTab({ ctx }: { ctx: SheetCtx }) {
               )}
               {c.magicType === "mystic" && (
                 <div>
-                  <div className="mb-1 text-sm font-semibold">Power points <span className="text-xs font-normal text-dim">{ADV_COST.pp} Karma each</span></div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <span className="num text-dim">{d.slots.powerPoints} total</span>
-                    <button className="btn small" disabled={!can(ADV_COST.pp)} onClick={() => buy({ k: "pp" }, "Power point", ADV_COST.pp)}>Buy one</button>
-                  </div>
+                  <div className="mb-1 text-sm font-semibold">Power points <span className="num text-xs font-normal text-dim">{d.slots.powerPoints} total</span></div>
+                  <p className="text-sm text-dim">Raising Magic gives mystic adepts no Power Points. Take the Power Point option when you initiate instead.</p>
                 </div>
               )}
               {c.magicType === "adept" && <p className="text-sm text-dim">Adepts gain a power point with every point of Magic. Raise Magic above, then add powers on the Magic tab.</p>}
@@ -290,6 +287,11 @@ export function AdvanceTab({ ctx }: { ctx: SheetCtx }) {
                   <button className="btn small primary" disabled={!o.initiate?.ok} onClick={() => { buy({ k: "initiate", meta: meta.trim() || undefined }, `${techno ? "Submerged" : "Initiated"} to grade ${o.grade + 1}`, o.initiate!.cost); setMeta(""); }}>
                     Grade {o.grade + 1} · {o.initiate?.cost}
                   </button>
+                  {(c.magicType === "adept" || c.magicType === "mystic") && (
+                    <button className="btn small" disabled={!o.initiate?.ok} onClick={() => { buy({ k: "initiate", meta: POWER_POINT }, `Initiated to grade ${o.grade + 1} (Power Point)`, o.initiate!.cost); setMeta(""); }}>
+                      Grade {o.grade + 1} + Power Point · {o.initiate?.cost}
+                    </button>
+                  )}
                 </div>
                 <p className="mt-1 text-xs text-faint">Each grade raises your {techno ? "Resonance" : "Magic"} maximum by 1.</p>
               </div>

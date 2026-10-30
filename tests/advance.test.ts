@@ -81,3 +81,15 @@ test("buying off a negative quality removes it from the sheet but not from the b
   assert.equal(derive(withAdv(c)).condition.stun, stun + 1);
   assert.equal(c.qualities.length, 1);
 });
+
+test("mystic adepts gain Power Points from initiation, not from Magic", () => {
+  const c = runner();
+  c.magicType = "mystic";
+  c.priorities = { metatype: "D", attributes: "A", skills: "B", magic: "B", resources: "E" };
+  c.karmaEarned = 200;
+  const before = derive(withAdv(c)).slots.powerPoints;
+  assert.equal(advance(c, { k: "magic" }, "Magic 4", ADV_COST.rating(4)), null);
+  assert.equal(derive(withAdv(c)).slots.powerPoints, before, "raising Magic adds no Power Point");
+  assert.equal(advance(c, { k: "initiate", meta: "Power Point" }, "Grade 1", ADV_COST.initiate(1)), null);
+  assert.equal(derive(withAdv(c)).slots.powerPoints, before + 1);
+});
