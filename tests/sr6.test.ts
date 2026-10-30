@@ -248,3 +248,36 @@ test("at creation a contact's Connection and Loyalty cannot exceed Charisma", ()
   c.contacts[0].connection = 4;
   assert.ok(validate(c).some((i) => /higher than your Charisma/.test(i.text)));
 });
+
+test("mystic adept Magic for the split is the priority rating less Essence loss", () => {
+  const c = probe(); // Magic priority C: Magic 2
+  c.magicType = "mystic";
+  c.gear.push({ id: "g", name: "Cyberear", category: "cyberware", cost: 0, qty: 1, essence: 0.5 });
+  assert.equal(derive(c).slots.powerPoints, 1);
+  assert.equal(derive(c).slots.spells, 2);
+});
+
+test("the quality limit is on the net bonus: negatives minus positives", () => {
+  const c = probe();
+  c.qualities.push({ id: "n", name: "Bad", kind: "negative", karma: 30, level: 1 });
+  c.qualities.push({ id: "p", name: "Good", kind: "positive", karma: 15, level: 1 });
+  assert.equal(budget(c).karma.negativeBonus, 30, "net 15 is within the limit");
+  c.qualities[1].karma = 5;
+  assert.equal(budget(c).karma.negativeBonus, 25, "net is held to 20");
+});
+
+test("attribute points can raise a special racial attribute to its metatype maximum", () => {
+  const c = probe();
+  c.metatype = "troll";
+  c.attrPts.body = 7; // Body 8 of 9
+  assert.ok(!validate(c).some((i) => i.where === "Attributes" && /body/.test(i.text)));
+});
+
+test("astral initiative is Logic + Intuition + 2D6", () => {
+  const c = probe();
+  c.attrPts.logic = 3;
+  c.attrPts.intuition = 2;
+  const d = derive(c);
+  assert.equal(d.initiative.astralRank, 7);
+  assert.equal(d.initiative.astralDice, 2);
+});

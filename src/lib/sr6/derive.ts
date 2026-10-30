@@ -75,6 +75,7 @@ export interface Budget {
     cost: { attributes: number; skills: number; qualities: number; edgeMagic: number; knowledge: number; nuyen: number };
     left: number;
   };
+  /** net: negative bonus minus positive cost; the book caps it at 20. */
   qualities: { count: number; net: number };
   /** Free points for contacts' Connection and Loyalty: Charisma x 6. */
   contacts: { total: number; spent: number; left: number };
@@ -195,11 +196,11 @@ export function derive(c: Character): Derived {
   const initDice = Math.min(R.initDiceCap, 1 + eff.initiativeDice);
 
   // Mystic adepts split the priority Magic rating: each whole point is either one Power Point or two spells.
-  const mysticPP = c.magicType === "mystic"
-    ? Math.min(mpr, Math.ceil(Math.max(0, c.adeptPowers.reduce((s, p) => s + p.cost, 0) - (c.extraPP ?? 0)) - 1e-9))
-    : 0;
-  const spells = awakened && c.magicType !== "adept" ? (mpr - mysticPP) * 2 : 0;
-  const powerPoints = (c.magicType === "adept" ? magic : c.magicType === "mystic" ? mpr : 0) + (c.extraPP ?? 0);
+  // That rating is the one from the Priority table, reduced by Essence loss.
+  const mysticMagic = c.magicType === "mystic" ? Math.max(0, mpr - essenceMagicLoss) : 0;
+  const mysticPP = Math.min(mysticMagic, Math.ceil(Math.max(0, c.adeptPowers.reduce((s, p) => s + p.cost, 0) - (c.extraPP ?? 0)) - 1e-9));
+  const spells = awakened && c.magicType !== "adept" ? (c.magicType === "mystic" ? mysticMagic - mysticPP : mpr) * 2 : 0;
+  const powerPoints = (c.magicType === "adept" ? magic : mysticMagic) + (c.extraPP ?? 0);
 
   const con = c.damage;
   const unconscious = con.stun >= stunBoxes || con.physical >= physicalBoxes;
@@ -219,8 +220,9 @@ export function derive(c: Character): Derived {
     initiative: {
       rank: initRank,
       dice: initDice,
-      astralRank: attrs.intuition * 2,
-      astralDice: 3,
+      // Astral combat table: Logic + Intuition + 2D6.
+      astralRank: attrs.logic + attrs.intuition,
+      astralDice: 2,
     },
     condition: { physical: physicalBoxes, stun: stunBoxes, overflow: overflowBoxes },
     woundRows,
@@ -290,7 +292,8 @@ export function budget(c: Character): Budget {
     if (q.kind === "positive") positive += v;
     else negative += v;
   }
-  const negativeBonus = Math.min(KARMA.maxQualityKarma, negative);
+  // The net bonus (negatives minus positives) cannot be more than 20 Karma.
+  const negativeBonus = Math.min(negative, positive + KARMA.maxQualityKarma);
 
   const perKarma = c.qualities.reduce<number>((m, q) => Math.max(m, q.effect?.nuyenPerKarma ?? 0), KARMA.nuyenPerKarma);
   const nuyenFromKarma = c.karmaToNuyen * perKarma;
@@ -331,7 +334,7 @@ export function budget(c: Character): Budget {
       },
       left: karmaPool - karmaSpent,
     },
-    qualities: { count: c.qualities.length, net: negative },
+    qualities: { count: c.qualities.length, net: negative - positive },
     contacts: { total: contactTotal, spent: contactSpent, left: contactTotal - contactSpent },
   };
 }
@@ -373,8 +376,6 @@ export function validate(c: Character): Issue[] {
   for (const a of ATTRIBUTES) {
     const val = d.natural[a];
     if (val > d.attrMax[a]) issues.push({ level: "error", where: "Attributes", text: `${a} is above its maximum of ${d.attrMax[a]}.` });
-    if (1 + (c.attrPts[a] ?? 0) > Math.min(6, meta.ranges[a][1]))
-      issues.push({ level: "error", where: "Attributes", text: `${a}: priority points cannot raise it past ${Math.min(6, meta.ranges[a][1])}; use adjustment points for racial range above 6.` });
     if ((c.adjRacial[a] ?? 0) > 0 && !special.includes(a))
       issues.push({ level: "error", where: "Adjustment", text: `${a} is not a special racial attribute for ${meta.name}.` });
     if (val === d.attrMax[a]) atMax++;
@@ -407,7 +408,7 @@ export function validate(c: Character): Issue[] {
   // qualities
   if (b.qualities.count > KARMA.maxQualities) issues.push({ level: "error", where: "Qualities", text: `At most ${KARMA.maxQualities} qualities at creation.` });
   if (b.qualities.net > KARMA.maxQualityKarma)
-    issues.push({ level: "warn", where: "Qualities", text: `Negative quality bonus is capped at ${KARMA.maxQualityKarma} Karma; extra bonus is wasted.` });
+    issues.push({ level: "warn", where: "Qualities", text: `The net bonus from qualities is capped at ${KARMA.maxQualityKarma} Karma; extra bonus is wasted.` });
 
   // spells and forms
   if (c.spells.length > d.slots.spells) issues.push({ level: "error", where: "Magic", text: `Too many spells or rituals (limit ${d.slots.spells} at creation).` });

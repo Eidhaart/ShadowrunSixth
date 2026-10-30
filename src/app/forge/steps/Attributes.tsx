@@ -23,11 +23,12 @@ export function Attributes({ c, patch }: StepProps) {
   const d = derive(c);
   const meta = METATYPES[c.metatype];
   const special = specialRacialAttrs(c.metatype);
-  const cap = (a: AttrKey) => Math.min(6, meta.ranges[a][1]);
+  /** Attribute points can take an attribute to its metatype maximum, less what other sources add. */
+  const cap = (a: AttrKey) => Math.max(1, d.attrMax[a] - (c.adjRacial[a] ?? 0) - (c.attrKar[a] ?? 0));
 
   return (
     <div>
-      <StepHeader title="Attributes" lead="Every attribute starts at 1 for free. Spend your attribute points to raise them; priority points can take an attribute to 6, never beyond. Only one attribute may sit at its metatype maximum." rule={/^Attributes$/i} />
+      <StepHeader title="Attributes" lead="Every attribute starts at 1 for free. Spend your attribute points to raise them, up to your metatype maximum. Only one Physical or Mental attribute may sit at its maximum." rule={/^Attributes$/i} />
       <div className="mb-5 max-w-md"><Budget label="Attribute points left" left={b.attributes.left} total={b.attributes.total} /></div>
       {!c.priorities.attributes && <div className="mb-4"><Note tone="warn">Choose an Attributes priority to get points to spend.</Note></div>}
       <div className="grid gap-3 lg:grid-cols-2">
