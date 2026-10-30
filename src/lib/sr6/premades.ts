@@ -6,6 +6,7 @@
  *   - premade: the full runner with name, story, gear and contacts, ready to play.
  */
 import core from "@/data/gear-core.json";
+import { withBookFix } from "@/data/book-fixes";
 import { COMMLINKS, CYBERDECKS, RCCS } from "./rules6";
 import { newCharacter, uid, type Character, type Contact, type GearItem, type KnowledgeSkill, type QualityPick } from "./character";
 import type { AttrKey, MagicType, MetatypeId, PriorityColumn, PriorityLevel } from "./data";
@@ -16,8 +17,9 @@ const CORE = core as unknown as CoreGear[];
 
 /** A gear item from the bundled gear list, optionally bought at a rating (price × rating). */
 function item(id: string, opts: { qty?: number; rating?: number; name?: string } = {}): Omit<GearItem, "id"> {
-  const it = CORE.find((x) => x.id === id);
-  if (!it) throw new Error(`Unknown gear id ${id}`);
+  const raw = CORE.find((x) => x.id === id);
+  if (!raw) throw new Error(`Unknown gear id ${id}`);
+  const it = withBookFix({ ...raw, name: raw.gear.name });
   const g: Omit<GearItem, "id"> = JSON.parse(JSON.stringify(it.gear));
   if (opts.rating) { g.cost *= opts.rating; g.name = `${opts.name ?? g.name} (rating ${opts.rating})`; }
   else if (opts.name) g.name = opts.name;

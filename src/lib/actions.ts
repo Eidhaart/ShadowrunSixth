@@ -107,7 +107,7 @@ export function answerCall(callId: string, check: CheckSpec, o: { runnerId?: str
   const d = runner ? derive(runner) : null;
   const push = !!(o.push && runner && runner.edgeCurrent >= 4);
   if (push && runner) useRunners.getState().update(runner.id, (x) => { x.edgeCurrent -= 4; });
-  const r = roll({ label: check.label, pool: info.pool, explode: push, glitchOn2: d?.glitchOn2, threshold: check.threshold }, push && d ? d.edge : 0);
+  const r = roll({ label: check.label, pool: info.pool, explode: push, badLuck: d?.glitchOn2, threshold: check.threshold }, push && d ? d.edge : 0);
   const who = runner ? runnerName(runner) : handle;
   useRolls.getState().push({ kind: "roll", who, result: r });
   sfxRoll(r.dice.length);

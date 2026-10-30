@@ -283,3 +283,22 @@ test("astral initiative is Logic + Intuition + 2D6", () => {
   assert.equal(d.initiative.astralRank, 7);
   assert.equal(d.initiative.astralDice, 2);
 });
+
+test("Bad Luck: 2s count toward a glitch but not toward a critical glitch", () => {
+  const dice = [2, 2, 2, 1, 3].map((v) => die(v));
+  const r = tally(dice, { label: "t", pool: 5, badLuck: true }, 5, 0, 0);
+  assert.equal(r.glitch, true);
+  assert.equal(r.critGlitch, false, "only 1s count for a critical glitch");
+  const boosted = tally(dice, { label: "t", pool: 5, glitchOn2: true }, 5, 0, 0);
+  assert.equal(boosted.critGlitch, true, "the 5-Edge boost counts 2s for both");
+});
+
+test("Glass Jaw leaves at least 2 Stun boxes; trolls punch for Physical", async () => {
+  const c = probe();
+  c.qualities.push({ id: "g", name: "Glass Jaw", kind: "negative", karma: 4, level: 20, effect: { stunBoxes: -1 } });
+  assert.equal(derive(c).condition.stun, 2);
+  const { weaponsFor } = await import("../src/lib/vtt/runner");
+  const t = probe();
+  t.metatype = "troll";
+  assert.equal(weaponsFor(t).find((w) => w.name === "Unarmed strike")?.type, "P");
+});

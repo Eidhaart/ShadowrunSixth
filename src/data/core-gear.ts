@@ -69,7 +69,7 @@ export const CYBERWARE: AugRow[] = [
   { name: "Audio enhancement", group: "Earware", ess: 0.1, cap: "[1]", avail: "2", cost: 4000 },
   { name: "Balance augmenter", group: "Earware", ess: 0.1, cap: "[4]", avail: "3", cost: 8000 },
   { name: "Damper", group: "Earware", ess: 0.1, cap: "[1]", avail: "2", cost: 2250 },
-  { name: "Select sound filter", group: "Earware", ess: 0.1, cap: "[Rating]", avail: "4", cost: 3500, costPerRating: true, ratings: [1, 5] },
+  { name: "Select sound filter", group: "Earware", ess: 0.1, cap: "[Rating]", avail: "4", cost: 3500, costPerRating: true, ratings: [1, 6] },
   { name: "Sound link", group: "Earware", ess: 0.1, avail: "2", cost: 1000 },
   { name: "Spatial recognizer", group: "Earware", ess: 0.1, cap: "[2]", avail: "3", cost: 4000 },
   // bodyware (bone lacing comes from the gear list)

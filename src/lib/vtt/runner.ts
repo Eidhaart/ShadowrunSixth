@@ -49,8 +49,8 @@ export function weaponsFor(raw: Character): Weapon[] {
     return { name: w.name, pool: poolFor(w.skill ?? "firearms"), dv, type, ar: (w.ar ?? [null, null, null, null, null]).map((v) => (v == null ? null : v)) };
   });
   // Unarmed: base DV 2S (Close Combat, p. 94); AR is Reaction + Strength, Close only.
-  // Half Strength is the damage for the grapple option, not for a strike.
-  out.push({ name: "Unarmed strike", pool: poolFor("close-combat"), dv: 2, type: "S", ar: [d.attrs.reaction + d.attrs.strength, null, null, null, null] });
+  // Half Strength is the damage for the grapple option, not for a strike. Dermal Deposits makes it Physical.
+  out.push({ name: "Unarmed strike", pool: poolFor("close-combat"), dv: 2, type: d.unarmedPhysical ? "P" : "S", ar: [d.attrs.reaction + d.attrs.strength, null, null, null, null] });
   return out;
 }
 

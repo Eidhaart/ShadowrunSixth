@@ -183,7 +183,7 @@ export function Sheet({ id }: { id: string }) {
     const pool = poolOf(base, opts);
     const useEdge = edgePre && c.edgeCurrent >= 4;
     if (useEdge) upd((x) => { x.edgeCurrent -= 4; });
-    const r = doRoll({ label, pool, explode: useEdge, glitchOn2: d.glitchOn2 }, useEdge ? d.edge : 0, who);
+    const r = doRoll({ label, pool, explode: useEdge, badLuck: d.glitchOn2 }, useEdge ? d.edge : 0, who);
     setLastId(r.id);
     if (useEdge) setEdgePre(false);
     return r;

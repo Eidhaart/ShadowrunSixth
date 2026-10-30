@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import core from "@/data/gear-core.json";
+import { withBookFix } from "@/data/book-fixes";
 import { COMMLINKS, CYBERDECKS, CYBERJACKS, RCCS } from "@/lib/sr6/rules6";
 import { editExt, newVehicle } from "@/lib/sr6/ext";
 import { uid, type Character, type GearItem } from "@/lib/sr6/character";
@@ -118,8 +119,9 @@ function coreTables(): CompItem[] {
   return out;
 }
 
-/** Only the core rulebook: other sourcebooks in the gear list are left out. Old categories are mapped. */
-const coreOnly = (items: CoreItem[]) => items.filter((i) => !i.book || i.book === "Core").map((i) => ({ ...i, cat: fixCat(i.cat, i.group) }));
+/** Only the core rulebook: other sourcebooks in the gear list are left out. Old categories are mapped
+ *  and the list's known differences from the book tables are corrected. */
+const coreOnly = (items: CoreItem[]) => items.filter((i) => !i.book || i.book === "Core").map((i) => withBookFix({ ...i, cat: fixCat(i.cat, i.group) }));
 
 const BUILT_IN: CoreItem[] = foldParts([...coreOnly(core as unknown as CoreItem[]), ...MATRIX, ...coreTables()]);
 /** The bundled catalog, for tests and scripts. */

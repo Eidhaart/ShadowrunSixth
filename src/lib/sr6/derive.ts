@@ -61,6 +61,8 @@ export interface Derived {
   unconscious: boolean;
   dead: boolean;
   glitchOn2: boolean;
+  /** Dermal Deposits: unarmed attacks do Physical damage (p. 73). */
+  unarmedPhysical: boolean;
 }
 
 export interface Budget {
@@ -152,7 +154,8 @@ export function derive(c: Character): Derived {
 
   const R = rules();
   const physicalBoxes = R.physBase + Math.ceil(attrs.body / 2) + meta.builtTough + eff.physicalBoxes;
-  const stunBoxes = R.stunBase + Math.ceil(attrs.willpower / 2) + eff.stunBoxes;
+  // Glass Jaw removes Stun boxes, down to a minimum of 2 (p. 75).
+  const stunBoxes = Math.max(eff.stunBoxes < 0 ? 2 : 0, R.stunBase + Math.ceil(attrs.willpower / 2) + eff.stunBoxes);
   const overflowBoxes = attrs.body * R.overflowMult + eff.overflowBoxes;
 
   const wearArmor = c.gear
@@ -241,6 +244,7 @@ export function derive(c: Character): Derived {
     unconscious,
     dead,
     glitchOn2: c.qualities.some((q) => q.effect?.glitchOn2),
+    unarmedPhysical: meta.dermalDefense > 0 || c.qualities.some((q) => /^dermal deposits/i.test(q.name)),
   };
 }
 
@@ -409,6 +413,9 @@ export function validate(c: Character): Issue[] {
   if (b.qualities.count > KARMA.maxQualities) issues.push({ level: "error", where: "Qualities", text: `At most ${KARMA.maxQualities} qualities at creation.` });
   if (b.qualities.net > KARMA.maxQualityKarma)
     issues.push({ level: "warn", where: "Qualities", text: `The net bonus from qualities is capped at ${KARMA.maxQualityKarma} Karma; extra bonus is wasted.` });
+
+  if (c.magicType !== "mundane" && c.qualities.some((q) => /^sensitive system/i.test(q.name)))
+    issues.push({ level: "error", where: "Qualities", text: "Sensitive System cannot be taken with a Magic or Resonance rating." });
 
   // spells and forms
   if (c.spells.length > d.slots.spells) issues.push({ level: "error", where: "Magic", text: `Too many spells or rituals (limit ${d.slots.spells} at creation).` });
