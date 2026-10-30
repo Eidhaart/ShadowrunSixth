@@ -158,7 +158,7 @@ export function offers(m: Character) {
 
 /** Skills the runner could learn from scratch. */
 export function learnableSkills(m: Character) {
-  return SKILLS.filter((s) => skillAvailable(s, m.magicType) && !((m.skills[s.id]?.pts ?? 0) + (m.skills[s.id]?.kar ?? 0)));
+  return SKILLS.filter((s) => skillAvailable(s, m.magicType, m.adeptPowers) && !((m.skills[s.id]?.pts ?? 0) + (m.skills[s.id]?.kar ?? 0)));
 }
 
 // ───────────────────────── buying and undoing ─────────────────────────

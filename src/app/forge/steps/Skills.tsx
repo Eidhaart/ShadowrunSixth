@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { uid, type KnowledgeSkill } from "@/lib/sr6/character";
-import { ATTR_ABBR, SKILLS, skillAvailable, type SkillDef } from "@/lib/sr6/data";
+import { ATTR_ABBR, FREE_SPEC_SKILLS, SKILLS, skillAvailable, type SkillDef } from "@/lib/sr6/data";
 import { budget, derive } from "@/lib/sr6/derive";
 import { Budget, Field, Note, StepHeader, Stepper, type StepProps } from "../ui";
 
@@ -26,8 +26,8 @@ export function Skills({ c, patch }: StepProps) {
   const maxFor = (id: string) => (c.qualities.some((x) => x.name.startsWith("Aptitude") && x.note === id) ? 7 : 6);
   const entry = (id: string) => c.skills[id] ?? { pts: 0, kar: 0 };
 
-  const list = useMemo(() => SKILLS.filter((s) => skillAvailable(s, c.magicType) && (!q || s.name.toLowerCase().includes(q.toLowerCase()))), [c.magicType, q]);
-  const hiddenMagic = SKILLS.filter((s) => !skillAvailable(s, c.magicType)).map((s) => s.name);
+  const list = useMemo(() => SKILLS.filter((s) => skillAvailable(s, c.magicType, c.adeptPowers) && (!q || s.name.toLowerCase().includes(q.toLowerCase()))), [c.magicType, c.adeptPowers, q]);
+  const hiddenMagic = SKILLS.filter((s) => !skillAvailable(s, c.magicType, c.adeptPowers)).map((s) => s.name);
   const knowledgeUsed = c.knowledge.filter((k) => !k.native).length;
 
   const setPts = (id: string, v: number) =>
@@ -98,7 +98,7 @@ export function Skills({ c, patch }: StepProps) {
                               {s.specs.map((sp) => <option key={sp}>{sp}</option>)}
                             </select>
                           ) : (
-                            <input className="field" placeholder="Specialization (costs 1 point)" value={e.spec ?? ""} onChange={(ev) => setSpec(s.id, ev.target.value)} aria-label={`${s.name} specialization`} />
+                            <input className="field" placeholder={FREE_SPEC_SKILLS.includes(s.id) ? "Weapon (free, required)" : "Specialization (costs 1 point)"} value={e.spec ?? ""} onChange={(ev) => setSpec(s.id, ev.target.value)} aria-label={`${s.name} specialization`} />
                           )}
                         </div>
                       )}

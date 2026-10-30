@@ -7,7 +7,7 @@ export function KarmaStep({ c, patch }: StepProps) {
   const b = budget(c);
   const d = derive(c);
   const meta = METATYPES[c.metatype];
-  const skillsOwned = SKILLS.filter((s) => skillAvailable(s, c.magicType));
+  const skillsOwned = SKILLS.filter((s) => skillAvailable(s, c.magicType, c.adeptPowers));
   const perKarma = b.nuyen.fromKarma && c.karmaToNuyen ? b.nuyen.fromKarma / c.karmaToNuyen : KARMA.nuyenPerKarma;
 
   return (

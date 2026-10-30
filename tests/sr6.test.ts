@@ -205,3 +205,27 @@ test("mystic adepts split the priority Magic between Power Points and spells", (
   d = derive(c);
   assert.equal(d.slots.spells, 2, "a part-spent point of Magic no longer buys spells");
 });
+
+test("Exotic Weapons takes its weapon as a free, required specialization", () => {
+  const c = probe();
+  c.skills["exotic-weapons"] = { pts: 2, kar: 0 };
+  assert.ok(validate(c).some((i) => /name the weapon/.test(i.text)));
+  c.skills["exotic-weapons"].spec = "Monofilament whip";
+  assert.equal(budget(c).skills.spent, 2);
+  assert.ok(!validate(c).some((i) => /name the weapon/.test(i.text)));
+});
+
+test("adepts need Astral Perception for the Astral skill; aspected magicians keep to one branch", () => {
+  const c = probe();
+  c.magicType = "adept";
+  c.skills.astral = { pts: 1, kar: 0 };
+  assert.ok(validate(c).some((i) => /Astral is not available/.test(i.text)));
+  c.adeptPowers.push({ name: "Astral Perception", cost: 1, level: 1 });
+  assert.ok(!validate(c).some((i) => /Astral is not available/.test(i.text)));
+
+  const a = probe();
+  a.magicType = "aspected";
+  a.skills.sorcery = { pts: 2, kar: 0 };
+  a.skills.conjuring = { pts: 1, kar: 0 };
+  assert.ok(validate(a).some((i) => /aspected magician/.test(i.text)));
+});

@@ -1,13 +1,16 @@
 import type { Character, QualityEffect } from "./character";
 import { rules } from "@/lib/house/rules";
 import {
+  ASPECT_SKILLS,
   ATTRIBUTES,
+  FREE_SPEC_SKILLS,
   KARMA,
   LIFESTYLES,
   METATYPES,
   PRIORITY_TABLE,
   SKILL_BY_ID,
   SKILLS,
+  skillAvailable,
   specialRacialAttrs,
   type AttrKey,
   type MagicType,
@@ -257,8 +260,8 @@ export function budget(c: Character): Budget {
   const skillTotal = p.skills ? PRIORITY_TABLE[p.skills].skills : 0;
   let skillSpent = 0;
   let skillKarma = 0;
-  for (const e of Object.values(c.skills)) {
-    skillSpent += e.pts + (e.spec && e.specVia !== "karma" ? 1 : 0);
+  for (const [id, e] of Object.entries(c.skills)) {
+    skillSpent += e.pts + (e.spec && e.specVia !== "karma" && !FREE_SPEC_SKILLS.includes(id) ? 1 : 0);
     skillKarma += karmaForRanks(e.pts, e.kar, KARMA.skillRank);
     if (e.spec && e.specVia === "karma") skillKarma += KARMA.specialization;
   }
@@ -387,7 +390,11 @@ export function validate(c: Character): Issue[] {
     if (rank > maxSkill(id)) issues.push({ level: "error", where: "Skills", text: `${def.name} is above the creation maximum.` });
     if (rank === maxSkill(id)) skillsAtMax++;
     if (e.spec && rank < 1) issues.push({ level: "error", where: "Skills", text: `${def.name}: specialization needs at least rank 1.` });
+    if (FREE_SPEC_SKILLS.includes(id) && rank > 0 && !e.spec) issues.push({ level: "error", where: "Skills", text: `${def.name}: name the weapon as its free specialization.` });
+    if (!skillAvailable(def, c.magicType, c.adeptPowers) && rank > 0) issues.push({ level: "error", where: "Skills", text: `${def.name} is not available to your magic type.` });
   }
+  if (c.magicType === "aspected" && ASPECT_SKILLS.filter((id) => (c.skills[id]?.pts ?? 0) + (c.skills[id]?.kar ?? 0) > 0).length > 1)
+    issues.push({ level: "error", where: "Skills", text: "An aspected magician uses only one of Sorcery, Conjuring or Enchanting." });
   if (skillsAtMax > 1) issues.push({ level: "error", where: "Skills", text: "Only one skill may be at the creation maximum." });
   if (b.skills.left < 0) issues.push({ level: "error", where: "Skills", text: `${-b.skills.left} skill point(s) over budget.` });
   if (b.skills.left > 0) issues.push({ level: "warn", where: "Skills", text: `${b.skills.left} skill point(s) unspent.` });
