@@ -150,7 +150,7 @@ export function GearTab({ ctx }: { ctx: SheetCtx }) {
                 <input className="field mt-1 !min-h-0 !py-1 text-xs" value={k.role} placeholder="Role" aria-label="Contact role" onChange={(ev) => upd((x) => { const t = x.contacts.find((q) => q.id === k.id); if (t) t.role = ev.target.value; })} />
                 <div className="mt-1.5 flex items-center gap-3 text-xs text-dim">
                   Connection <Stepper label={`${k.name} connection`} value={k.connection} min={1} max={12} onChange={(n) => upd((x) => { const t = x.contacts.find((q) => q.id === k.id); if (t) t.connection = n; })} />
-                  Loyalty <Stepper label={`${k.name} loyalty`} value={k.loyalty} min={1} max={6} onChange={(n) => upd((x) => { const t = x.contacts.find((q) => q.id === k.id); if (t) t.loyalty = n; })} />
+                  Loyalty <Stepper label={`${k.name} loyalty`} value={k.loyalty} min={1} max={12} onChange={(n) => upd((x) => { const t = x.contacts.find((q) => q.id === k.id); if (t) t.loyalty = n; })} />
                 </div>
               </li>
             ))}

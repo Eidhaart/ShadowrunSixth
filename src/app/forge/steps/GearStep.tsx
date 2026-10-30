@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRulebook } from "@/lib/store/rulebook";
 import { uid, type GearItem } from "@/lib/sr6/character";
 import { LIFESTYLES } from "@/lib/sr6/data";
-import { budget } from "@/lib/sr6/derive";
+import { budget, derive } from "@/lib/sr6/derive";
 import { Budget, Field, Note, StepHeader, Stepper, type StepProps } from "../ui";
 import clsx from "clsx";
 import { GearBrowser, useGearDrop } from "@/components/compendium/GearBrowser";
@@ -28,6 +28,8 @@ const blank = (): Omit<GearItem, "id"> => ({ name: "", category: "misc", cost: 0
 
 export function GearStep({ c, patch }: StepProps) {
   const b = budget(c);
+  /** At creation a contact's Connection and Loyalty cannot exceed Charisma. */
+  const cap = Math.max(1, Math.min(12, derive(c).natural.charisma));
   const book = useRulebook((s) => s.book);
   const search = useRulebook((s) => s.search);
   const [item, setItem] = useState(blank());
@@ -145,7 +147,7 @@ export function GearStep({ c, patch }: StepProps) {
 
           <section className="panel quiet p-4">
             <h3 className="mb-1 text-lg font-semibold">Contacts</h3>
-            <p className="mb-3 text-sm text-dim">Contacts are free: Charisma × 6 points to spread over their Connection and Loyalty.</p>
+            <p className="mb-3 text-sm text-dim">Contacts are free: Charisma × 6 points to spread over their Connection and Loyalty. Neither rating can be higher than your Charisma ({cap}) at creation.</p>
             <div className="mb-3 max-w-xs"><Budget label="Contact points left" left={b.contacts.left} total={b.contacts.total} /></div>
             <ul className="mb-3 divide-y divide-line">
               {c.contacts.map((k, i) => (
@@ -158,8 +160,8 @@ export function GearStep({ c, patch }: StepProps) {
             <div className="flex flex-wrap items-end gap-2">
               <input className="field w-40" placeholder="Name" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} aria-label="Contact name" />
               <input className="field w-44" placeholder="Role (fixer, street doc)" value={contact.role} onChange={(e) => setContact({ ...contact, role: e.target.value })} aria-label="Contact role" />
-              <label className="text-xs text-dim">Connection<input className="field num mt-1 w-16" type="number" min={1} max={12} value={contact.connection} onChange={(e) => setContact({ ...contact, connection: Math.max(1, Math.min(12, Number(e.target.value) || 1)) })} /></label>
-              <label className="text-xs text-dim">Loyalty<input className="field num mt-1 w-16" type="number" min={1} max={6} value={contact.loyalty} onChange={(e) => setContact({ ...contact, loyalty: Math.max(1, Math.min(6, Number(e.target.value) || 1)) })} /></label>
+              <label className="text-xs text-dim">Connection<input className="field num mt-1 w-16" type="number" min={1} max={cap} value={contact.connection} onChange={(e) => setContact({ ...contact, connection: Math.max(1, Math.min(cap, Number(e.target.value) || 1)) })} /></label>
+              <label className="text-xs text-dim">Loyalty<input className="field num mt-1 w-16" type="number" min={1} max={cap} value={contact.loyalty} onChange={(e) => setContact({ ...contact, loyalty: Math.max(1, Math.min(cap, Number(e.target.value) || 1)) })} /></label>
               <button className="btn" disabled={!contact.name.trim()} onClick={() => { patch((x) => { x.contacts.push({ id: uid("ct"), ...contact, name: contact.name.trim() }); }); setContact({ name: "", role: "", connection: 1, loyalty: 1 }); }}>Add</button>
             </div>
           </section>

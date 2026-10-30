@@ -417,6 +417,9 @@ export function validate(c: Character): Issue[] {
 
   // contacts
   if (b.contacts.left < 0) issues.push({ level: "error", where: "Contacts", text: `Contacts use ${b.contacts.spent} points but Charisma x 6 gives only ${b.contacts.total}.` });
+  for (const k of c.contacts)
+    if (k.connection > d.natural.charisma || k.loyalty > d.natural.charisma)
+      issues.push({ level: "error", where: "Contacts", text: `${k.name}: Connection and Loyalty cannot be higher than your Charisma (${d.natural.charisma}) at creation.` });
 
   // karma and nuyen
   if (b.karma.left < 0) issues.push({ level: "error", where: "Karma", text: `${-b.karma.left} Karma over budget.` });

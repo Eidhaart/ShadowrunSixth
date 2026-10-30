@@ -202,7 +202,7 @@ export const PREMADES: Premade[] = [
       item("identity-docwagon-platinum-contract-1-year"),
     ],
     lifestyle: "middle", months: 11, link: 2,
-    contacts: [{ name: "Sergeant Vale", role: "Lone Star desk sergeant", connection: 3, loyalty: 2 }, { name: "Tink", role: "Street doc", connection: 2, loyalty: 3 }],
+    contacts: [{ name: "Sergeant Vale", role: "Lone Star desk sergeant", connection: 2, loyalty: 2 }, { name: "Tink", role: "Street doc", connection: 2, loyalty: 2 }],
   },
   {
     build: "decker", name: "Mara Voss", alias: "Cipher",
@@ -215,7 +215,7 @@ export const PREMADES: Premade[] = [
       item("electronics-rfid-tags-stealth", { qty: 2 }), item("tools-tool-kit", { name: "Electronics tool kit" }),
     ],
     lifestyle: "middle", months: 9, deck: 2, link: 3,
-    contacts: [{ name: "Null Pointer", role: "Data haven broker", connection: 3, loyalty: 1 }, { name: "Mr. Shiro", role: "Fixer", connection: 1, loyalty: 1 }],
+    contacts: [{ name: "Null Pointer", role: "Data haven broker", connection: 1, loyalty: 1 }, { name: "Mr. Shiro", role: "Fixer", connection: 1, loyalty: 1 }],
   },
   {
     build: "mage", name: "Ilias Rhein", alias: "Ashfall", portrait: "ashfall",
@@ -265,7 +265,7 @@ export const PREMADES: Premade[] = [
       item("identity-fake-sin", { rating: 2, name: "Fake SIN" }), item("identity-docwagon-basic-contract-1-month"),
     ],
     lifestyle: "low", months: 4,
-    contacts: [{ name: "Patch", role: "Hardware fence", connection: 2, loyalty: 3 }, { name: "Echo", role: "Otaku mentor", connection: 3, loyalty: 4 }],
+    contacts: [{ name: "Patch", role: "Hardware fence", connection: 2, loyalty: 2 }, { name: "Echo", role: "Otaku mentor", connection: 2, loyalty: 2 }],
   },
   {
     build: "samurai", name: "Vesna Orlova", alias: "Vex", portrait: "vex",
@@ -279,7 +279,7 @@ export const PREMADES: Premade[] = [
       item("identity-docwagon-platinum-contract-1-year"),
     ],
     lifestyle: "middle", months: 15, link: 1,
-    contacts: [{ name: "Grease", role: "Ancients lieutenant", connection: 3, loyalty: 2 }, { name: "Mama Iva", role: "Fence", connection: 2, loyalty: 3 }],
+    contacts: [{ name: "Grease", role: "Ancients lieutenant", connection: 2, loyalty: 2 }, { name: "Mama Iva", role: "Fence", connection: 2, loyalty: 2 }],
   },
   {
     build: "samurai-elf", name: "Liane Varga", alias: "Nightshade", portrait: "nightshade",
@@ -293,7 +293,7 @@ export const PREMADES: Premade[] = [
       item("identity-docwagon-platinum-contract-1-year"), item("tools-grapple-gun"),
     ],
     lifestyle: "middle", months: 13, link: 2,
-    contacts: [{ name: "Corran", role: "Tir smuggler", connection: 3, loyalty: 2 }, { name: "Mr. Shiro", role: "Fixer", connection: 3, loyalty: 1 }],
+    contacts: [{ name: "Corran", role: "Tir smuggler", connection: 2, loyalty: 2 }, { name: "Mr. Shiro", role: "Fixer", connection: 2, loyalty: 1 }],
   },
   {
     build: "samurai-elf", name: "Kai Morrow", alias: "Rook", portrait: "rook",
@@ -307,7 +307,7 @@ export const PREMADES: Premade[] = [
       item("identity-docwagon-gold-contract-1-year"), item("tools-tool-kit"), item("tools-grapple-gun"),
     ],
     lifestyle: "middle", months: 13, link: 2,
-    contacts: [{ name: "Aunt Winona", role: "Salish-Shidhe trader", connection: 3, loyalty: 4 }, { name: "Juno", role: "Fixer", connection: 3, loyalty: 1 }],
+    contacts: [{ name: "Aunt Winona", role: "Salish-Shidhe trader", connection: 2, loyalty: 2 }, { name: "Juno", role: "Fixer", connection: 2, loyalty: 1 }],
   },
   {
     build: "mage", name: "Dorian Vey", alias: "Cinder", portrait: "cinder",
@@ -363,7 +363,7 @@ export const PREMADES: Premade[] = [
       { name: "Getaway van", kind: "vehicle", note: "Not in the gear list yet: enter stats and price from the book." },
       { name: "Spotter drone \"Helga\"", kind: "drone", note: "Not in the gear list yet: enter stats and price from the book." },
     ],
-    contacts: [{ name: "Sal Bertucci", role: "Mafia capo", connection: 4, loyalty: 1 }, { name: "Patch", role: "Hardware fence", connection: 2, loyalty: 3 }],
+    contacts: [{ name: "Sal Bertucci", role: "Mafia capo", connection: 2, loyalty: 1 }, { name: "Patch", role: "Hardware fence", connection: 2, loyalty: 2 }],
   },
 ];
 
