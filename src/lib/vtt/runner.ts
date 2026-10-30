@@ -48,8 +48,9 @@ export function weaponsFor(raw: Character): Weapon[] {
     const { dv, type } = parseDv(w.dv);
     return { name: w.name, pool: poolFor(w.skill ?? "firearms"), dv, type, ar: (w.ar ?? [null, null, null, null, null]).map((v) => (v == null ? null : v)) };
   });
-  // Unarmed: DV is half Strength rounded up, Stun; AR is Reaction + Strength, Close only
-  out.push({ name: "Unarmed strike", pool: poolFor("close-combat"), dv: Math.ceil(d.attrs.strength / 2), type: "S", ar: [d.attrs.reaction + d.attrs.strength, null, null, null, null] });
+  // Unarmed: base DV 2S (Close Combat, p. 94); AR is Reaction + Strength, Close only.
+  // Half Strength is the damage for the grapple option, not for a strike.
+  out.push({ name: "Unarmed strike", pool: poolFor("close-combat"), dv: 2, type: "S", ar: [d.attrs.reaction + d.attrs.strength, null, null, null, null] });
   return out;
 }
 
