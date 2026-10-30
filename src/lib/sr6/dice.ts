@@ -144,7 +144,8 @@ export const BOOST_LABEL: Record<PostBoost, string> = {
 };
 
 export function canPostBoost(r: RollResult, boost: PostBoost): boolean {
-  if (r.postBoost) return false;
+  // One Edge expenditure per action, but the same boost may be bought several times (p. 46).
+  if (r.postBoost && (r.postBoost !== boost || boost === "rerollFailed")) return false;
   if (boost === "rerollFailed" && r.glitch) return false;
   if (boost === "plusOne") return r.dice.some((d) => !d.rerolled && d.value < 6);
   return true;

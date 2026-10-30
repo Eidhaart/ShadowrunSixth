@@ -68,6 +68,8 @@ test("post-roll Edge boosts", () => {
   assert.equal(bumped.hits, 1);
   assert.equal(bumped.edgeSpent, 2);
   assert.equal(applyPostBoost(bumped, "autoHit").totalHits, 1, "only one Edge expenditure per action");
+  const twice = applyPostBoost(bumped, "plusOne", 2);
+  assert.equal(twice.edgeSpent, 4, "the same boost can be bought again");
   const auto = applyPostBoost(base, "autoHit");
   assert.equal(auto.totalHits, 1);
   assert.equal(auto.edgeSpent, 3);
