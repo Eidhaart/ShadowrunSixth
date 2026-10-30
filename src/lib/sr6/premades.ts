@@ -215,7 +215,7 @@ export const PREMADES: Premade[] = [
       item("electronics-rfid-tags-stealth", { qty: 2 }), item("tools-tool-kit", { name: "Electronics tool kit" }),
     ],
     lifestyle: "middle", months: 9, deck: 2, link: 3,
-    contacts: [{ name: "Null Pointer", role: "Data haven broker", connection: 4, loyalty: 2 }, { name: "Mr. Shiro", role: "Fixer", connection: 3, loyalty: 1 }],
+    contacts: [{ name: "Null Pointer", role: "Data haven broker", connection: 3, loyalty: 1 }, { name: "Mr. Shiro", role: "Fixer", connection: 1, loyalty: 1 }],
   },
   {
     build: "mage", name: "Ilias Rhein", alias: "Ashfall", portrait: "ashfall",

@@ -76,6 +76,8 @@ export interface Budget {
     left: number;
   };
   qualities: { count: number; net: number };
+  /** Free points for contacts' Connection and Loyalty: Charisma x 6. */
+  contacts: { total: number; spent: number; left: number };
 }
 
 export interface Issue {
@@ -300,6 +302,8 @@ export function budget(c: Character): Budget {
   const ls = LIFESTYLES.find((l) => l.id === c.lifestyle);
   const lifestyle = (ls?.cost ?? 0) * c.lifestyleMonths;
   const nuyenTotal = resources + nuyenFromKarma;
+  const contactTotal = d.natural.charisma * 6;
+  const contactSpent = c.contacts.reduce((s, k) => s + k.connection + k.loyalty, 0);
 
   return {
     attributes: { total: attrTotal, spent: attrSpent, left: attrTotal - attrSpent },
@@ -328,6 +332,7 @@ export function budget(c: Character): Budget {
       left: karmaPool - karmaSpent,
     },
     qualities: { count: c.qualities.length, net: negative },
+    contacts: { total: contactTotal, spent: contactSpent, left: contactTotal - contactSpent },
   };
 }
 
@@ -409,6 +414,9 @@ export function validate(c: Character): Issue[] {
   if (c.complexForms.length > d.slots.complexForms) issues.push({ level: "error", where: "Magic", text: `Too many complex forms (limit ${d.slots.complexForms}).` });
   const ppSpent = c.adeptPowers.reduce((s, x) => s + x.cost, 0);
   if (ppSpent > d.slots.powerPoints) issues.push({ level: "error", where: "Magic", text: `Adept powers cost ${ppSpent} but you only have ${d.slots.powerPoints} power points.` });
+
+  // contacts
+  if (b.contacts.left < 0) issues.push({ level: "error", where: "Contacts", text: `Contacts use ${b.contacts.spent} points but Charisma x 6 gives only ${b.contacts.total}.` });
 
   // karma and nuyen
   if (b.karma.left < 0) issues.push({ level: "error", where: "Karma", text: `${-b.karma.left} Karma over budget.` });

@@ -229,3 +229,14 @@ test("adepts need Astral Perception for the Astral skill; aspected magicians kee
   a.skills.conjuring = { pts: 1, kar: 0 };
   assert.ok(validate(a).some((i) => /aspected magician/.test(i.text)));
 });
+
+test("contacts draw on a free pool of Charisma x 6 points", () => {
+  const c = probe();
+  c.attrPts.charisma = 2; // Charisma 3: 18 points
+  c.contacts.push({ id: "a", name: "Fixer", role: "fixer", connection: 4, loyalty: 3 });
+  c.contacts.push({ id: "b", name: "Doc", role: "street doc", connection: 5, loyalty: 6 });
+  assert.deepEqual(budget(c).contacts, { total: 18, spent: 18, left: 0 });
+  assert.ok(!validate(c).some((i) => i.where === "Contacts"));
+  c.contacts[0].loyalty = 4;
+  assert.ok(validate(c).some((i) => i.where === "Contacts"));
+});

@@ -144,7 +144,9 @@ export function GearStep({ c, patch }: StepProps) {
           </section>
 
           <section className="panel quiet p-4">
-            <h3 className="mb-3 text-lg font-semibold">Contacts</h3>
+            <h3 className="mb-1 text-lg font-semibold">Contacts</h3>
+            <p className="mb-3 text-sm text-dim">Contacts are free: Charisma × 6 points to spread over their Connection and Loyalty.</p>
+            <div className="mb-3 max-w-xs"><Budget label="Contact points left" left={b.contacts.left} total={b.contacts.total} /></div>
             <ul className="mb-3 divide-y divide-line">
               {c.contacts.map((k, i) => (
                 <li key={k.id} className="flex items-center justify-between gap-2 py-2 text-sm">
