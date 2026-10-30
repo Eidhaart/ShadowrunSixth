@@ -30,6 +30,8 @@ export interface SkillPool {
 
 export interface Derived {
   attrs: Record<AttrKey, number>;
+  /** Attributes before augmentation (qualities, gear, powers); attrMax applies to these. */
+  natural: Record<AttrKey, number>;
   attrMax: Record<AttrKey, number>;
   edge: number;
   edgeMax: number;
@@ -91,7 +93,8 @@ const sumEffects = (items: (QualityEffect | undefined)[], mult: number[] = []): 
     acc.overflowBoxes += (e.overflowBoxes ?? 0) * m;
     acc.defense += (e.defense ?? 0) * m;
     acc.initiative += (e.initiative ?? 0) * m;
-    acc.initiativeDice += (e.initiativeDice ?? 0) * m;
+    // Bonus Initiative Dice from different sources do not stack: only the highest counts.
+    acc.initiativeDice = Math.max(acc.initiativeDice, (e.initiativeDice ?? 0) * m);
     acc.edge += (e.edge ?? 0) * m;
     for (const [k, v] of Object.entries(e.attr ?? {})) {
       acc.attr[k as AttrKey] = (acc.attr[k as AttrKey] ?? 0) + (v ?? 0) * m;
@@ -115,12 +118,14 @@ export function derive(c: Character): Derived {
   );
 
   const attrs = {} as Record<AttrKey, number>;
+  const natural = {} as Record<AttrKey, number>;
   const attrMax = {} as Record<AttrKey, number>;
   for (const a of ATTRIBUTES) {
-    const raw = 1 + (c.attrPts[a] ?? 0) + (c.attrKar[a] ?? 0) + (c.adjRacial[a] ?? 0) + (eff.attr[a] ?? 0);
+    natural[a] = 1 + (c.attrPts[a] ?? 0) + (c.attrKar[a] ?? 0) + (c.adjRacial[a] ?? 0);
     const maxMod = c.qualities.reduce((m, q) => (q.note === a && q.effect?.maxMod ? m + q.effect.maxMod * q.level : m), 0);
     attrMax[a] = Math.max(2, meta.ranges[a][1] + maxMod);
-    attrs[a] = raw;
+    // Augmentation adds at most +4 to an attribute.
+    attrs[a] = natural[a] + Math.min(4, eff.attr[a] ?? 0);
   }
 
   const essenceMult = c.qualities.reduce<number>((m, q) => Math.max(m, q.effect?.essenceMult ?? 1), 1);
@@ -184,12 +189,12 @@ export function derive(c: Character): Derived {
   const initRank = attrs.reaction + attrs.intuition + eff.initiative;
   const initDice = Math.min(R.initDiceCap, 1 + eff.initiativeDice);
 
-  const spells = awakened && c.magicType !== "adept"
-    ? c.magicType === "mystic"
-      ? Math.max(0, mpr - Math.min(mpr, c.adeptPowers.reduce((s, p) => s + p.cost, 0))) * 2
-      : mpr * 2
+  // Mystic adepts split the priority Magic rating: each whole point is either one Power Point or two spells.
+  const mysticPP = c.magicType === "mystic"
+    ? Math.min(mpr, Math.ceil(Math.max(0, c.adeptPowers.reduce((s, p) => s + p.cost, 0) - (c.extraPP ?? 0)) - 1e-9))
     : 0;
-  const powerPoints = (c.magicType === "adept" || c.magicType === "mystic" ? magic : 0) + (c.extraPP ?? 0);
+  const spells = awakened && c.magicType !== "adept" ? (mpr - mysticPP) * 2 : 0;
+  const powerPoints = (c.magicType === "adept" ? magic : c.magicType === "mystic" ? mpr : 0) + (c.extraPP ?? 0);
 
   const con = c.damage;
   const unconscious = con.stun >= stunBoxes || con.physical >= physicalBoxes;
@@ -197,6 +202,7 @@ export function derive(c: Character): Derived {
 
   return {
     attrs,
+    natural,
     attrMax,
     edge,
     edgeMax: Math.max(edge, edgeMax),
@@ -357,14 +363,13 @@ export function validate(c: Character): Issue[] {
   const special = specialRacialAttrs(c.metatype);
   let atMax = 0;
   for (const a of ATTRIBUTES) {
-    const val = d.attrs[a];
-    const baseline = 1 + (c.attrPts[a] ?? 0) + (c.attrKar[a] ?? 0);
+    const val = d.natural[a];
     if (val > d.attrMax[a]) issues.push({ level: "error", where: "Attributes", text: `${a} is above its maximum of ${d.attrMax[a]}.` });
     if (1 + (c.attrPts[a] ?? 0) > Math.min(6, meta.ranges[a][1]))
       issues.push({ level: "error", where: "Attributes", text: `${a}: priority points cannot raise it past ${Math.min(6, meta.ranges[a][1])}; use adjustment points for racial range above 6.` });
     if ((c.adjRacial[a] ?? 0) > 0 && !special.includes(a))
       issues.push({ level: "error", where: "Adjustment", text: `${a} is not a special racial attribute for ${meta.name}.` });
-    if (val === d.attrMax[a] && baseline >= 1) atMax++;
+    if (val === d.attrMax[a]) atMax++;
   }
   if (atMax > 1) issues.push({ level: "error", where: "Attributes", text: "Only one Physical or Mental attribute may be at its metatype maximum at creation." });
 

@@ -50,7 +50,7 @@ export function Attributes({ c, patch }: StepProps) {
                     </div>
                     <Stepper
                       label={ATTR_LABEL[a]}
-                      value={d.attrs[a] - (c.attrKar[a] ?? 0) - (c.adjRacial[a] ?? 0)}
+                      value={1 + (c.attrPts[a] ?? 0)}
                       min={1}
                       max={cap(a)}
                       disableUp={b.attributes.left <= 0 || atCap}

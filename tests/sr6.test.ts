@@ -166,3 +166,42 @@ test("academy entry sims: a seeded run is deterministic and Probe avoids illegal
   for (let i = 0; i < 400; i++) { brute += bruteRun(p, rng).os; probe += probeRun(p, rng).os; }
   assert.ok(brute / 400 > probe / 400, `brute ${brute / 400} should cost more OS than probe ${probe / 400} on a 10-round job`);
 });
+
+const probe = () => {
+  const c = newCharacter();
+  c.name = "Probe";
+  c.priorities = { metatype: "D", attributes: "A", skills: "B", magic: "C", resources: "E" };
+  return c;
+};
+
+test("augmentation does not count against the natural maximum, and adds at most +4", () => {
+  const c = probe();
+  c.magicType = "adept";
+  c.attrPts.reaction = 5;
+  c.adeptPowers.push({ name: "Improved Reflexes", cost: 1.5, level: 1, effect: { attr: { reaction: 1 }, initiativeDice: 1 } });
+  const d = derive(c);
+  assert.equal(d.natural.reaction, 6);
+  assert.equal(d.attrs.reaction, 7);
+  assert.ok(!validate(c).some((i) => /reaction is above/.test(i.text)));
+  c.gear.push({ id: "g", name: "Big boost", category: "cyberware", cost: 0, qty: 1, effect: { attr: { reaction: 5 } } });
+  assert.equal(derive(c).attrs.reaction, 10);
+});
+
+test("bonus Initiative Dice from different sources do not stack", () => {
+  const c = probe();
+  c.adeptPowers.push({ name: "Improved Reflexes", cost: 1.5, level: 1, effect: { initiativeDice: 1 } });
+  c.gear.push({ id: "g", name: "Wired reflexes 2", category: "cyberware", cost: 0, qty: 1, effect: { initiativeDice: 2 } });
+  assert.equal(derive(c).initiative.dice, 3);
+});
+
+test("mystic adepts split the priority Magic between Power Points and spells", () => {
+  const c = probe();
+  c.magicType = "mystic";
+  c.adjMagic = 3;
+  let d = derive(c);
+  assert.equal(d.slots.powerPoints, 2, "Power Points come from the priority Magic, not adjustment points");
+  assert.equal(d.slots.spells, 4);
+  c.adeptPowers.push({ name: "Half point", cost: 0.5, level: 1 });
+  d = derive(c);
+  assert.equal(d.slots.spells, 2, "a part-spent point of Magic no longer buys spells");
+});
