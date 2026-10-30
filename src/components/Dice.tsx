@@ -197,7 +197,7 @@ export function RollView({
             </button>
           )}
           {pick && <span className="text-xs text-cyan">Click a die to use it.</span>}
-          {result.postBoost && <span className="text-xs text-faint">Edge already spent on this roll.</span>}
+          {result.postBoost && <span className="text-xs text-faint">Edge already spent on this roll: you can only repeat {BOOST_LABEL[result.postBoost as PostBoost].toLowerCase()}.</span>}
         </div>
       )}
     </div>

@@ -23,8 +23,10 @@ export interface RollSpec {
   pool: number;
   /** Edge 4 boost: +Edge dice and exploding 6s. */
   explode?: boolean;
-  /** Pre-roll boost spent by the target: 2s also count toward glitches. */
+  /** Pre-roll boost spent by the target: 2s also count toward glitches and critical glitches. */
   glitchOn2?: boolean;
+  /** Bad Luck quality: 2s count toward a glitch, but not toward a critical glitch (p. 75). */
+  badLuck?: boolean;
   /** Threshold for a simple test. */
   threshold?: number;
   /** Flat extra hits (e.g. 3 Edge automatic hit). */
@@ -83,13 +85,12 @@ export function tally(
 ): RollResult {
   const live = dice.filter((d) => !d.rerolled);
   const hits = live.filter((d) => d.hit).length;
-  const glitchDice = live.filter(
-    (d) => !d.exploded && (d.value === 1 || (spec.glitchOn2 && d.value === 2)),
-  ).length;
+  const counts = (twos: boolean | undefined) => live.filter((d) => !d.exploded && (d.value === 1 || (twos && d.value === 2))).length;
+  const glitchDice = counts(spec.glitchOn2 || spec.badLuck);
   const glitch = glitchDice > baseCount / 2;
   const rawHits = hits + autoHits;
   const totalHits = rawHits;
-  const critGlitch = glitch && totalHits === 0;
+  const critGlitch = counts(spec.glitchOn2) > baseCount / 2 && totalHits === 0;
   return {
     id: keep?.id ?? nextId(),
     at: keep?.at ?? Date.now(),
@@ -144,7 +145,8 @@ export const BOOST_LABEL: Record<PostBoost, string> = {
 };
 
 export function canPostBoost(r: RollResult, boost: PostBoost): boolean {
-  if (r.postBoost) return false;
+  // One Edge expenditure per action, but the same boost may be bought several times (p. 46).
+  if (r.postBoost && (r.postBoost !== boost || boost === "rerollFailed")) return false;
   if (boost === "rerollFailed" && r.glitch) return false;
   if (boost === "plusOne") return r.dice.some((d) => !d.rerolled && d.value < 6);
   return true;

@@ -1,13 +1,16 @@
 import type { Character, QualityEffect } from "./character";
 import { rules } from "@/lib/house/rules";
 import {
+  ASPECT_SKILLS,
   ATTRIBUTES,
+  FREE_SPEC_SKILLS,
   KARMA,
   LIFESTYLES,
   METATYPES,
   PRIORITY_TABLE,
   SKILL_BY_ID,
   SKILLS,
+  skillAvailable,
   specialRacialAttrs,
   type AttrKey,
   type MagicType,
@@ -30,6 +33,8 @@ export interface SkillPool {
 
 export interface Derived {
   attrs: Record<AttrKey, number>;
+  /** Attributes before augmentation (qualities, gear, powers); attrMax applies to these. */
+  natural: Record<AttrKey, number>;
   attrMax: Record<AttrKey, number>;
   edge: number;
   edgeMax: number;
@@ -56,6 +61,8 @@ export interface Derived {
   unconscious: boolean;
   dead: boolean;
   glitchOn2: boolean;
+  /** Dermal Deposits: unarmed attacks do Physical damage (p. 73). */
+  unarmedPhysical: boolean;
 }
 
 export interface Budget {
@@ -70,7 +77,10 @@ export interface Budget {
     cost: { attributes: number; skills: number; qualities: number; edgeMagic: number; knowledge: number; nuyen: number };
     left: number;
   };
+  /** net: negative bonus minus positive cost; the book caps it at 20. */
   qualities: { count: number; net: number };
+  /** Free points for contacts' Connection and Loyalty: Charisma x 6. */
+  contacts: { total: number; spent: number; left: number };
 }
 
 export interface Issue {
@@ -91,7 +101,8 @@ const sumEffects = (items: (QualityEffect | undefined)[], mult: number[] = []): 
     acc.overflowBoxes += (e.overflowBoxes ?? 0) * m;
     acc.defense += (e.defense ?? 0) * m;
     acc.initiative += (e.initiative ?? 0) * m;
-    acc.initiativeDice += (e.initiativeDice ?? 0) * m;
+    // Bonus Initiative Dice from different sources do not stack: only the highest counts.
+    acc.initiativeDice = Math.max(acc.initiativeDice, (e.initiativeDice ?? 0) * m);
     acc.edge += (e.edge ?? 0) * m;
     for (const [k, v] of Object.entries(e.attr ?? {})) {
       acc.attr[k as AttrKey] = (acc.attr[k as AttrKey] ?? 0) + (v ?? 0) * m;
@@ -115,12 +126,14 @@ export function derive(c: Character): Derived {
   );
 
   const attrs = {} as Record<AttrKey, number>;
+  const natural = {} as Record<AttrKey, number>;
   const attrMax = {} as Record<AttrKey, number>;
   for (const a of ATTRIBUTES) {
-    const raw = 1 + (c.attrPts[a] ?? 0) + (c.attrKar[a] ?? 0) + (c.adjRacial[a] ?? 0) + (eff.attr[a] ?? 0);
+    natural[a] = 1 + (c.attrPts[a] ?? 0) + (c.attrKar[a] ?? 0) + (c.adjRacial[a] ?? 0);
     const maxMod = c.qualities.reduce((m, q) => (q.note === a && q.effect?.maxMod ? m + q.effect.maxMod * q.level : m), 0);
     attrMax[a] = Math.max(2, meta.ranges[a][1] + maxMod);
-    attrs[a] = raw;
+    // Augmentation adds at most +4 to an attribute.
+    attrs[a] = natural[a] + Math.min(4, eff.attr[a] ?? 0);
   }
 
   const essenceMult = c.qualities.reduce<number>((m, q) => Math.max(m, q.effect?.essenceMult ?? 1), 1);
@@ -141,7 +154,8 @@ export function derive(c: Character): Derived {
 
   const R = rules();
   const physicalBoxes = R.physBase + Math.ceil(attrs.body / 2) + meta.builtTough + eff.physicalBoxes;
-  const stunBoxes = R.stunBase + Math.ceil(attrs.willpower / 2) + eff.stunBoxes;
+  // Glass Jaw removes Stun boxes, down to a minimum of 2 (p. 75).
+  const stunBoxes = Math.max(eff.stunBoxes < 0 ? 2 : 0, R.stunBase + Math.ceil(attrs.willpower / 2) + eff.stunBoxes);
   const overflowBoxes = attrs.body * R.overflowMult + eff.overflowBoxes;
 
   const wearArmor = c.gear
@@ -184,12 +198,12 @@ export function derive(c: Character): Derived {
   const initRank = attrs.reaction + attrs.intuition + eff.initiative;
   const initDice = Math.min(R.initDiceCap, 1 + eff.initiativeDice);
 
-  const spells = awakened && c.magicType !== "adept"
-    ? c.magicType === "mystic"
-      ? Math.max(0, mpr - Math.min(mpr, c.adeptPowers.reduce((s, p) => s + p.cost, 0))) * 2
-      : mpr * 2
-    : 0;
-  const powerPoints = (c.magicType === "adept" || c.magicType === "mystic" ? magic : 0) + (c.extraPP ?? 0);
+  // Mystic adepts split the priority Magic rating: each whole point is either one Power Point or two spells.
+  // That rating is the one from the Priority table, reduced by Essence loss.
+  const mysticMagic = c.magicType === "mystic" ? Math.max(0, mpr - essenceMagicLoss) : 0;
+  const mysticPP = Math.min(mysticMagic, Math.ceil(Math.max(0, c.adeptPowers.reduce((s, p) => s + p.cost, 0) - (c.extraPP ?? 0)) - 1e-9));
+  const spells = awakened && c.magicType !== "adept" ? (c.magicType === "mystic" ? mysticMagic - mysticPP : mpr) * 2 : 0;
+  const powerPoints = (c.magicType === "adept" ? magic : mysticMagic) + (c.extraPP ?? 0);
 
   const con = c.damage;
   const unconscious = con.stun >= stunBoxes || con.physical >= physicalBoxes;
@@ -197,6 +211,7 @@ export function derive(c: Character): Derived {
 
   return {
     attrs,
+    natural,
     attrMax,
     edge,
     edgeMax: Math.max(edge, edgeMax),
@@ -208,8 +223,9 @@ export function derive(c: Character): Derived {
     initiative: {
       rank: initRank,
       dice: initDice,
-      astralRank: attrs.intuition * 2,
-      astralDice: 3,
+      // Astral combat table: Logic + Intuition + 2D6.
+      astralRank: attrs.logic + attrs.intuition,
+      astralDice: 2,
     },
     condition: { physical: physicalBoxes, stun: stunBoxes, overflow: overflowBoxes },
     woundRows,
@@ -228,6 +244,7 @@ export function derive(c: Character): Derived {
     unconscious,
     dead,
     glitchOn2: c.qualities.some((q) => q.effect?.glitchOn2),
+    unarmedPhysical: meta.dermalDefense > 0 || c.qualities.some((q) => /^dermal deposits/i.test(q.name)),
   };
 }
 
@@ -251,8 +268,8 @@ export function budget(c: Character): Budget {
   const skillTotal = p.skills ? PRIORITY_TABLE[p.skills].skills : 0;
   let skillSpent = 0;
   let skillKarma = 0;
-  for (const e of Object.values(c.skills)) {
-    skillSpent += e.pts + (e.spec && e.specVia !== "karma" ? 1 : 0);
+  for (const [id, e] of Object.entries(c.skills)) {
+    skillSpent += e.pts + (e.spec && e.specVia !== "karma" && !FREE_SPEC_SKILLS.includes(id) ? 1 : 0);
     skillKarma += karmaForRanks(e.pts, e.kar, KARMA.skillRank);
     if (e.spec && e.specVia === "karma") skillKarma += KARMA.specialization;
   }
@@ -279,7 +296,8 @@ export function budget(c: Character): Budget {
     if (q.kind === "positive") positive += v;
     else negative += v;
   }
-  const negativeBonus = Math.min(KARMA.maxQualityKarma, negative);
+  // The net bonus (negatives minus positives) cannot be more than 20 Karma.
+  const negativeBonus = Math.min(negative, positive + KARMA.maxQualityKarma);
 
   const perKarma = c.qualities.reduce<number>((m, q) => Math.max(m, q.effect?.nuyenPerKarma ?? 0), KARMA.nuyenPerKarma);
   const nuyenFromKarma = c.karmaToNuyen * perKarma;
@@ -291,6 +309,8 @@ export function budget(c: Character): Budget {
   const ls = LIFESTYLES.find((l) => l.id === c.lifestyle);
   const lifestyle = (ls?.cost ?? 0) * c.lifestyleMonths;
   const nuyenTotal = resources + nuyenFromKarma;
+  const contactTotal = d.natural.charisma * 6;
+  const contactSpent = c.contacts.reduce((s, k) => s + k.connection + k.loyalty, 0);
 
   return {
     attributes: { total: attrTotal, spent: attrSpent, left: attrTotal - attrSpent },
@@ -318,7 +338,8 @@ export function budget(c: Character): Budget {
       },
       left: karmaPool - karmaSpent,
     },
-    qualities: { count: c.qualities.length, net: negative },
+    qualities: { count: c.qualities.length, net: negative - positive },
+    contacts: { total: contactTotal, spent: contactSpent, left: contactTotal - contactSpent },
   };
 }
 
@@ -357,14 +378,11 @@ export function validate(c: Character): Issue[] {
   const special = specialRacialAttrs(c.metatype);
   let atMax = 0;
   for (const a of ATTRIBUTES) {
-    const val = d.attrs[a];
-    const baseline = 1 + (c.attrPts[a] ?? 0) + (c.attrKar[a] ?? 0);
+    const val = d.natural[a];
     if (val > d.attrMax[a]) issues.push({ level: "error", where: "Attributes", text: `${a} is above its maximum of ${d.attrMax[a]}.` });
-    if (1 + (c.attrPts[a] ?? 0) > Math.min(6, meta.ranges[a][1]))
-      issues.push({ level: "error", where: "Attributes", text: `${a}: priority points cannot raise it past ${Math.min(6, meta.ranges[a][1])}; use adjustment points for racial range above 6.` });
     if ((c.adjRacial[a] ?? 0) > 0 && !special.includes(a))
       issues.push({ level: "error", where: "Adjustment", text: `${a} is not a special racial attribute for ${meta.name}.` });
-    if (val === d.attrMax[a] && baseline >= 1) atMax++;
+    if (val === d.attrMax[a]) atMax++;
   }
   if (atMax > 1) issues.push({ level: "error", where: "Attributes", text: "Only one Physical or Mental attribute may be at its metatype maximum at creation." });
 
@@ -382,7 +400,11 @@ export function validate(c: Character): Issue[] {
     if (rank > maxSkill(id)) issues.push({ level: "error", where: "Skills", text: `${def.name} is above the creation maximum.` });
     if (rank === maxSkill(id)) skillsAtMax++;
     if (e.spec && rank < 1) issues.push({ level: "error", where: "Skills", text: `${def.name}: specialization needs at least rank 1.` });
+    if (FREE_SPEC_SKILLS.includes(id) && rank > 0 && !e.spec) issues.push({ level: "error", where: "Skills", text: `${def.name}: name the weapon as its free specialization.` });
+    if (!skillAvailable(def, c.magicType, c.adeptPowers) && rank > 0) issues.push({ level: "error", where: "Skills", text: `${def.name} is not available to your magic type.` });
   }
+  if (c.magicType === "aspected" && ASPECT_SKILLS.filter((id) => (c.skills[id]?.pts ?? 0) + (c.skills[id]?.kar ?? 0) > 0).length > 1)
+    issues.push({ level: "error", where: "Skills", text: "An aspected magician uses only one of Sorcery, Conjuring or Enchanting." });
   if (skillsAtMax > 1) issues.push({ level: "error", where: "Skills", text: "Only one skill may be at the creation maximum." });
   if (b.skills.left < 0) issues.push({ level: "error", where: "Skills", text: `${-b.skills.left} skill point(s) over budget.` });
   if (b.skills.left > 0) issues.push({ level: "warn", where: "Skills", text: `${b.skills.left} skill point(s) unspent.` });
@@ -390,13 +412,22 @@ export function validate(c: Character): Issue[] {
   // qualities
   if (b.qualities.count > KARMA.maxQualities) issues.push({ level: "error", where: "Qualities", text: `At most ${KARMA.maxQualities} qualities at creation.` });
   if (b.qualities.net > KARMA.maxQualityKarma)
-    issues.push({ level: "warn", where: "Qualities", text: `Negative quality bonus is capped at ${KARMA.maxQualityKarma} Karma; extra bonus is wasted.` });
+    issues.push({ level: "warn", where: "Qualities", text: `The net bonus from qualities is capped at ${KARMA.maxQualityKarma} Karma; extra bonus is wasted.` });
+
+  if (c.magicType !== "mundane" && c.qualities.some((q) => /^sensitive system/i.test(q.name)))
+    issues.push({ level: "error", where: "Qualities", text: "Sensitive System cannot be taken with a Magic or Resonance rating." });
 
   // spells and forms
   if (c.spells.length > d.slots.spells) issues.push({ level: "error", where: "Magic", text: `Too many spells or rituals (limit ${d.slots.spells} at creation).` });
   if (c.complexForms.length > d.slots.complexForms) issues.push({ level: "error", where: "Magic", text: `Too many complex forms (limit ${d.slots.complexForms}).` });
   const ppSpent = c.adeptPowers.reduce((s, x) => s + x.cost, 0);
   if (ppSpent > d.slots.powerPoints) issues.push({ level: "error", where: "Magic", text: `Adept powers cost ${ppSpent} but you only have ${d.slots.powerPoints} power points.` });
+
+  // contacts
+  if (b.contacts.left < 0) issues.push({ level: "error", where: "Contacts", text: `Contacts use ${b.contacts.spent} points but Charisma x 6 gives only ${b.contacts.total}.` });
+  for (const k of c.contacts)
+    if (k.connection > d.natural.charisma || k.loyalty > d.natural.charisma)
+      issues.push({ level: "error", where: "Contacts", text: `${k.name}: Connection and Loyalty cannot be higher than your Charisma (${d.natural.charisma}) at creation.` });
 
   // karma and nuyen
   if (b.karma.left < 0) issues.push({ level: "error", where: "Karma", text: `${-b.karma.left} Karma over budget.` });

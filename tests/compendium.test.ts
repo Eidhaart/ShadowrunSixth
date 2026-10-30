@@ -54,3 +54,13 @@ test("adding to a runner pays, stacks and refuses what they cannot afford", () =
   assert.equal(addToRunner(c, big, { pay: true }).ok, false);
   assert.equal(c.nuyen, 920);
 });
+
+test("gear list corrections from the core book tables are applied", async () => {
+  const { BUILT_IN_ITEMS } = await import("../src/lib/compendium/catalog");
+  const by = (id: string) => BUILT_IN_ITEMS.find((i) => i.id === id)!;
+  assert.deepEqual(by("weapons-streetline-special").gear?.ar, [8, 8, null, null, null]);
+  assert.equal(by("weapons-streetline-special").legal, undefined);
+  assert.equal(by("weapons-panther-xxl").legal, "I");
+  assert.equal(by("weapons-armtech-mgl-6").gear?.ar?.[0], null, "launchers cannot fire at Close range");
+  assert.equal(by("weapons-aztechnology-strkier").name, "Aztechnology Striker");
+});

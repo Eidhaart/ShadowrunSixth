@@ -1,4 +1,5 @@
 "use client";
+import { rules } from "@/lib/house/rules";
 import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
@@ -87,7 +88,7 @@ export function AttackDialog({ attackerId, targetId }: { attackerId: string; tar
               );
             })}
           </ul>
-          <p className="text-xs text-faint">The target rolls Defense (Reaction + Intuition). More hits for you is a hit, a tie grazes for no damage. Damage is DV plus net hits, resisted with Body.</p>
+          <p className="text-xs text-faint">The target rolls Defense (Reaction + Intuition). More hits for you is a hit; {rules().tie === "hit" ? "a tie still hits for the base DV" : rules().tie === "graze" ? "a tie grazes for no damage" : "a tie misses"}. Damage is DV plus net hits, resisted with Body.</p>
         </div>
       </div>
     </div>

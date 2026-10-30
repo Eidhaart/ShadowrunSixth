@@ -7,7 +7,7 @@ export function KarmaStep({ c, patch }: StepProps) {
   const b = budget(c);
   const d = derive(c);
   const meta = METATYPES[c.metatype];
-  const skillsOwned = SKILLS.filter((s) => skillAvailable(s, c.magicType));
+  const skillsOwned = SKILLS.filter((s) => skillAvailable(s, c.magicType, c.adeptPowers));
   const perKarma = b.nuyen.fromKarma && c.karmaToNuyen ? b.nuyen.fromKarma / c.karmaToNuyen : KARMA.nuyenPerKarma;
 
   return (
@@ -30,10 +30,10 @@ export function KarmaStep({ c, patch }: StepProps) {
               const kar = c.attrKar[a] ?? 0;
               const baseRank = 1 + (c.attrPts[a] ?? 0) + (c.adjRacial[a] ?? 0);
               const next = baseRank + kar + 1;
-              const room = d.attrMax[a] - d.attrs[a];
+              const room = d.attrMax[a] - d.natural[a];
               return (
                 <li key={a} className="flex items-center justify-between gap-3">
-                  <div><span className="font-display">{ATTR_LABEL[a]}</span> <span className="num text-sm text-dim">{d.attrs[a]} / {d.attrMax[a]}</span>{kar > 0 && <span className="num ml-2 text-xs text-accent">+{kar} for {karmaForRanks(baseRank, kar, KARMA.attributeRank)}</span>}</div>
+                  <div><span className="font-display">{ATTR_LABEL[a]}</span> <span className="num text-sm text-dim">{d.natural[a]} / {d.attrMax[a]}</span>{kar > 0 && <span className="num ml-2 text-xs text-accent">+{kar} for {karmaForRanks(baseRank, kar, KARMA.attributeRank)}</span>}</div>
                   <div className="flex items-center gap-2"><span className="num text-xs text-faint">next {KARMA.attributeRank(next)}</span>
                     <Stepper size="sm" label={`${ATTR_LABEL[a]} Karma ranks`} value={kar} min={0} max={kar + Math.max(0, room)} disableUp={b.karma.left < KARMA.attributeRank(next) || room <= 0} onChange={(v) => patch((x) => { x.attrKar[a] = v; })} />
                   </div>

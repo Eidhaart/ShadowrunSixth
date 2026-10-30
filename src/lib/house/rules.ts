@@ -73,7 +73,7 @@ export interface Ruleset {
 }
 
 export const BOOK: Mechanics = {
-  tie: "graze",
+  tie: "hit",
   edgeGap: 4,
   edgeGain: 1,
   zeroHitsMiss: true,
@@ -86,7 +86,7 @@ export const BOOK: Mechanics = {
   maxEdge: 7,
   initDiceCap: 5,
   minorBase: 1,
-  rerollRounds: true,
+  rerollRounds: false,
   startKarma: 50,
   maxUnspent: 5,
   nuyenPerKarma: 2000,
@@ -109,7 +109,7 @@ export const GROUPS: { id: Group; blurb: string }[] = [
 ];
 
 export const FIELDS: Field[] = [
-  { key: "tie", group: "Combat", label: "When attack and defense hits tie", help: "The book calls a tie a graze: it connects, no damage.", spec: { kind: "choice", options: [{ v: "graze", label: "Graze, no damage" }, { v: "hit", label: "Hit, DV only" }, { v: "miss", label: "Miss" }] } },
+  { key: "tie", group: "Combat", label: "When attack and defense hits tie", help: "The book: a tie still hits, for the weapon's base damage (no net hits).", spec: { kind: "choice", options: [{ v: "graze", label: "Graze, no damage" }, { v: "hit", label: "Hit, DV only" }, { v: "miss", label: "Miss" }] } },
   { key: "zeroHitsMiss", group: "Combat", label: "An attack with no hits always misses", help: "Turn off to let a 0 v 0 tie use the tie rule above.", spec: { kind: "bool" } },
   { key: "edgeGap", group: "Combat", label: "Lead in AR against DR that earns Edge", help: "Whoever is this far ahead gains Edge.", spec: { kind: "num", min: 1, max: 12 } },
   { key: "edgeGain", group: "Combat", label: "Edge gained from that lead", help: "Per attack.", spec: { kind: "num", min: 0, max: 3 } },
@@ -122,7 +122,7 @@ export const FIELDS: Field[] = [
   { key: "maxEdge", group: "Edge and initiative", label: "Most Edge you can hold", help: "Gains past this are lost.", spec: { kind: "num", min: 1, max: 12 } },
   { key: "initDiceCap", group: "Edge and initiative", label: "Most initiative dice", help: "", spec: { kind: "num", min: 1, max: 8, unit: "D6" } },
   { key: "minorBase", group: "Edge and initiative", label: "Minor actions before initiative dice", help: "Minor actions are this plus your initiative dice.", spec: { kind: "num", min: 0, max: 4 } },
-  { key: "rerollRounds", group: "Edge and initiative", label: "Reroll NPC initiative each round", help: "Off keeps the first roll all fight.", spec: { kind: "bool" } },
+  { key: "rerollRounds", group: "Edge and initiative", label: "Reroll NPC initiative each round", help: "The book keeps the first roll all fight.", spec: { kind: "bool" } },
   { key: "startKarma", group: "Creation and advancement", label: "Karma to customize a new runner", help: "", spec: { kind: "num", min: 0, max: 200, step: 5 } },
   { key: "maxUnspent", group: "Creation and advancement", label: "Unspent Karma a runner may start with", help: "", spec: { kind: "num", min: 0, max: 50 } },
   { key: "nuyenPerKarma", group: "Creation and advancement", label: "Nuyen per Karma at creation", help: "", spec: { kind: "num", min: 0, max: 10000, step: 500, unit: "¥" } },

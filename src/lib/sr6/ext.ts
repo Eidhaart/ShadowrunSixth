@@ -235,7 +235,7 @@ export function matrixStats(c: Character, d: Derived): MatrixStats {
     const v = base.map((b, i) => b + bonus[i]);
     return finish({
       source: "persona", name: "Living persona", rating: d.resonance, attack: v[0], sleaze: v[1], dp: v[2], fw: v[3], boxes: 0,
-      init: { rank: d.attrs.logic + d.attrs.intuition, dice: mode === "ar" ? d.initiative.dice : Math.min(5, 1 + (mode === "hot" ? 2 : 1)) },
+      init: { rank: v[2] + d.attrs.intuition, dice: mode === "ar" ? d.initiative.dice : Math.min(5, 1 + (mode === "hot" ? 2 : 1)) },
       tm: { base, spent: d.resonance - left, bonus },
     });
   }

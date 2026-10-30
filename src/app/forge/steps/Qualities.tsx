@@ -27,7 +27,7 @@ export function Qualities({ c, patch }: StepProps) {
 
   return (
     <div>
-      <StepHeader title="Qualities" lead={`Positive qualities cost Karma; negative ones give it back. You can take at most ${KARMA.maxQualities} in total, and the net bonus from negatives is capped at ${KARMA.maxQualityKarma} Karma.`} rule={/^Select Qualities$/i} />
+      <StepHeader title="Qualities" lead={`Positive qualities cost Karma; negative ones give it back. You can take at most ${KARMA.maxQualities} in total, and the net bonus (negatives minus positives) is capped at ${KARMA.maxQualityKarma} Karma.`} rule={/^Select Qualities$/i} />
       <div className="mb-5 grid max-w-xl gap-4 sm:grid-cols-2">
         <Budget label="Qualities taken" left={KARMA.maxQualities - b.qualities.count} total={KARMA.maxQualities} />
         <Budget label="Negative bonus used" left={KARMA.maxQualityKarma - Math.min(KARMA.maxQualityKarma, b.qualities.net)} total={KARMA.maxQualityKarma} />

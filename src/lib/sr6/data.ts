@@ -239,17 +239,25 @@ export const SKILLS: SkillDef[] = [
     specs: ["Compiling", "Decompiling", "Registering"] },
 ];
 
+/** Magical skills an aspected magician chooses one of. */
+export const ASPECT_SKILLS = ["sorcery", "conjuring", "enchanting"] as const;
+
+/** Exotic Weapons always names its weapon: that specialization is free. */
+export const FREE_SPEC_SKILLS = ["exotic-weapons"];
+
 export const SKILL_BY_ID: Record<string, SkillDef> = Object.fromEntries(SKILLS.map((s) => [s.id, s]));
 
-/** Skills that need Magic / Resonance and are therefore gated by magic type. */
-export function skillAvailable(skill: SkillDef, magic: MagicType): boolean {
+/** Skills that need Magic / Resonance and are therefore gated by magic type.
+ *  Adepts and mystic adepts only learn Astral once they have the Astral Perception power. */
+export function skillAvailable(skill: SkillDef, magic: MagicType, powers: { name: string }[] = []): boolean {
   switch (skill.id) {
     case "sorcery":
     case "conjuring":
     case "enchanting":
       return magic === "full" || magic === "mystic" || magic === "aspected";
     case "astral":
-      return magic === "full" || magic === "aspected" || magic === "mystic" || magic === "adept";
+      return magic === "full" || magic === "aspected" ||
+        ((magic === "mystic" || magic === "adept") && powers.some((p) => /^astral perception$/i.test(p.name)));
     case "tasking":
       return magic === "technomancer";
     default:

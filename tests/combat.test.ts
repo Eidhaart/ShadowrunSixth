@@ -5,9 +5,9 @@ import assert from "node:assert/strict";
 import { emptyTable, opsForPlayer, permitted, viewFor } from "../server/vtt.mjs";
 import { damageAfter, damageBars, edgeFromRatings, outcomeOf, parseDv, woundPenalty } from "../src/lib/vtt/combat";
 
-test("attack outcome: more hits hit, a tie grazes, fewer or none miss", () => {
+test("attack outcome: more hits hit, a tie hits for base DV, fewer or none miss", () => {
   assert.deepEqual(outcomeOf(4, 2), { outcome: "hit", net: 2 });
-  assert.deepEqual(outcomeOf(3, 3), { outcome: "graze", net: 0 });
+  assert.deepEqual(outcomeOf(3, 3), { outcome: "hit", net: 0 }, "a tie hits for base DV (p. 105)");
   assert.deepEqual(outcomeOf(2, 3), { outcome: "miss", net: 0 });
   assert.deepEqual(outcomeOf(0, 0), { outcome: "miss", net: 0 });
 });
@@ -68,4 +68,13 @@ test("attacks from hidden tokens reach players unnamed; attacks on hidden tokens
   assert.equal(v.combat.x2, undefined);
   const ops = opsForPlayer(t, t, [{ k: "set", p: ["combat", "x1"], v: t.combat.x1 }], { role: "player", assetsSent: new Set() });
   assert.equal(ops[0].v.attacker.name, "Unseen attacker");
+});
+
+test("Minor actions top out at 5; initiative ties go Edge, Reaction, Intuition", async () => {
+  const { minorsFor, ericTie } = await import("../src/lib/vtt/ops");
+  assert.equal(minorsFor(1, 1), 2);
+  assert.equal(minorsFor(5, 1), 5);
+  const high = ericTie([["EDG", 3], ["REA", 2], ["INT", 2]]);
+  const low = ericTie([["EDG", 2], ["REA", 6], ["INT", 6]]);
+  assert.ok(high > low, "Edge decides before Reaction");
 });

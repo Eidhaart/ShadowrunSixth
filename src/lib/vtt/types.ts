@@ -163,8 +163,10 @@ export interface TurnEntry {
   minors: number;
   acted: boolean;
   delayed: boolean;
-  /** Breaks ties: higher goes first. */
+  /** Breaks ties: higher goes first (Edge, Reaction, Intuition, then a coin flip). */
   tie: number;
+  /** Edge gained this combat round; the book allows at most 2. */
+  edgeGained?: number;
 }
 
 export interface Turn { on: boolean; round: number; current: string | null; entries: Record<string, TurnEntry> }

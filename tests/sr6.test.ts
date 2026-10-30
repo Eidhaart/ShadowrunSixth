@@ -68,6 +68,8 @@ test("post-roll Edge boosts", () => {
   assert.equal(bumped.hits, 1);
   assert.equal(bumped.edgeSpent, 2);
   assert.equal(applyPostBoost(bumped, "autoHit").totalHits, 1, "only one Edge expenditure per action");
+  const twice = applyPostBoost(bumped, "plusOne", 2);
+  assert.equal(twice.edgeSpent, 4, "the same boost can be bought again");
   const auto = applyPostBoost(base, "autoHit");
   assert.equal(auto.totalHits, 1);
   assert.equal(auto.edgeSpent, 3);
@@ -165,4 +167,138 @@ test("academy entry sims: a seeded run is deterministic and Probe avoids illegal
   let brute = 0, probe = 0;
   for (let i = 0; i < 400; i++) { brute += bruteRun(p, rng).os; probe += probeRun(p, rng).os; }
   assert.ok(brute / 400 > probe / 400, `brute ${brute / 400} should cost more OS than probe ${probe / 400} on a 10-round job`);
+});
+
+const probe = () => {
+  const c = newCharacter();
+  c.name = "Probe";
+  c.priorities = { metatype: "D", attributes: "A", skills: "B", magic: "C", resources: "E" };
+  return c;
+};
+
+test("augmentation does not count against the natural maximum, and adds at most +4", () => {
+  const c = probe();
+  c.magicType = "adept";
+  c.attrPts.reaction = 5;
+  c.adeptPowers.push({ name: "Improved Reflexes", cost: 1.5, level: 1, effect: { attr: { reaction: 1 }, initiativeDice: 1 } });
+  const d = derive(c);
+  assert.equal(d.natural.reaction, 6);
+  assert.equal(d.attrs.reaction, 7);
+  assert.ok(!validate(c).some((i) => /reaction is above/.test(i.text)));
+  c.gear.push({ id: "g", name: "Big boost", category: "cyberware", cost: 0, qty: 1, effect: { attr: { reaction: 5 } } });
+  assert.equal(derive(c).attrs.reaction, 10);
+});
+
+test("bonus Initiative Dice from different sources do not stack", () => {
+  const c = probe();
+  c.adeptPowers.push({ name: "Improved Reflexes", cost: 1.5, level: 1, effect: { initiativeDice: 1 } });
+  c.gear.push({ id: "g", name: "Wired reflexes 2", category: "cyberware", cost: 0, qty: 1, effect: { initiativeDice: 2 } });
+  assert.equal(derive(c).initiative.dice, 3);
+});
+
+test("mystic adepts split the priority Magic between Power Points and spells", () => {
+  const c = probe();
+  c.magicType = "mystic";
+  c.adjMagic = 3;
+  let d = derive(c);
+  assert.equal(d.slots.powerPoints, 2, "Power Points come from the priority Magic, not adjustment points");
+  assert.equal(d.slots.spells, 4);
+  c.adeptPowers.push({ name: "Half point", cost: 0.5, level: 1 });
+  d = derive(c);
+  assert.equal(d.slots.spells, 2, "a part-spent point of Magic no longer buys spells");
+});
+
+test("Exotic Weapons takes its weapon as a free, required specialization", () => {
+  const c = probe();
+  c.skills["exotic-weapons"] = { pts: 2, kar: 0 };
+  assert.ok(validate(c).some((i) => /name the weapon/.test(i.text)));
+  c.skills["exotic-weapons"].spec = "Monofilament whip";
+  assert.equal(budget(c).skills.spent, 2);
+  assert.ok(!validate(c).some((i) => /name the weapon/.test(i.text)));
+});
+
+test("adepts need Astral Perception for the Astral skill; aspected magicians keep to one branch", () => {
+  const c = probe();
+  c.magicType = "adept";
+  c.skills.astral = { pts: 1, kar: 0 };
+  assert.ok(validate(c).some((i) => /Astral is not available/.test(i.text)));
+  c.adeptPowers.push({ name: "Astral Perception", cost: 1, level: 1 });
+  assert.ok(!validate(c).some((i) => /Astral is not available/.test(i.text)));
+
+  const a = probe();
+  a.magicType = "aspected";
+  a.skills.sorcery = { pts: 2, kar: 0 };
+  a.skills.conjuring = { pts: 1, kar: 0 };
+  assert.ok(validate(a).some((i) => /aspected magician/.test(i.text)));
+});
+
+test("contacts draw on a free pool of Charisma x 6 points", () => {
+  const c = probe();
+  c.attrPts.charisma = 2; // Charisma 3: 18 points
+  for (const id of ["a", "b", "c"]) c.contacts.push({ id, name: id, role: "fixer", connection: 3, loyalty: 3 });
+  assert.deepEqual(budget(c).contacts, { total: 18, spent: 18, left: 0 });
+  assert.ok(!validate(c).some((i) => i.where === "Contacts"));
+  c.contacts.push({ id: "d", name: "d", role: "fence", connection: 1, loyalty: 1 });
+  assert.ok(validate(c).some((i) => /Charisma x 6/.test(i.text)));
+});
+
+test("at creation a contact's Connection and Loyalty cannot exceed Charisma", () => {
+  const c = probe();
+  c.attrPts.charisma = 2; // Charisma 3
+  c.contacts.push({ id: "a", name: "Fixer", role: "fixer", connection: 3, loyalty: 3 });
+  assert.ok(!validate(c).some((i) => i.where === "Contacts"));
+  c.contacts[0].connection = 4;
+  assert.ok(validate(c).some((i) => /higher than your Charisma/.test(i.text)));
+});
+
+test("mystic adept Magic for the split is the priority rating less Essence loss", () => {
+  const c = probe(); // Magic priority C: Magic 2
+  c.magicType = "mystic";
+  c.gear.push({ id: "g", name: "Cyberear", category: "cyberware", cost: 0, qty: 1, essence: 0.5 });
+  assert.equal(derive(c).slots.powerPoints, 1);
+  assert.equal(derive(c).slots.spells, 2);
+});
+
+test("the quality limit is on the net bonus: negatives minus positives", () => {
+  const c = probe();
+  c.qualities.push({ id: "n", name: "Bad", kind: "negative", karma: 30, level: 1 });
+  c.qualities.push({ id: "p", name: "Good", kind: "positive", karma: 15, level: 1 });
+  assert.equal(budget(c).karma.negativeBonus, 30, "net 15 is within the limit");
+  c.qualities[1].karma = 5;
+  assert.equal(budget(c).karma.negativeBonus, 25, "net is held to 20");
+});
+
+test("attribute points can raise a special racial attribute to its metatype maximum", () => {
+  const c = probe();
+  c.metatype = "troll";
+  c.attrPts.body = 7; // Body 8 of 9
+  assert.ok(!validate(c).some((i) => i.where === "Attributes" && /body/.test(i.text)));
+});
+
+test("astral initiative is Logic + Intuition + 2D6", () => {
+  const c = probe();
+  c.attrPts.logic = 3;
+  c.attrPts.intuition = 2;
+  const d = derive(c);
+  assert.equal(d.initiative.astralRank, 7);
+  assert.equal(d.initiative.astralDice, 2);
+});
+
+test("Bad Luck: 2s count toward a glitch but not toward a critical glitch", () => {
+  const dice = [2, 2, 2, 1, 3].map((v) => die(v));
+  const r = tally(dice, { label: "t", pool: 5, badLuck: true }, 5, 0, 0);
+  assert.equal(r.glitch, true);
+  assert.equal(r.critGlitch, false, "only 1s count for a critical glitch");
+  const boosted = tally(dice, { label: "t", pool: 5, glitchOn2: true }, 5, 0, 0);
+  assert.equal(boosted.critGlitch, true, "the 5-Edge boost counts 2s for both");
+});
+
+test("Glass Jaw leaves at least 2 Stun boxes; trolls punch for Physical", async () => {
+  const c = probe();
+  c.qualities.push({ id: "g", name: "Glass Jaw", kind: "negative", karma: 4, level: 20, effect: { stunBoxes: -1 } });
+  assert.equal(derive(c).condition.stun, 2);
+  const { weaponsFor } = await import("../src/lib/vtt/runner");
+  const t = probe();
+  t.metatype = "troll";
+  assert.equal(weaponsFor(t).find((w) => w.name === "Unarmed strike")?.type, "P");
 });
