@@ -58,6 +58,7 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
   const ppUsed = c.adeptPowers.reduce((s, p) => s + p.cost, 0);
   const adept = c.magicType === "adept" || c.magicType === "mystic";
   const bonded = e.foci.filter((f) => f.bonded).length;
+  const bondedForce = e.foci.filter((f) => f.bonded).reduce((sum, f) => sum + f.rating, 0);
   const forceTotal = e.spirits.reduce((s, x) => s + x.force, 0);
   const forceCap = d.magic * SPIRIT_FORCE_CAP;
 
@@ -167,7 +168,7 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
         <Box title="Spirits" right={<span className={clsx("num text-xs", forceTotal > forceCap ? "text-danger" : "text-dim")}>Force {forceTotal} / {forceCap}</span>}>
           <div className="no-print mb-3 flex flex-wrap items-center gap-2">
             <select className="field !w-28" aria-label="Spirit type" value={spirit.type} onChange={(ev) => setSpirit({ ...spirit, type: ev.target.value })}>{SPIRITS.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
-            <Stepper label="Force" value={spirit.force} min={1} max={Math.max(1, d.magic * 2)} onChange={(n) => setSpirit({ ...spirit, force: n })} />
+            <Stepper label="Force" value={spirit.force} min={1} max={Math.max(1, forceCap - forceTotal)} onChange={(n) => setSpirit({ ...spirit, force: n })} />
             <button className="btn small primary" disabled={conjuring.blocked} onClick={summon}>Summon {ctx.poolOf(conjuring.base)}</button>
             <span className="text-xs text-dim">Conjuring + Magic vs Force × 2</span>
           </div>
@@ -232,18 +233,19 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
           </ul>
         </Box>
 
-        <Box title="Foci" right={<span className="num text-xs text-dim">{bonded} bonded · Magic {d.magic}</span>}>
+        <Box title="Foci" right={<span className={clsx("num text-xs", bonded > d.magic || bondedForce > d.magic * 5 ? "text-danger" : "text-dim")}>{bonded} / {d.magic} bonded · Force {bondedForce} / {d.magic * 5}</span>}>
           <ul className="divide-y divide-line text-sm">
             {e.foci.map((f) => (
               <li key={f.id} className="flex flex-wrap items-center gap-2 py-1.5">
                 <span className="flex-1"><b className="font-display">{f.name}</b> <span className="text-xs text-dim">{f.kind} focus, rating {f.rating}</span></span>
-                <button className={clsx("btn small", f.bonded && "primary")} aria-pressed={f.bonded} onClick={() => upd((x) => editExt(x, (ex) => { const t = ex.foci.find((q) => q.id === f.id); if (t) { t.bonded = !t.bonded; if (!t.bonded) t.active = false; } }))}>{f.bonded ? "Bonded" : "Bond"}</button>
+                <button className={clsx("btn small", f.bonded && "primary")} aria-pressed={f.bonded} disabled={!f.bonded && (bonded >= d.magic || f.rating > d.magic || bondedForce + f.rating > d.magic * 5)} title={f.bonded ? undefined : "You can bond up to Magic foci, each no higher than Magic, Force Magic × 5 in all"} onClick={() => upd((x) => editExt(x, (ex) => { const t = ex.foci.find((q) => q.id === f.id); if (t) { t.bonded = !t.bonded; if (!t.bonded) t.active = false; } }))}>{f.bonded ? "Bonded" : "Bond"}</button>
                 <button className={clsx("btn small", f.active && "primary")} disabled={!f.bonded} aria-pressed={f.active} onClick={() => upd((x) => editExt(x, (ex) => { const t = ex.foci.find((q) => q.id === f.id); if (t) t.active = !t.active; }))}>{f.active ? "Active" : "Inactive"}</button>
                 <button className="btn ghost small" aria-label={`Remove ${f.name}`} onClick={() => upd((x) => editExt(x, (ex) => { ex.foci = ex.foci.filter((q) => q.id !== f.id); }))}>×</button>
               </li>
             ))}
             {e.foci.length === 0 && <li className="py-1.5 text-dim">No foci.</li>}
           </ul>
+          <p className="mt-1 text-xs text-faint">Bond up to your Magic in foci; no focus Force above your Magic, and Magic × 5 Force in all. Only one focus adds to any one test.</p>
           <form className="no-print mt-2 grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_auto_auto_auto]" onSubmit={(ev) => { ev.preventDefault(); if (!focus.name.trim()) return; upd((x) => editExt(x, (ex) => { ex.foci.push({ id: xid("f"), name: focus.name.trim(), kind: focus.kind, rating: focus.rating, bonded: false, active: false }); })); setFocus({ ...focus, name: "" }); }}>
             <input className="field col-span-2 sm:col-span-1" value={focus.name} onChange={(ev) => setFocus({ ...focus, name: ev.target.value })} placeholder="Focus name" aria-label="Focus name" />
             <select className="field" aria-label="Focus kind" value={focus.kind} onChange={(ev) => setFocus({ ...focus, kind: ev.target.value })}>{FOCUS_KINDS.map((k) => <option key={k}>{k}</option>)}</select>
