@@ -12,7 +12,9 @@ function Picker({ label, entries, picked, onAdd, onRemove, limit, allowFree = tr
   const [group, setGroup] = useState("");
   const groups = useMemo(() => Array.from(new Set(entries.map((e) => e.group))), [entries]);
   const shown = entries.filter((e) => (!q || e.name.toLowerCase().includes(q.toLowerCase())) && (!group || e.group === group)).slice(0, 80);
+  // past the free picks each one is bought with 5 Karma, like any advancement
   const full = picked.length >= limit;
+  const addLabel = full ? "Add · 5 Karma" : "Add";
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div>
@@ -35,20 +37,20 @@ function Picker({ label, entries, picked, onAdd, onRemove, limit, allowFree = tr
                   <div className="font-display font-semibold">{e.name} <span className="text-xs font-normal text-faint">{e.group} · p.{e.page}</span></div>
                   <div className="line-clamp-2 text-xs text-dim">{e.summary}</div>
                 </div>
-                <button className="btn small" disabled={on || full} onClick={() => onAdd(e.name)}>{on ? "Added" : "Add"}</button>
+                <button className="btn small" disabled={on} onClick={() => onAdd(e.name)}>{on ? "Added" : addLabel}</button>
               </li>
             );
           })}
         </ul>
         {allowFree && (
-          <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget).get("free") as string; if (f?.trim() && !full) { onAdd(f.trim()); e.currentTarget.reset(); } }}>
+          <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget).get("free") as string; if (f?.trim()) { onAdd(f.trim()); e.currentTarget.reset(); } }}>
             <input name="free" className="field" placeholder="Or type a name" aria-label="Custom name" />
-            <button className="btn" type="submit" disabled={full}>Add</button>
+            <button className="btn" type="submit">{addLabel}</button>
           </form>
         )}
       </div>
       <div>
-        <div className="mb-2 font-display font-semibold">Your {label.toLowerCase()} ({picked.length} / {limit})</div>
+        <div className="mb-2 font-display font-semibold">Your {label.toLowerCase()} ({picked.length} / {limit} free){picked.length > limit && <span className="ml-1 text-xs font-normal text-accent">{(picked.length - limit) * 5} Karma for the extra {picked.length - limit}</span>}</div>
         {picked.length === 0 && <p className="text-sm text-dim">Nothing chosen yet.</p>}
         <ul className="flex flex-wrap gap-2">
           {picked.map((n) => (

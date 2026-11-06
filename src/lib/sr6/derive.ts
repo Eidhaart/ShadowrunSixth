@@ -75,7 +75,7 @@ export interface Budget {
     base: number;
     negativeBonus: number;
     spent: number;
-    cost: { attributes: number; skills: number; qualities: number; edgeMagic: number; knowledge: number; nuyen: number };
+    cost: { attributes: number; skills: number; qualities: number; edgeMagic: number; knowledge: number; magic: number; nuyen: number };
     left: number;
   };
   /** net: negative bonus minus positive cost; the book caps it at 20. */
@@ -241,7 +241,8 @@ export function derive(c: Character): Derived {
     movement: { walk: 10, sprint: 15 },
     skills,
     slots: { spells, complexForms: c.magicType === "technomancer" ? mpr * 2 : 0, powerPoints },
-    free: { knowledge: attrs.logic },
+    // free knowledge points equal Logic, not counting augmentations
+    free: { knowledge: natural.logic },
     unconscious,
     dead,
     glitchOn2: c.qualities.some((q) => q.effect?.glitchOn2),
@@ -254,6 +255,14 @@ export function karmaForRanks(pts: number, kar: number, per: (rank: number) => n
   let total = 0;
   for (let i = 1; i <= kar; i++) total += per(pts + i);
   return total;
+}
+
+/**
+ * Knowledge points used: one per knowledge skill, one per level of each non-native language
+ * (Specialist is 2, Expert 3). The native language is free (p. 66).
+ */
+export function knowledgePoints(c: Pick<Character, "knowledge">): number {
+  return c.knowledge.reduce((s, k) => s + (k.kind === "language" ? (k.native ? 0 : Math.max(1, Math.min(3, k.level ?? 1))) : 1), 0);
 }
 
 export function budget(c: Character): Budget {
@@ -284,10 +293,7 @@ export function budget(c: Character): Budget {
     karmaForRanks(1 + c.adjEdge, c.karEdge, KARMA.attributeRank) +
     karmaForRanks(magicPriorityRating(c) + c.adjMagic, c.karMagic, KARMA.attributeRank);
 
-  const knowledgeExtra = Math.max(
-    0,
-    c.knowledge.filter((k) => !(k.kind === "language" && k.native)).length - d.free.knowledge,
-  );
+  const knowledgeExtra = Math.max(0, knowledgePoints(c) - d.free.knowledge);
   const knowledgeKarma = knowledgeExtra * KARMA.knowledge;
 
   let positive = 0;
@@ -302,7 +308,11 @@ export function budget(c: Character): Budget {
 
   const perKarma = c.qualities.reduce<number>((m, q) => Math.max(m, q.effect?.nuyenPerKarma ?? 0), KARMA.nuyenPerKarma);
   const nuyenFromKarma = c.karmaToNuyen * perKarma;
-  const karmaSpent = attrKarma + skillKarma + positive + edgeMagicKarma + knowledgeKarma + c.karmaToNuyen;
+  // spells, rituals and complex forms past the free picks are bought like any advancement: 5 Karma each
+  const magicKarma =
+    Math.max(0, c.spells.length - d.slots.spells) * KARMA.spell +
+    Math.max(0, c.complexForms.length - d.slots.complexForms) * KARMA.complexForm;
+  const karmaSpent = attrKarma + skillKarma + positive + edgeMagicKarma + knowledgeKarma + magicKarma + c.karmaToNuyen;
   const karmaPool = KARMA.customization + negativeBonus;
 
   const resources = p.resources ? PRIORITY_TABLE[p.resources].resources : 0;
@@ -337,6 +347,7 @@ export function budget(c: Character): Budget {
         qualities: positive,
         edgeMagic: edgeMagicKarma,
         knowledge: knowledgeKarma,
+        magic: magicKarma,
         nuyen: c.karmaToNuyen,
       },
       left: karmaPool - karmaSpent,
@@ -421,8 +432,11 @@ export function validate(c: Character): Issue[] {
     issues.push({ level: "error", where: "Qualities", text: "Sensitive System cannot be taken with a Magic or Resonance rating." });
 
   // spells and forms
-  if (c.spells.length > d.slots.spells) issues.push({ level: "error", where: "Magic", text: `Too many spells or rituals (limit ${d.slots.spells} at creation).` });
-  if (c.complexForms.length > d.slots.complexForms) issues.push({ level: "error", where: "Magic", text: `Too many complex forms (limit ${d.slots.complexForms}).` });
+  if (c.knowledge.filter((k) => k.kind === "language" && k.native).length > 1)
+    issues.push({ level: "error", where: "Knowledge", text: "Only one language can be native." });
+  if (c.spells.length && !d.slots.spells && c.magicType !== "full" && c.magicType !== "aspected" && c.magicType !== "mystic")
+    issues.push({ level: "error", where: "Magic", text: "Only magicians and mystic adepts learn spells." });
+  if (c.complexForms.length && c.magicType !== "technomancer") issues.push({ level: "error", where: "Magic", text: "Only technomancers learn complex forms." });
   const ppSpent = c.adeptPowers.reduce((s, x) => s + x.cost, 0);
   if (ppSpent > d.slots.powerPoints) issues.push({ level: "error", where: "Magic", text: `Adept powers cost ${ppSpent} but you only have ${d.slots.powerPoints} power points.` });
 

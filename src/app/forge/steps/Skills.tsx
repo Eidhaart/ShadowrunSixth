@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { uid, type KnowledgeSkill } from "@/lib/sr6/character";
 import { ATTR_ABBR, FREE_SPEC_SKILLS, SKILLS, skillAvailable, type SkillDef } from "@/lib/sr6/data";
-import { budget, derive } from "@/lib/sr6/derive";
+import { budget, derive, knowledgePoints } from "@/lib/sr6/derive";
 import { Budget, Field, Note, StepHeader, Stepper, type StepProps } from "../ui";
 
 const GROUPS: { id: SkillDef["group"]; label: string }[] = [
@@ -28,7 +28,7 @@ export function Skills({ c, patch }: StepProps) {
 
   const list = useMemo(() => SKILLS.filter((s) => skillAvailable(s, c.magicType, c.adeptPowers) && (!q || s.name.toLowerCase().includes(q.toLowerCase()))), [c.magicType, c.adeptPowers, q]);
   const hiddenMagic = SKILLS.filter((s) => !skillAvailable(s, c.magicType, c.adeptPowers)).map((s) => s.name);
-  const knowledgeUsed = c.knowledge.filter((k) => !k.native).length;
+  const knowledgeUsed = knowledgePoints(c);
 
   const setPts = (id: string, v: number) =>
     patch((x) => {
@@ -113,7 +113,7 @@ export function Skills({ c, patch }: StepProps) {
 
       <section className="mt-10">
         <h3 className="mb-1 text-xl font-semibold">Knowledge and languages</h3>
-        <p className="mb-3 max-w-2xl text-sm text-dim">You get {d.free.knowledge} free (equal to Logic) plus one free native language. Extra ones cost 3 Karma each.</p>
+        <p className="mb-3 max-w-2xl text-sm text-dim">You get {d.free.knowledge} free points (equal to Logic) plus one free native language. Each knowledge skill takes a point, and each level of another language takes one: Specialist is 2, Expert 3. Extra points cost 3 Karma each.</p>
         <div className="mb-3 flex flex-wrap gap-2">
           <div className="min-w-56 flex-1"><Field label="New entry"><input className="field" value={kn} onChange={(e) => setKn(e.target.value)} placeholder="Urban brawl, Seattle gangs, Japanese..." /></Field></div>
           <div className="w-44"><Field label="Type"><select className="field" value={kind} onChange={(e) => setKind(e.target.value as KnowledgeSkill["kind"])}><option value="knowledge">Knowledge</option><option value="language">Language</option></select></Field></div>
@@ -122,7 +122,13 @@ export function Skills({ c, patch }: StepProps) {
         <ul className="flex flex-wrap gap-2">
           {c.knowledge.map((k) => (
             <li key={k.id} className="chip on">
-              {k.name} <span className="text-xs opacity-70">{k.kind === "language" ? (k.native ? "native" : "language") : "knowledge"}</span>
+              {k.name}
+              {k.kind === "language" && !k.native ? (
+                <select className="bg-transparent text-xs opacity-80" value={k.level ?? 1} aria-label={`${k.name} level`}
+                  onChange={(e) => patch((x) => { const y = x.knowledge.find((z) => z.id === k.id); if (y) y.level = Number(e.target.value); })}>
+                  <option value={1}>language, 1 pt</option><option value={2}>Specialist, 2 pts</option><option value={3}>Expert, 3 pts</option>
+                </select>
+              ) : <span className="text-xs opacity-70">{k.native ? "native" : "knowledge"}</span>}
               <button className="ml-1 hover:text-danger" onClick={() => patch((x) => { x.knowledge = x.knowledge.filter((y) => y.id !== k.id); })} aria-label={`Remove ${k.name}`}>×</button>
             </li>
           ))}

@@ -93,6 +93,8 @@ export interface KnowledgeSkill {
   name: string;
   kind: "knowledge" | "language";
   native?: boolean;
+  /** Languages other than the native one: 1 speaks it, 2 Specialist, 3 Expert. Each level is one knowledge point. */
+  level?: number;
 }
 
 export interface Damage {

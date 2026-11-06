@@ -40,6 +40,15 @@ export function adeptPowerList(book: Rulebook | null): BookEntry[] {
   const out: BookEntry[] = [];
   for (const s of book.sections) {
     if (s.level !== 3 || s.parent !== "Adept Powers" || JUNK.test(s.title)) continue;
+    // Improved Ability prices combat skills and other skills differently: offer both (p. 157)
+    const split = /Combat skill:\s*([\d.]+)\s*PP per level;\s*other skills\s*([\d.]+)\s*PP per level/i.exec(s.text.replace(/\s+/g, " "));
+    if (split) {
+      const base = s.title.replace(/\s*\(.*\)$/, "");
+      const summary = brief(s.text.replace(/\s+/g, " ").replace(/Cost:.*?Activation:\s*\w+/i, ""));
+      out.push({ id: `${s.id}-combat`, name: `${base} (combat skill)`, page: s.page, group: "Adept power", pp: Number(split[1]), perLevel: true, maxLevel: 6, summary });
+      out.push({ id: s.id, name: base, page: s.page, group: "Adept power", pp: Number(split[2]), perLevel: true, maxLevel: 6, summary });
+      continue;
+    }
     const m = /Cost:\s*([\d.]+)\s*PP(\s*per level)?/i.exec(s.text);
     if (!m) continue;
     const name = s.title.replace(/\s*\(.*\)$/, "");
