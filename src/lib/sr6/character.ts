@@ -149,6 +149,9 @@ export interface Character {
   adv?: import("./advance").Advancement;
   /** Power points bought with Karma (mystic adepts). Filled in by withAdv. */
   extraPP?: number;
+  /** Initiation or submersion bought with creation Karma: grades and the metamagic or echo taken at each. */
+  startGrade?: number;
+  startMeta?: string[];
   /** Initiate or submersion grade. Filled in by withAdv. */
   initiateGrade?: number;
   metamagic?: string[];

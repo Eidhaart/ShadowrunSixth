@@ -110,3 +110,31 @@ test("spells past the free picks cost 5 Karma instead of being refused", () => {
   assert.equal(b.karma.cost.magic, 10);
   assert.ok(!validate(c).some((i) => /Too many spells/.test(i.text)));
 });
+
+import { withAdv } from "../src/lib/sr6/advance";
+import { derive } from "../src/lib/sr6/derive";
+
+test("initiation at creation costs 10 + grade per grade and raises the Magic ceiling", () => {
+  const c = newCharacter();
+  c.priorities = { metatype: "E", attributes: "B", magic: "A", skills: "C", resources: "D" } as never;
+  c.magicType = "adept";
+  c.startGrade = 2;
+  c.startMeta = ["Power Point", "Centering"];
+  const b = budget(c);
+  assert.equal(b.karma.cost.initiation, 11 + 12);
+  // Magic 4 from Priority A, plus one Power Point from grade 1
+  assert.equal(derive(c).slots.powerPoints, 5);
+  c.karMagic = 3; // Magic 7: allowed with grade 2 (6 + 2)
+  assert.ok(!validate(c).some((i) => /cannot exceed/.test(i.text)));
+  c.karMagic = 5; // Magic 9: over 6 + 2
+  assert.ok(validate(c).some((i) => /cannot exceed 6 \+ grade 2/.test(i.text)));
+  // after creation the sheet carries the grade forward
+  assert.equal(withAdv(c).initiateGrade, 2);
+  assert.deepEqual(withAdv(c).metamagic, ["Power Point", "Centering"]);
+});
+
+test("a mundane runner cannot initiate", () => {
+  const c = newCharacter();
+  c.startGrade = 1;
+  assert.ok(validate(c).some((i) => /Only the Awakened/.test(i.text)));
+});

@@ -85,7 +85,8 @@ export const qualityKey = (q: Pick<QualityPick, "name" | "note">) => `${q.name}|
 
 /** A copy of the character with every advancement applied, for derive() and display. */
 export function withAdv(c: Character): Character {
-  if (!c.adv) return c;
+  // grades bought at creation count toward the grade; their Power Points are counted by derive()
+  if (!c.adv) return c.startGrade ? { ...c, initiateGrade: c.startGrade, metamagic: [...(c.startMeta ?? [])] } : c;
   const a = getAdv(c);
   const x: Character = JSON.parse(JSON.stringify(c));
   for (const k of ATTRIBUTES) if (a.attr[k]) x.attrKar[k] = (x.attrKar[k] ?? 0) + (a.attr[k] ?? 0);
@@ -108,8 +109,8 @@ export function withAdv(c: Character): Character {
   // a.pp only holds purchases from older saves, when the deck sold them for Karma.
   const ppGrades = x.magicType === "adept" || x.magicType === "mystic" ? a.metamagic.filter(isPowerPoint).length : 0;
   x.extraPP = (x.extraPP ?? 0) + a.pp + ppGrades;
-  x.initiateGrade = a.grade;
-  x.metamagic = a.metamagic;
+  x.initiateGrade = (c.startGrade ?? 0) + a.grade;
+  x.metamagic = [...(c.startMeta ?? []), ...a.metamagic];
   return x;
 }
 

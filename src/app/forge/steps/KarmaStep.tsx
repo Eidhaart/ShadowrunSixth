@@ -17,7 +17,7 @@ export function KarmaStep({ c, patch }: StepProps) {
         <Budget label="Karma left" left={b.karma.left} total={b.karma.base + b.karma.negativeBonus} />
         <div className="text-xs text-dim">
           <div>Attributes <b className="num text-fg">{b.karma.cost.attributes + b.karma.cost.edgeMagic}</b> · Skills <b className="num text-fg">{b.karma.cost.skills}</b> · Qualities <b className="num text-fg">{b.karma.cost.qualities}</b></div>
-          <div>Knowledge <b className="num text-fg">{b.karma.cost.knowledge}</b>{b.karma.cost.magic ? <> · Extra spells and forms <b className="num text-fg">{b.karma.cost.magic}</b></> : null} · Cash <b className="num text-fg">{b.karma.cost.nuyen}</b> · Negative bonus <b className="num text-fg">+{b.karma.negativeBonus}</b></div>
+          <div>Knowledge <b className="num text-fg">{b.karma.cost.knowledge}</b>{b.karma.cost.magic ? <> · Extra spells and forms <b className="num text-fg">{b.karma.cost.magic}</b></> : null}{b.karma.cost.initiation ? <> · Initiation <b className="num text-fg">{b.karma.cost.initiation}</b></> : null} · Cash <b className="num text-fg">{b.karma.cost.nuyen}</b> · Negative bonus <b className="num text-fg">+{b.karma.negativeBonus}</b></div>
         </div>
       </div>
       {b.karma.left > KARMA.maxUnspent && <div className="mb-4"><Note tone="warn">You still have {b.karma.left} Karma. Spend it down to {KARMA.maxUnspent} or fewer.</Note></div>}

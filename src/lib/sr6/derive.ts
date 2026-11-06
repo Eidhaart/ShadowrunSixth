@@ -75,7 +75,7 @@ export interface Budget {
     base: number;
     negativeBonus: number;
     spent: number;
-    cost: { attributes: number; skills: number; qualities: number; edgeMagic: number; knowledge: number; magic: number; nuyen: number };
+    cost: { attributes: number; skills: number; qualities: number; edgeMagic: number; knowledge: number; magic: number; initiation: number; nuyen: number };
     left: number;
   };
   /** net: negative bonus minus positive cost; the book caps it at 20. */
@@ -204,7 +204,9 @@ export function derive(c: Character): Derived {
   const mysticMagic = c.magicType === "mystic" ? Math.max(0, mpr - essenceMagicLoss) : 0;
   const mysticPP = Math.min(mysticMagic, Math.ceil(Math.max(0, c.adeptPowers.reduce((s, p) => s + p.cost, 0) - (c.extraPP ?? 0)) - 1e-9));
   const spells = awakened && c.magicType !== "adept" ? (c.magicType === "mystic" ? mysticMagic - mysticPP : mpr) * 2 : 0;
-  const powerPoints = (c.magicType === "adept" ? magic : mysticMagic) + (c.extraPP ?? 0);
+  // a grade taken at creation can be a Power Point instead of a metamagic
+  const startPP = c.magicType === "adept" || c.magicType === "mystic" ? (c.startMeta ?? []).filter((m) => /^power point$/i.test(m.trim())).length : 0;
+  const powerPoints = (c.magicType === "adept" ? magic : mysticMagic) + (c.extraPP ?? 0) + startPP;
 
   const con = c.damage;
   const unconscious = con.stun >= stunBoxes || con.physical >= physicalBoxes;
@@ -312,7 +314,10 @@ export function budget(c: Character): Budget {
   const magicKarma =
     Math.max(0, c.spells.length - d.slots.spells) * KARMA.spell +
     Math.max(0, c.complexForms.length - d.slots.complexForms) * KARMA.complexForm;
-  const karmaSpent = attrKarma + skillKarma + positive + edgeMagicKarma + knowledgeKarma + magicKarma + c.karmaToNuyen;
+  // initiation or submersion at creation: 10 + new grade Karma per grade, like the advancement table
+  let initiationKarma = 0;
+  for (let g = 1; g <= (c.startGrade ?? 0); g++) initiationKarma += Math.max(1, Math.round(((10 + g) * rules().karmaCostPct) / 100));
+  const karmaSpent = attrKarma + skillKarma + positive + edgeMagicKarma + knowledgeKarma + magicKarma + initiationKarma + c.karmaToNuyen;
   const karmaPool = KARMA.customization + negativeBonus;
 
   const resources = p.resources ? PRIORITY_TABLE[p.resources].resources : 0;
@@ -348,6 +353,7 @@ export function budget(c: Character): Budget {
         edgeMagic: edgeMagicKarma,
         knowledge: knowledgeKarma,
         magic: magicKarma,
+        initiation: initiationKarma,
         nuyen: c.karmaToNuyen,
       },
       left: karmaPool - karmaSpent,
@@ -401,8 +407,13 @@ export function validate(c: Character): Issue[] {
   if (atMax > 1) issues.push({ level: "error", where: "Attributes", text: "Only one Physical or Mental attribute may be at its metatype maximum at creation." });
 
   // magic
-  if (c.magicType !== "mundane" && d.magic + d.resonance > 6)
-    issues.push({ level: "error", where: "Magic", text: "Magic or Resonance cannot exceed 6 at creation." });
+  // initiation raises the ceiling: 6 + grade
+  const grade = c.startGrade ?? 0;
+  if (c.magicType !== "mundane" && d.magic + d.resonance > 6 + grade)
+    issues.push({ level: "error", where: "Magic", text: grade ? `Magic or Resonance cannot exceed 6 + grade ${grade} at creation.` : "Magic or Resonance cannot exceed 6 at creation." });
+  if (c.magicType === "mundane" && grade > 0) issues.push({ level: "error", where: "Magic", text: "Only the Awakened and technomancers can initiate or submerge." });
+  if (c.magicType !== "adept" && c.magicType !== "mystic" && (c.startMeta ?? []).some((m) => /^power point$/i.test(m.trim())))
+    issues.push({ level: "error", where: "Magic", text: "Only adepts and mystic adepts can take a Power Point at initiation." });
 
   // skills
   const maxSkill = (id: string) => (c.qualities.some((q) => q.name.startsWith("Aptitude") && q.note === id) ? 7 : 6);
