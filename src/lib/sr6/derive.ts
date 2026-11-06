@@ -1,5 +1,6 @@
 import type { Character, QualityEffect } from "./character";
 import { rules } from "@/lib/house/rules";
+import { QUALITY_EFFECTS } from "./qualities";
 import {
   ASPECT_SKILLS,
   ATTRIBUTES,
@@ -307,7 +308,9 @@ export function budget(c: Character): Budget {
   const resources = p.resources ? PRIORITY_TABLE[p.resources].resources : 0;
   const gear = c.gear.reduce((s, g) => s + g.cost * (g.qty || 1), 0);
   const ls = LIFESTYLES.find((l) => l.id === c.lifestyle);
-  const lifestyle = (ls?.cost ?? 0) * c.lifestyleMonths;
+  // picks made before the effect existed are matched by name
+  const lsMult = c.qualities.reduce<number>((m, q) => Math.max(m, q.effect?.lifestyleMult ?? QUALITY_EFFECTS[q.name.replace(/\(.*?\)/g, "").trim().toLowerCase()]?.lifestyleMult ?? 1), 1);
+  const lifestyle = Math.round((ls?.cost ?? 0) * c.lifestyleMonths * lsMult);
   const nuyenTotal = resources + nuyenFromKarma;
   const contactTotal = d.natural.charisma * 6;
   const contactSpent = c.contacts.reduce((s, k) => s + k.connection + k.loyalty, 0);

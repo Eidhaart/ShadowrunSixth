@@ -38,6 +38,8 @@ export interface QualityEffect {
   woundDouble?: boolean;
   /** Per level, raises (+) or lowers (-) the maximum of the attribute named in the pick's note. */
   maxMod?: number;
+  /** Lifestyle costs this much more (SINner: taxes, 1.1). */
+  lifestyleMult?: number;
   /** Karma-to-nuyen rate override (In Debt). */
   nuyenPerKarma?: number;
   /** Multiplies essence cost of augmentations (Sensitive System). */

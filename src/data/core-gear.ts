@@ -20,7 +20,7 @@ export const ARMOR: [string, number, number, string, number, string][] = [
   ["Armor vest", 3, 6, "2", 750, "Armor"],
   ["Chameleon suit", 2, 4, "4(I)", 2000, "Armor"],
   ["Full body armor", 5, 10, "4(L)", 2000, "Armor"],
-  ["Full body armor helmet", 2, 6, "4(L)", 500, "Armor"],
+  ["Full body armor helmet", 2, 6, "", 500, "Armor"], // no Availability: sold with the armor
   ["Lined coat", 3, 7, "2", 900, "Armor"],
   ["Urban explorer jumpsuit", 3, 6, "2", 800, "Armor"],
   ["Helmet", 1, 4, "1", 200, "Helmet and shield"],

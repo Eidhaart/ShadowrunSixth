@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import core from "@/data/gear-core.json";
-import { withBookFix } from "@/data/book-fixes";
+import { RATED, withBookFix } from "@/data/book-fixes";
 import { COMMLINKS, CYBERDECKS, CYBERJACKS, RCCS } from "@/lib/sr6/rules6";
 import { editExt, newVehicle } from "@/lib/sr6/ext";
 import { uid, type Character, type GearItem } from "@/lib/sr6/character";
@@ -95,7 +95,9 @@ function coreTables(): CompItem[] {
   for (const [n, perForce, karma] of FOCI)
     for (let f = 1; f <= 6; f++) {
       const name = `${n}, Force ${f}`;
-      out.push({ id: `magic-${slug(name)}`, name, cat: "magic", group: "Focus", cost: perForce * f, avail: f, legal: "L", source: "built-in", book: "Core", page: 295,
+      // power and weapon foci are harder to find: Availability Force + 3 (p. 295)
+      const avail = /^(Power|Weapon) focus$/.test(n) ? f + 3 : f;
+      out.push({ id: `magic-${slug(name)}`, name, cat: "magic", group: "Focus", cost: perForce * f, avail, legal: "L", source: "built-in", book: "Core", page: 295,
         stats: [["Force", String(f)], ["Bonding", `${karma * f} Karma`]], gear: { name, category: "magic", cost: perForce * f, qty: 1 } });
     }
   for (const [kind, a, cost] of FORMULAS) {
@@ -121,7 +123,23 @@ function coreTables(): CompItem[] {
 
 /** Only the core rulebook: other sourcebooks in the gear list are left out. Old categories are mapped
  *  and the list's known differences from the book tables are corrected. */
-const coreOnly = (items: CoreItem[]) => items.filter((i) => !i.book || i.book === "Core").map((i) => withBookFix({ ...i, cat: fixCat(i.cat, i.group) }));
+/** One entry per rating for gear the book prices by rating (fake SINs and licenses, sensors). */
+function rated(items: CoreItem[]): CoreItem[] {
+  return items.flatMap((i) => {
+    const r = RATED[i.id];
+    if (!r) return [i];
+    const [lo, hi, per] = r;
+    return Array.from({ length: hi - lo + 1 }, (_, k) => {
+      const n = lo + k;
+      const name = `${i.name}, rating ${n}`;
+      return { ...i, id: `${i.id}-r${n}`, name, cost: per * n,
+        stats: [["Rating", String(n)], ...i.stats.filter(([s]) => !/rating/i.test(s))] as [string, string][],
+        gear: { ...i.gear, name, cost: per * n } };
+    });
+  });
+}
+
+const coreOnly = (items: CoreItem[]) => rated(items.filter((i) => !i.book || i.book === "Core").map((i) => withBookFix({ ...i, cat: fixCat(i.cat, i.group) })));
 
 const BUILT_IN: CoreItem[] = foldParts([...coreOnly(core as unknown as CoreItem[]), ...MATRIX, ...coreTables()]);
 /** The bundled catalog, for tests and scripts. */

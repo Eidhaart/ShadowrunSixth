@@ -30,6 +30,8 @@ export const QUALITY_EFFECTS: Record<string, QualityEffect> = {
   "exceptional": { maxMod: 1 },
   "impaired": { maxMod: -1 },
   "in debt": { nuyenPerKarma: 5000 },
+  // p. 77: a SINner pays taxes, 10 percent on top of their lifestyle
+  "sinner": { lifestyleMult: 1.1 },
   "sensitive system": { essenceMult: 2 },
   "bad luck": { glitchOn2: true },
 };

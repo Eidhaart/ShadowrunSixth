@@ -61,3 +61,27 @@ test("library links go to the item's own section, not just its page", () => {
   assert.equal(sectionFor(sections, it("Cyberarm, obvious", "cyberware", "Cyberlimb", 285))?.id, "c");
   assert.equal(sectionFor(sections, it("Cyberjack 3", "cyberware", "Headware", 285))?.id, "d");
 });
+
+import { BUILT_IN_ITEMS } from "../src/lib/compendium/catalog";
+import { budget } from "../src/lib/sr6/derive";
+
+test("fake SINs and licenses are bought by rating at book prices", () => {
+  const sin = BUILT_IN_ITEMS.filter((i) => i.name.startsWith("Fake SIN, rating"));
+  assert.deepEqual(sin.map((i) => i.cost), [2500, 5000, 7500, 10000, 12500, 15000]);
+  assert.ok(sin.every((i) => i.avail === 4 && i.legal === "I"));
+  const lic = BUILT_IN_ITEMS.find((i) => i.name === "Fake License, rating 4");
+  assert.equal(lic?.cost, 800);
+  assert.equal(BUILT_IN_ITEMS.find((i) => i.name === "Sensor Array, rating 3")?.cost, 3000);
+  assert.equal(BUILT_IN_ITEMS.find((i) => i.name === "Cyberjack 4")?.legal, "L");
+  assert.equal(BUILT_IN_ITEMS.find((i) => i.name === "Power focus, Force 2")?.avail, 5);
+  assert.equal(BUILT_IN_ITEMS.find((i) => i.name === "Stealth Rope")?.legal, "I");
+});
+
+test("a SINner pays 10 percent more for their lifestyle", () => {
+  const c = newCharacter();
+  c.lifestyle = "middle";
+  c.lifestyleMonths = 2;
+  assert.equal(budget(c).nuyen.lifestyle, 10000);
+  c.qualities.push({ id: "q", name: "SINner", kind: "negative", karma: 8, level: 1 } as never);
+  assert.equal(budget(c).nuyen.lifestyle, 11000);
+});

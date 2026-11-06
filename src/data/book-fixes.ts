@@ -42,6 +42,29 @@ export const BOOK_FIXES: Record<string, Fix> = {
   "weapons-armtech-mgl-12": { ...launcher([0, 8, 9, 6, 2]), ammo: "12(c)" },
   "weapons-aztechnology-strkier": { ...launcher([0, 4, 10, 9, 6]), name: "Aztechnology Striker" },
   "weapons-onotari-interceptor": launcher([0, 5, 9, 10, 8]),
+  // p. 281 B&E gear: both are illegal, not licensed
+  "tools-catalyst-stick": { legal: "I" },
+  "tools-stealth-rope": { legal: "I" },
+  // p. 278 sensors are priced per rating (see RATED below); these are the rating 1 prices
+  "electronics-single-sensor": { cost: 100 },
+  // p. 284 Cyberjacks Table: every cyberjack needs a license
+  "augmentations-cyberjack-1": { avail: 3, legal: "L" },
+  "augmentations-cyberjack-2": { avail: 3, legal: "L" },
+  "augmentations-cyberjack-3": { avail: 3, legal: "L" },
+  "augmentations-cyberjack-4": { avail: 4, legal: "L" },
+  "augmentations-cyberjack-5": { avail: 5, legal: "L" },
+  "augmentations-cyberjack-6": { avail: 6, legal: "L" },
+};
+
+/**
+ * Gear the book prices "Rating x" that the gear list sells at one flat price. The catalog offers
+ * one entry per rating instead: [lowest, highest rating, price per rating].
+ */
+export const RATED: Record<string, [number, number, number]> = {
+  "identity-fake-sin": [1, 6, 2500], // p. 274, 4(I)
+  "identity-fake-license": [1, 6, 200], // p. 274, 4(I)
+  "electronics-single-sensor": [1, 8, 100], // p. 278, ratings 1 to 8
+  "electronics-sensor-array": [2, 8, 1000], // p. 278, ratings 2 to 8
 };
 
 const arText = (ar: Ar) => ar.map((v) => (v == null ? "–" : String(v))).join("/");
