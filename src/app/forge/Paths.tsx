@@ -161,7 +161,7 @@ export function Paths({ onStarted, onTaken }: { onStarted: () => void; onTaken: 
           {view === "premade"
             ? [...PREMADES].sort((a, b) => Number(!!b.portrait) - Number(!!a.portrait)).map((p) => (
                 <PremadeCard key={p.alias} p={p}
-                  onTake={async () => { startDraft(await premadeWithPortrait(p)); const done = finishDraft(); if (done) onTaken(done.id); }}
+                  onTake={async () => { startDraft(await premadeWithPortrait(p)); const done = finishDraft(); if (done) onTaken(done.id); else onStarted(); }}
                   onEdit={async () => { startDraft(await premadeWithPortrait(p)); onStarted(); }} />
               ))
             : TEMPLATES.map((b) => <TemplateCard key={b.id} b={b} onUse={() => { startDraft(fromBuild(b)); onStarted(); }} />)}

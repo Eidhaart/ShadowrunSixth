@@ -32,6 +32,8 @@ export interface Mechanics {
   // creation and advancement
   startKarma: number;
   maxUnspent: number;
+  maxStartingNuyen: number;
+  buyCreationMagicWithKarma: boolean;
   nuyenPerKarma: number;
   creationAvail: number;
   karmaCostPct: number;
@@ -89,6 +91,8 @@ export const BOOK: Mechanics = {
   rerollRounds: false,
   startKarma: 50,
   maxUnspent: 5,
+  maxStartingNuyen: 5000,
+  buyCreationMagicWithKarma: false,
   nuyenPerKarma: 2000,
   creationAvail: 6,
   karmaCostPct: 100,
@@ -126,6 +130,8 @@ export const FIELDS: Field[] = [
   { key: "startKarma", group: "Creation and advancement", label: "Karma to customize a new runner", help: "", spec: { kind: "num", min: 0, max: 200, step: 5 } },
   { key: "maxUnspent", group: "Creation and advancement", label: "Unspent Karma a runner may start with", help: "", spec: { kind: "num", min: 0, max: 50 } },
   { key: "nuyenPerKarma", group: "Creation and advancement", label: "Nuyen per Karma at creation", help: "", spec: { kind: "num", min: 0, max: 10000, step: 500, unit: "¥" } },
+  { key: "maxStartingNuyen", group: "Creation and advancement", label: "Unspent nuyen a runner may start with", help: "", spec: { kind: "num", min: 0, max: 1000000 } },
+  { key: "buyCreationMagicWithKarma", group: "Creation and advancement", label: "Buy extra spells, rituals and complex forms with Karma", help: "Each extra selection costs 5 Karma at creation.", spec: { kind: "bool" } },
   { key: "creationAvail", group: "Creation and advancement", label: "Highest Availability at creation", help: "", spec: { kind: "num", min: 1, max: 20 } },
   { key: "karmaCostPct", group: "Creation and advancement", label: "Karma cost of advancement", help: "Scales every price on the Advance tab.", spec: { kind: "num", min: 25, max: 300, step: 25, unit: "%" } },
 ];

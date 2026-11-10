@@ -41,6 +41,7 @@ export function runnerToFoundry(c: Character, d: Derived) {
       ...c.gear.map((g) => ({ name: g.name, type: "equipment", system: { category: g.category, qty: g.qty, dv: g.dv ?? null, ar: g.ar ?? null, armor: g.armor ?? null, description: { value: g.notes ?? "" } } })),
       ...c.qualities.map((q) => ({ name: q.name, type: "feature", system: { kind: q.kind, level: q.level, description: { value: q.note ?? "" } } })),
       ...c.spells.map((s) => ({ name: s, type: "spell", system: {} })),
+      ...(c.rituals ?? []).map((name) => ({ name, type: "feature", system: { kind: "ritual" } })),
       ...c.complexForms.map((s) => ({ name: s, type: "feature", system: { kind: "complex form" } })),
     ],
   };

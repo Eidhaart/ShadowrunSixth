@@ -20,7 +20,7 @@ export function KarmaStep({ c, patch }: StepProps) {
           <div>Knowledge <b className="num text-fg">{b.karma.cost.knowledge}</b>{b.karma.cost.magic ? <> · Extra spells and forms <b className="num text-fg">{b.karma.cost.magic}</b></> : null}{b.karma.cost.initiation ? <> · Initiation <b className="num text-fg">{b.karma.cost.initiation}</b></> : null} · Cash <b className="num text-fg">{b.karma.cost.nuyen}</b> · Negative bonus <b className="num text-fg">+{b.karma.negativeBonus}</b></div>
         </div>
       </div>
-      {b.karma.left > KARMA.maxUnspent && <div className="mb-4"><Note tone="warn">You still have {b.karma.left} Karma. Spend it down to {KARMA.maxUnspent} or fewer.</Note></div>}
+      {b.karma.left > KARMA.maxUnspent && <div className="mb-4"><Note tone="warn">You still have {b.karma.left} Karma. Any amount above {KARMA.maxUnspent} is lost when you finish.</Note></div>}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="panel quiet p-4">

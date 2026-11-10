@@ -28,6 +28,12 @@ export function spellList(book: Rulebook | null): BookEntry[] {
     .map((s) => ({ id: s.id, name: s.title, page: s.page, group: s.parent!.replace(" Descriptions", "").replace(" Spells", ""), summary: brief(s.text) }));
 }
 
+export function ritualList(book: Rulebook | null): BookEntry[] {
+  return (book?.sections ?? [])
+    .filter((s) => /^Rituals(?: Descriptions)?$/i.test(s.parent ?? "") && /^[A-Z]/.test(s.title) && !JUNK.test(s.title))
+    .map((s) => ({ id: s.id, name: s.title, page: s.page, group: "Ritual", summary: brief(s.text) }));
+}
+
 export function complexFormList(book: Rulebook | null): BookEntry[] {
   if (!book) return [];
   return book.sections

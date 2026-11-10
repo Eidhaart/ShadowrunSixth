@@ -1,22 +1,23 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRulebook } from "@/lib/store/rulebook";
-import { adeptPowerList, complexFormList, spellList, type BookEntry } from "@/lib/sr6/bookLists";
-import { derive } from "@/lib/sr6/derive";
+import { adeptPowerList, complexFormList, ritualList, spellList, type BookEntry } from "@/lib/sr6/bookLists";
+import { budget, canLearnSpells, canSelectRituals, derive } from "@/lib/sr6/derive";
 import { POWER_POINT } from "@/lib/sr6/advance";
 import { rules } from "@/lib/house/rules";
-import { Budget, Note, StepHeader, type StepProps } from "../ui";
+import { Budget, Note, StepHeader, Stepper, type StepProps } from "../ui";
 
-function Picker({ label, entries, picked, onAdd, onRemove, limit, allowFree = true }: {
-  label: string; entries: BookEntry[]; picked: string[]; onAdd: (name: string) => void; onRemove: (name: string) => void; limit: number; allowFree?: boolean;
+function Picker({ label, entries, picked, onAdd, onRemove, limit, used = picked.length, canAdd = true, karmaLeft }: {
+  label: string; entries: BookEntry[]; picked: string[]; onAdd: (name: string) => void; onRemove: (name: string) => void; limit: number; used?: number; canAdd?: boolean; karmaLeft: number;
 }) {
   const [q, setQ] = useState("");
   const [group, setGroup] = useState("");
   const groups = useMemo(() => Array.from(new Set(entries.map((e) => e.group))), [entries]);
   const shown = entries.filter((e) => (!q || e.name.toLowerCase().includes(q.toLowerCase())) && (!group || e.group === group)).slice(0, 80);
   // past the free picks each one is bought with 5 Karma, like any advancement
-  const full = picked.length >= limit;
-  const addLabel = full ? "Add · 5 Karma" : "Add";
+  const full = used >= limit;
+  const blocked = !canAdd || (full && (!rules().buyCreationMagicWithKarma || karmaLeft < 5));
+  const addLabel = full && rules().buyCreationMagicWithKarma ? "Add · 5 Karma" : "Add";
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div>
@@ -29,7 +30,7 @@ function Picker({ label, entries, picked, onAdd, onRemove, limit, allowFree = tr
             </select>
           )}
         </div>
-        {entries.length === 0 && <Note>Mount your rulebook to browse the list. You can still type names in by hand below.</Note>}
+        {entries.length === 0 && <Note>You can enter a name below.</Note>}
         <ul className="max-h-[26rem] divide-y divide-line overflow-auto border border-line">
           {shown.map((e) => {
             const on = picked.includes(e.name);
@@ -39,20 +40,25 @@ function Picker({ label, entries, picked, onAdd, onRemove, limit, allowFree = tr
                   <div className="font-display font-semibold">{e.name} <span className="text-xs font-normal text-faint">{e.group} · p.{e.page}</span></div>
                   <div className="line-clamp-2 text-xs text-dim">{e.summary}</div>
                 </div>
-                <button className="btn small" disabled={on} onClick={() => onAdd(e.name)}>{on ? "Added" : addLabel}</button>
+                <button className="btn small" disabled={on || blocked} onClick={() => onAdd(e.name)}>{on ? "Added" : addLabel}</button>
               </li>
             );
           })}
         </ul>
-        {allowFree && (
-          <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget).get("free") as string; if (f?.trim()) { onAdd(f.trim()); e.currentTarget.reset(); } }}>
-            <input name="free" className="field" placeholder="Or type a name" aria-label="Custom name" />
-            <button className="btn" type="submit">{addLabel}</button>
-          </form>
-        )}
+        <form className="mt-2 flex gap-2" onSubmit={(e) => {
+          e.preventDefault();
+          const name = String(new FormData(e.currentTarget).get("free") ?? "").trim();
+          if (!blocked && name && !picked.some((n) => n.toLowerCase() === name.toLowerCase())) {
+            onAdd(name);
+            e.currentTarget.reset();
+          }
+        }}>
+          <input name="free" className="field" placeholder="Or type a name" aria-label={`Custom ${label.toLowerCase()} name`} />
+          <button className="btn" type="submit" disabled={blocked}>{addLabel}</button>
+        </form>
       </div>
       <div>
-        <div className="mb-2 font-display font-semibold">Your {label.toLowerCase()} ({picked.length} / {limit} free){picked.length > limit && <span className="ml-1 text-xs font-normal text-accent">{(picked.length - limit) * 5} Karma for the extra {picked.length - limit}</span>}</div>
+        <div className="mb-2 font-display font-semibold">Your {label.toLowerCase()} ({picked.length})</div>
         {picked.length === 0 && <p className="text-sm text-dim">Nothing chosen yet.</p>}
         <ul className="flex flex-wrap gap-2">
           {picked.map((n) => (
@@ -122,6 +128,12 @@ function Initiation({ c, patch }: StepProps) {
 export function MagicStep({ c, patch }: StepProps) {
   const book = useRulebook((s) => s.book);
   const d = derive(c);
+  const karmaLeft = budget(c).karma.left;
+  const rituals = useMemo(() => ritualList(book), [book]);
+  const selectedRituals = c.rituals ?? [];
+  const spellPicks = c.spells.length + selectedRituals.length;
+  const spellcaster = canLearnSpells(c);
+  const canAddRitual = canSelectRituals(c.magicType);
   const spells = useMemo(() => spellList(book), [book]);
   const forms = useMemo(() => complexFormList(book), [book]);
   const powers = useMemo(() => adeptPowerList(book), [book]);
@@ -132,18 +144,27 @@ export function MagicStep({ c, patch }: StepProps) {
     <div>
       <StepHeader title="Spells, powers and forms" lead="Your free picks come from the Magic or Resonance priority. They use the rating on the priority table, not what you raise it to with Karma." rule={/^Magic Basics$/i} />
 
-      {(c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic") && (
+      {(canAddRitual || spellPicks > 0) && (
         <section className="mb-10">
           <h3 className="mb-1 text-xl font-semibold">Spells and rituals</h3>
-          {c.magicType === "aspected" && <div className="mb-3"><Note>Aspected magicians use only one branch of magic. Pick spells only if your aspect is sorcery; note your aspect in your concept.</Note></div>}
-          <div className="mb-3 max-w-sm"><Budget label="Free spells left" left={d.slots.spells - c.spells.length} total={d.slots.spells} /></div>
-          <Picker label="Spells" entries={spells} picked={c.spells} limit={d.slots.spells} onAdd={(n) => patch((x) => { x.spells.push(n); })} onRemove={(n) => patch((x) => { x.spells = x.spells.filter((s) => s !== n); })} />
+          {!spellcaster && <div className="mb-3"><Note>Spells require a rank in Sorcery or Enchanting.</Note></div>}
+          <div className="mb-3 max-w-sm"><Budget label="Shared free picks left" left={d.slots.spells - spellPicks} total={d.slots.spells} /></div>
+          <Picker label="Spells" entries={spells} picked={c.spells} limit={d.slots.spells} used={spellPicks} canAdd={spellcaster} karmaLeft={karmaLeft} onAdd={(n) => patch((x) => { x.spells.push(n); })} onRemove={(n) => patch((x) => { x.spells = x.spells.filter((s) => s !== n); })} />
+          <h4 className="mb-2 mt-5 font-semibold">Rituals</h4>
+          <Picker label="Rituals" entries={rituals} picked={selectedRituals} limit={d.slots.spells} used={spellPicks} canAdd={canAddRitual} karmaLeft={karmaLeft} onAdd={(n) => patch((x) => { (x.rituals ??= []).push(n); })} onRemove={(n) => patch((x) => { x.rituals = (x.rituals ?? []).filter((r) => r !== n); })} />
         </section>
       )}
 
-      {(c.magicType === "adept" || c.magicType === "mystic") && (
+      {(c.magicType === "adept" || c.magicType === "mystic" || c.adeptPowers.length > 0) && (
         <section className="mb-10">
           <h3 className="mb-1 text-xl font-semibold">Adept powers</h3>
+          {c.magicType === "mystic" && (
+            <div className="mb-3 max-w-sm">
+              <Stepper label="Priority Magic allocated to Power Points" value={c.mysticPriorityPP ?? d.slots.mysticPriorityPP}
+                min={0} max={d.slots.mysticPriorityMax} onChange={(n) => patch((x) => { x.mysticPriorityPP = n; })} />
+              <p className="mt-1 text-xs text-dim">Each point left in priority Magic gives two spell or ritual picks.</p>
+            </div>
+          )}
           <div className="mb-3 max-w-sm"><Budget label="Power points left" left={+(d.slots.powerPoints - spent).toFixed(2)} total={d.slots.powerPoints} /></div>
           <div className="grid gap-4 lg:grid-cols-2">
             <div>
@@ -185,15 +206,14 @@ export function MagicStep({ c, patch }: StepProps) {
               {c.adeptPowers.some((p) => p.effect) && <p className="mt-2 text-xs text-ok">Improved Reflexes is applied to your Reaction and Initiative automatically.</p>}
             </div>
           </div>
-          {c.magicType === "mystic" && <p className="mt-3 text-sm text-dim">Mystic adepts buy powers first, then double what is left of the priority Magic rating for spells (currently {d.slots.spells}).</p>}
         </section>
       )}
 
-      {c.magicType === "technomancer" && (
+      {(c.magicType === "technomancer" || c.complexForms.length > 0) && (
         <section className="mb-10">
           <h3 className="mb-1 text-xl font-semibold">Complex forms</h3>
           <div className="mb-3 max-w-sm"><Budget label="Free forms left" left={d.slots.complexForms - c.complexForms.length} total={d.slots.complexForms} /></div>
-          <Picker label="Complex forms" entries={forms} picked={c.complexForms} limit={d.slots.complexForms} onAdd={(n) => patch((x) => { x.complexForms.push(n); })} onRemove={(n) => patch((x) => { x.complexForms = x.complexForms.filter((s) => s !== n); })} />
+          <Picker label="Complex forms" entries={forms} picked={c.complexForms} limit={d.slots.complexForms} canAdd={c.magicType === "technomancer"} karmaLeft={karmaLeft} onAdd={(n) => patch((x) => { x.complexForms.push(n); })} onRemove={(n) => patch((x) => { x.complexForms = x.complexForms.filter((s) => s !== n); })} />
         </section>
       )}
 

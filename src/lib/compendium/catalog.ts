@@ -214,13 +214,26 @@ export interface AddResult { ok: boolean; msg: string }
 
 /** Put a compendium item on a runner. Stacks with an identical item, equips Matrix hardware into an
  *  empty slot, and pays for it from the runner's nuyen when `pay` is set. */
+export function catalogGear(item: CompItem): Omit<GearItem, "id"> {
+  return {
+    ...item.gear,
+    avail: item.avail ?? item.gear.avail,
+    legal: item.legal ?? item.gear.legal,
+    fitted: item.gear.fitted ?? (item.cat === "armor" || item.gear.category === "armor"),
+  };
+}
+
+/** Put a compendium item on a runner. Stacks with an identical item, equips Matrix hardware into an
+ * empty slot, and pays for it from the runner's nuyen when `pay` is set. */
 export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; qty?: number }): AddResult {
   const qty = opts.qty ?? 1;
   const price = (item.cost ?? 0) * qty;
   if (opts.pay && price > c.nuyen) return { ok: false, msg: `${item.name} costs ${price.toLocaleString("en-US")}¥; ${c.alias || c.name || "the runner"} has ${c.nuyen.toLocaleString("en-US")}¥.` };
-  const same = c.gear.find((g) => g.name === item.gear.name && g.category === item.gear.category && g.cost === item.gear.cost);
+  const gear = catalogGear(item);
+  const same = c.gear.find((g) => g.name === gear.name && g.category === gear.category && g.cost === gear.cost &&
+    g.avail === gear.avail && g.legal === gear.legal && !!g.priceIncludesMarkup === !!gear.priceIncludesMarkup && (g.fitted ?? (g.category === "armor")) === gear.fitted);
   if (same && item.cat !== "cyberware" && item.cat !== "bioware" && !item.vehicle) same.qty += qty;
-  else c.gear.push({ ...(JSON.parse(JSON.stringify(item.gear)) as Omit<GearItem, "id">), id: uid("g"), qty });
+  else c.gear.push({ ...(JSON.parse(JSON.stringify(gear)) as Omit<GearItem, "id">), id: uid("g"), qty });
   // integrated parts come with the weapon, one set per weapon
   for (const part of item.parts ?? []) {
     const have = c.gear.find((g) => g.name === part.name);

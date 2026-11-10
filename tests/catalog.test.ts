@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { emptyRuleset, setActiveRules } from "../src/lib/house/rules";
 import { addToRunner } from "../src/lib/compendium/catalog";
 import { COMMLINKS, CYBERDECKS, RCCS } from "../src/lib/sr6/rules6";
 import core from "../src/data/gear-core.json";
@@ -100,15 +101,29 @@ test("language levels take knowledge points; the native language is free", () =>
   assert.ok(validate(c).some((i) => /one language can be native/.test(i.text)));
 });
 
-test("spells past the free picks cost 5 Karma instead of being refused", () => {
+test("extra spells, rituals and complex forms require the creation Karma option", () => {
   const c = newCharacter();
-  c.priorities = { metatype: "E", attributes: "B", magic: "A", skills: "C", resources: "D" } as never;
+  c.priorities = { metatype: "E", attributes: "B", magic: "A", skills: "C", resources: "D" };
   c.magicType = "full";
-  const free = 8; // Magic 4 from Priority A, times two
-  c.spells = Array.from({ length: free + 2 }, (_, i) => `Spell ${i}`);
-  const b = budget(c);
-  assert.equal(b.karma.cost.magic, 10);
-  assert.ok(!validate(c).some((i) => /Too many spells/.test(i.text)));
+  c.skills.sorcery = { pts: 1, kar: 0 };
+  c.spells = Array.from({ length: 8 }, (_, i) => `Spell ${i}`);
+  c.rituals = ["Ward", "Circle of Protection"];
+  assert.equal(budget(c).karma.cost.magic, 0);
+  assert.ok(validate(c).some((i) => /share 8 creation/.test(i.text)));
+
+  const techno = { ...c, magicType: "technomancer" as const, spells: [], rituals: [],
+    complexForms: Array.from({ length: 9 }, (_, i) => `Form ${i}`) };
+  assert.ok(validate(techno).some((i) => /Only 8 complex form/.test(i.text)));
+
+  try {
+    setActiveRules({ ...emptyRuleset(), mech: { buyCreationMagicWithKarma: true } });
+    assert.equal(budget(c).karma.cost.magic, 10);
+    assert.equal(budget(techno).karma.cost.magic, 5);
+    assert.ok(!validate(c).some((i) => /share 8 creation/.test(i.text)));
+    assert.ok(!validate(techno).some((i) => /Only 8 complex form/.test(i.text)));
+  } finally {
+    setActiveRules(null);
+  }
 });
 
 import { withAdv } from "../src/lib/sr6/advance";
@@ -137,4 +152,22 @@ test("a mundane runner cannot initiate", () => {
   const c = newCharacter();
   c.startGrade = 1;
   assert.ok(validate(c).some((i) => /Only the Awakened/.test(i.text)));
+});
+
+test("creation budget prices fitted gear and retains catalog availability for final validation", () => {
+  const c = newCharacter();
+  const gear = { id: "armor", name: "Fitted armor", cat: "armor" as const, group: "Armor", cost: 1000,
+    avail: 7, legal: "L" as const, stats: [], source: "built-in" as const,
+    gear: { name: "Fitted armor", category: "armor" as const, cost: 1000, qty: 1 } };
+  addToRunner(c, gear, { pay: false, qty: 2 });
+  c.gear.push({ id: "tool", name: "Tool", category: "misc", cost: 1000, qty: 1, avail: 6 });
+  assert.equal(c.gear[0].legal, "L");
+  assert.equal(budget(c).nuyen.gear, 3000);
+  c.metatype = "dwarf";
+  assert.equal(budget(c).nuyen.gear, 3200);
+  c.metatype = "troll";
+  assert.equal(budget(c).nuyen.gear, 3300);
+  c.gear[0].priceIncludesMarkup = true;
+  assert.equal(budget(c).nuyen.gear, 3100);
+  assert.equal(validate(c).filter((issue) => /Availability/.test(issue.text)).length, 1);
 });

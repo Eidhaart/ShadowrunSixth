@@ -1,4 +1,6 @@
 "use client";
+import { creationGearPrice } from "@/lib/sr6/derive";
+import type { MetatypeId } from "@/lib/sr6/data";
 import { rules } from "@/lib/house/rules";
 import { Fragment, useMemo, useState } from "react";
 import { sectionFor } from "@/lib/compendium/section";
@@ -7,7 +9,7 @@ import clsx from "clsx";
 import { Icon } from "@/components/Icon";
 import { useRulebook } from "@/lib/store/rulebook";
 import { COMP_CATS, RANGE_NAMES, type CompCat, type CompItem } from "@/lib/compendium/types";
-import { DRAG_TYPE, findItem, useCatalog, useGearList } from "@/lib/compendium/catalog";
+import { catalogGear, DRAG_TYPE, findItem, useCatalog, useGearList } from "@/lib/compendium/catalog";
 
 const yen = (n: number | null) => (n == null ? "—" : `${n.toLocaleString("en-US")}¥`);
 
@@ -127,7 +129,7 @@ export interface BrowserProps {
   /** Button text, e.g. "Add to Cipher". */
   addLabel?: string;
   /** Character creation: Availability above the cap (6 by the book) cannot be bought. */
-  creation?: boolean;
+  creation?: MetatypeId;
   /** Nuyen on hand, for the "I can afford it" filter. */
   nuyen?: number;
   compact?: boolean;
@@ -163,7 +165,7 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
       if (cat !== "all" && i.cat !== cat) return false;
       if (group && `${i.cat}|${i.group || "Other"}` !== group) return false;
       if (legalOnly && i.legal) return false;
-      if (afford && nuyen != null && (i.cost ?? 0) > nuyen) return false;
+      if (afford && nuyen != null && (creation ? creationGearPrice(creation, catalogGear(i)) : i.cost ?? 0) > nuyen) return false;
       if (!words.length) return true;
       const hay = `${i.name} ${i.group} ${i.stats.map((s) => s.join(" ")).join(" ")}`.toLowerCase();
       return words.every((w) => hay.includes(w));
@@ -176,7 +178,7 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
       : sort === "type" ? catOrder(a.cat) - catOrder(b.cat) || a.group.localeCompare(b.group) || (a.cost ?? Infinity) - (b.cost ?? Infinity)
       : 0) || a.name.localeCompare(b.name));
     return out;
-  }, [list, q, cat, group, legalOnly, afford, nuyen, sort]);
+  }, [list, q, cat, group, legalOnly, afford, creation, nuyen, sort]);
 
   const cap = rules().creationAvail;
   const blockedFor = (i: CompItem) => (creation && (i.avail ?? 0) > cap ? `Availability ${cap + 1} or more: not allowed at creation` : undefined);
@@ -243,7 +245,7 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
                   </div>
                 </button>
                 <div className="flex shrink-0 items-center gap-2 pt-0.5">
-                  <span className="num text-sm">{yen(i.cost)}{i.per && <span className="block text-right text-[10px] text-faint">{i.per}</span>}</span>
+                  <span className="num text-sm">{yen(creation && i.cost != null ? creationGearPrice(creation, catalogGear(i)) : i.cost)}{i.per && <span className="block text-right text-[10px] text-faint">{i.per}</span>}</span>
                   <AvailBadge item={i} />
                   {onAdd && (
                     <button className="btn small !min-h-8 !px-2" aria-label={`${addLabel}: ${i.name}`} title={blocked ?? addLabel} disabled={!!blocked} onClick={() => onAdd(i, 1)}>

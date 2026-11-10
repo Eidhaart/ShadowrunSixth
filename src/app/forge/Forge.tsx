@@ -1,4 +1,5 @@
 "use client";
+import { rules } from "@/lib/house/rules";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
@@ -33,10 +34,10 @@ const STEPS: StepDef[] = [
   { id: "origin", label: "Metatype and magic", done: (c) => budget(c).adjustment.left === 0 && Object.keys(c.priorities).length === 5, Comp: Origin },
   { id: "attributes", label: "Attributes", done: (c) => budget(c).attributes.left === 0 && budget(c).attributes.total > 0, Comp: Attributes },
   { id: "skills", label: "Skills", done: (c) => budget(c).skills.left === 0 && budget(c).skills.total > 0, Comp: Skills },
-  { id: "magic", label: "Spells and powers", show: (c) => c.magicType !== "mundane", done: (c) => c.spells.length + c.complexForms.length + c.adeptPowers.length > 0, Comp: MagicStep },
+  { id: "magic", label: "Spells and powers", show: (c) => c.magicType !== "mundane" || c.spells.length > 0 || !!c.rituals?.length || c.complexForms.length > 0 || c.adeptPowers.length > 0, done: (c) => c.spells.length + (c.rituals?.length ?? 0) + c.complexForms.length + c.adeptPowers.length > 0, Comp: MagicStep },
   { id: "qualities", label: "Qualities", done: (c) => c.qualities.length > 0, Comp: Qualities },
-  { id: "karma", label: "Karma", done: (c) => { const k = budget(c).karma.left; return k >= 0 && k <= 5; }, Comp: KarmaStep },
-  { id: "gear", label: "Gear and lifestyle", done: (c) => { const n = budget(c).nuyen.left; return n >= 0 && n <= 5000 && c.gear.length > 0; }, Comp: GearStep },
+  { id: "karma", label: "Karma", done: (c) => { const k = budget(c).karma.left; return k >= 0 && k <= rules().maxUnspent; }, Comp: KarmaStep },
+  { id: "gear", label: "Gear and lifestyle", done: (c) => { const n = budget(c).nuyen.left; return n >= 0 && n <= rules().maxStartingNuyen && c.gear.length > 0; }, Comp: GearStep },
   { id: "review", label: "Review", done: (c) => validate(c).every((i) => i.level !== "error"), Comp: Review },
 ];
 
@@ -49,7 +50,6 @@ export function Forge() {
   const { startDraft, patchDraft, discardDraft, finishDraft } = useRunners();
   const [stepId, setStepId] = useState("concept");
   const [hydrated, setHydrated] = useState(false);
-  const [saveAnyway, setSaveAnyway] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
   const [sheet, setSheet] = useState(false);
 
@@ -79,7 +79,7 @@ export function Forge() {
   const issues = validate(draft);
   const blockers = issues.filter((i) => i.level === "error");
   const goTo = (where: string) => {
-    const map: Record<string, string> = { Concept: "concept", Priorities: "priorities", Metatype: "origin", Adjustment: "origin", Attributes: "attributes", Skills: "skills", Magic: "magic", Qualities: "qualities", Karma: "karma", Gear: "gear" };
+    const map: Record<string, string> = { Concept: "concept", Priorities: "priorities", Metatype: "origin", Adjustment: "origin", Attributes: "attributes", Skills: "skills", Knowledge: "skills", Contacts: "gear", Magic: "magic", Qualities: "qualities", Karma: "karma", Gear: "gear" };
     const id = map[where];
     if (id && steps.some((x) => x.id === id)) { setStepId(id); setSheet(false); window.scrollTo({ top: 0 }); }
   };
@@ -173,10 +173,8 @@ export function Forge() {
           <button className="btn max-md:min-w-0 max-md:flex-1" aria-label="Previous step" disabled={idx === 0} onClick={() => { setStepId(steps[idx - 1].id); window.scrollTo({ top: 0 }); }}><Icon name="back" size={16} /> <span className="max-md:sr-only">{idx > 0 ? steps[idx - 1].label : "Back"}</span></button>
           {isLast ? (
             <div className="flex flex-wrap items-center gap-3 max-md:min-w-0 max-md:flex-[2] max-md:justify-end max-md:gap-2">
-              {blockers.length > 0 && (
-                <label className="flex items-center gap-2 text-sm text-dim max-md:text-xs"><input type="checkbox" className="accent-[var(--accent)]" checked={saveAnyway} onChange={(e) => setSaveAnyway(e.target.checked)} /> Save with open problems</label>
-              )}
-              <button className="btn primary" disabled={blockers.length > 0 && !saveAnyway} onClick={finish}><Icon name="check" size={16} /> Finish and open sheet</button>
+              {blockers.length > 0 && <span className="text-xs text-dim">Draft saved. Resolve the errors to finish.</span>}
+              <button className="btn primary" disabled={blockers.length > 0} onClick={finish}><Icon name="check" size={16} /> Finish and open sheet</button>
             </div>
           ) : (
             <button className="btn primary max-md:min-w-0 max-md:flex-[2]" onClick={() => { setStepId(steps[idx + 1].id); window.scrollTo({ top: 0 }); }}><span className="max-md:truncate">{steps[idx + 1].label}</span> <Icon name="chev" size={16} /></button>

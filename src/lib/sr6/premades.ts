@@ -12,7 +12,7 @@ import { newCharacter, uid, type Character, type Contact, type GearItem, type Kn
 import type { AttrKey, MagicType, MetatypeId, PriorityColumn, PriorityLevel } from "./data";
 import { editExt, newVehicle } from "./ext";
 
-type CoreGear = { id: string; gear: Omit<GearItem, "id"> };
+type CoreGear = { id: string; avail?: number; legal?: GearItem["legal"]; gear: Omit<GearItem, "id"> };
 const CORE = core as unknown as CoreGear[];
 
 /** A gear item from the bundled gear list, optionally bought at a rating (price × rating). */
@@ -20,7 +20,7 @@ function item(id: string, opts: { qty?: number; rating?: number; name?: string }
   const raw = CORE.find((x) => x.id === id);
   if (!raw) throw new Error(`Unknown gear id ${id}`);
   const it = withBookFix({ ...raw, name: raw.gear.name });
-  const g: Omit<GearItem, "id"> = JSON.parse(JSON.stringify(it.gear));
+  const g: Omit<GearItem, "id"> = { ...structuredClone(it.gear), avail: it.avail, legal: it.legal };
   if (opts.rating) { g.cost *= opts.rating; g.name = `${opts.name ?? g.name} (rating ${opts.rating})`; }
   else if (opts.name) g.name = opts.name;
   g.qty = opts.qty ?? 1;
@@ -161,7 +161,7 @@ export const BUILDS: Build[] = [
     adjEdge: 2, adjMagic: 2,
     skills: { electronics: 6, cracking: 5, tasking: 5, perception: 2, stealth: 2 },
     specs: { cracking: "Hacking", electronics: "Software" },
-    knowledge: ["Matrix lore", "Data havens", "Sprites", "Seattle", "Trideo music"],
+    knowledge: ["Matrix lore", "Data havens", "Sprites", "Seattle", "Trideo music", "Matrix hosts"],
     forms: ["Cleaner", "Diffusion", "Editor", "Infusion", "Pulse Storm", "Puppeteer", "Resonance Spike", "Static Veil"],
     karmaToNuyen: 5,
   },

@@ -1,4 +1,4 @@
-import type { Character, QualityEffect } from "./character";
+import type { Character, GearItem, QualityEffect } from "./character";
 import { rules } from "@/lib/house/rules";
 import { QUALITY_EFFECTS } from "./qualities";
 import {
@@ -57,7 +57,7 @@ export interface Derived {
   memory: number;
   movement: { walk: number; sprint: number };
   skills: SkillPool[];
-  slots: { spells: number; complexForms: number; powerPoints: number };
+  slots: { spells: number; complexForms: number; powerPoints: number; mysticPriorityPP: number; mysticPriorityMax: number };
   free: { knowledge: number };
   unconscious: boolean;
   dead: boolean;
@@ -116,6 +116,20 @@ export function magicPriorityRating(c: Character): number {
   const lvl = c.priorities.magic;
   if (!lvl || c.magicType === "mundane") return 0;
   return PRIORITY_TABLE[lvl].magic[c.magicType] ?? 0;
+}
+
+export function canSelectRituals(type: MagicType): boolean {
+  return type === "full" || type === "aspected" || type === "mystic";
+}
+
+export function canLearnSpells(c: Pick<Character, "magicType" | "skills">): boolean {
+  return canSelectRituals(c.magicType) &&
+    ["sorcery", "enchanting"].some((id) => (c.skills[id]?.pts ?? 0) + (c.skills[id]?.kar ?? 0) > 0);
+}
+
+export function creationGearPrice(metatype: MetatypeId, gear: Pick<GearItem, "cost" | "category" | "fitted" | "priceIncludesMarkup">): number {
+  const markedUp = metatype === "troll" || (metatype === "dwarf" && (gear.fitted ?? (gear.category === "armor")));
+  return markedUp && !gear.priceIncludesMarkup ? gear.cost + Math.floor(gear.cost / 10) : gear.cost;
 }
 
 export function derive(c: Character): Derived {
@@ -202,11 +216,13 @@ export function derive(c: Character): Derived {
   // Mystic adepts split the priority Magic rating: each whole point is either one Power Point or two spells.
   // That rating is the one from the Priority table, reduced by Essence loss.
   const mysticMagic = c.magicType === "mystic" ? Math.max(0, mpr - essenceMagicLoss) : 0;
-  const mysticPP = Math.min(mysticMagic, Math.ceil(Math.max(0, c.adeptPowers.reduce((s, p) => s + p.cost, 0) - (c.extraPP ?? 0)) - 1e-9));
+  const startPP = c.magicType === "adept" || c.magicType === "mystic"
+    ? (c.startMeta ?? []).slice(0, c.startGrade ?? 0).filter((m) => /^power point$/i.test(m.trim())).length : 0;
+  const spentPP = c.adeptPowers.reduce((s, p) => s + p.cost, 0);
+  const legacyPP = Math.ceil(Math.max(0, spentPP - (c.extraPP ?? 0) - startPP) - 1e-9);
+  const mysticPP = Math.max(0, Math.min(mysticMagic, c.mysticPriorityPP ?? legacyPP));
   const spells = awakened && c.magicType !== "adept" ? (c.magicType === "mystic" ? mysticMagic - mysticPP : mpr) * 2 : 0;
-  // a grade taken at creation can be a Power Point instead of a metamagic
-  const startPP = c.magicType === "adept" || c.magicType === "mystic" ? (c.startMeta ?? []).filter((m) => /^power point$/i.test(m.trim())).length : 0;
-  const powerPoints = (c.magicType === "adept" ? magic : mysticMagic) + (c.extraPP ?? 0) + startPP;
+  const powerPoints = (c.magicType === "adept" ? magic : mysticPP) + (c.extraPP ?? 0) + startPP;
 
   const con = c.damage;
   const unconscious = con.stun >= stunBoxes || con.physical >= physicalBoxes;
@@ -242,7 +258,7 @@ export function derive(c: Character): Derived {
     memory: attrs.logic + attrs.intuition,
     movement: { walk: 10, sprint: 15 },
     skills,
-    slots: { spells, complexForms: c.magicType === "technomancer" ? mpr * 2 : 0, powerPoints },
+    slots: { spells, complexForms: c.magicType === "technomancer" ? mpr * 2 : 0, powerPoints, mysticPriorityPP: mysticPP, mysticPriorityMax: mysticMagic },
     // free knowledge points equal Logic, not counting augmentations
     free: { knowledge: natural.logic },
     unconscious,
@@ -310,10 +326,10 @@ export function budget(c: Character): Budget {
 
   const perKarma = c.qualities.reduce<number>((m, q) => Math.max(m, q.effect?.nuyenPerKarma ?? 0), KARMA.nuyenPerKarma);
   const nuyenFromKarma = c.karmaToNuyen * perKarma;
-  // spells, rituals and complex forms past the free picks are bought like any advancement: 5 Karma each
-  const magicKarma =
-    Math.max(0, c.spells.length - d.slots.spells) * KARMA.spell +
-    Math.max(0, c.complexForms.length - d.slots.complexForms) * KARMA.complexForm;
+  const magicKarma = rules().buyCreationMagicWithKarma
+    ? Math.max(0, c.spells.length + (c.rituals?.length ?? 0) - d.slots.spells) * KARMA.spell +
+      Math.max(0, c.complexForms.length - d.slots.complexForms) * KARMA.complexForm
+    : 0;
   // initiation or submersion at creation: 10 + new grade Karma per grade, like the advancement table
   let initiationKarma = 0;
   for (let g = 1; g <= (c.startGrade ?? 0); g++) initiationKarma += Math.max(1, Math.round(((10 + g) * rules().karmaCostPct) / 100));
@@ -321,7 +337,7 @@ export function budget(c: Character): Budget {
   const karmaPool = KARMA.customization + negativeBonus;
 
   const resources = p.resources ? PRIORITY_TABLE[p.resources].resources : 0;
-  const gear = c.gear.reduce((s, g) => s + g.cost * (g.qty || 1), 0);
+  const gear = c.gear.reduce((s, g) => s + creationGearPrice(c.metatype, g) * (g.qty || 1), 0);
   const ls = LIFESTYLES.find((l) => l.id === c.lifestyle);
   // picks made before the effect existed are matched by name
   const lsMult = c.qualities.reduce<number>((m, q) => Math.max(m, q.effect?.lifestyleMult ?? QUALITY_EFFECTS[q.name.replace(/\(.*?\)/g, "").trim().toLowerCase()]?.lifestyleMult ?? 1), 1);
@@ -406,6 +422,10 @@ export function validate(c: Character): Issue[] {
   }
   if (atMax > 1) issues.push({ level: "error", where: "Attributes", text: "Only one Physical or Mental attribute may be at its metatype maximum at creation." });
 
+  const naturalEdge = 1 + c.adjEdge + c.karEdge;
+  if (naturalEdge > meta.ranges.edge[1])
+    issues.push({ level: "error", where: "Adjustment", text: `Edge exceeds the ${meta.name} maximum of ${meta.ranges.edge[1]}. Reallocate the excess points.` });
+
   // magic
   // initiation raises the ceiling: 6 + grade
   const grade = c.startGrade ?? 0;
@@ -432,12 +452,12 @@ export function validate(c: Character): Issue[] {
     issues.push({ level: "error", where: "Skills", text: "An aspected magician uses only one of Sorcery, Conjuring or Enchanting." });
   if (skillsAtMax > 1) issues.push({ level: "error", where: "Skills", text: "Only one skill may be at the creation maximum." });
   if (b.skills.left < 0) issues.push({ level: "error", where: "Skills", text: `${-b.skills.left} skill point(s) over budget.` });
-  if (b.skills.left > 0) issues.push({ level: "warn", where: "Skills", text: `${b.skills.left} skill point(s) unspent.` });
+  if (b.skills.left > 0) issues.push({ level: "error", where: "Skills", text: `${b.skills.left} skill point(s) unspent.` });
 
   // qualities
   if (b.qualities.count > KARMA.maxQualities) issues.push({ level: "error", where: "Qualities", text: `At most ${KARMA.maxQualities} qualities at creation.` });
   if (b.qualities.net > KARMA.maxQualityKarma)
-    issues.push({ level: "warn", where: "Qualities", text: `The net bonus from qualities is capped at ${KARMA.maxQualityKarma} Karma; extra bonus is wasted.` });
+    issues.push({ level: "error", where: "Qualities", text: `The net bonus from qualities may not exceed ${KARMA.maxQualityKarma} Karma.` });
 
   if (c.magicType !== "mundane" && c.qualities.some((q) => /^sensitive system/i.test(q.name)))
     issues.push({ level: "error", where: "Qualities", text: "Sensitive System cannot be taken with a Magic or Resonance rating." });
@@ -445,8 +465,20 @@ export function validate(c: Character): Issue[] {
   // spells and forms
   if (c.knowledge.filter((k) => k.kind === "language" && k.native).length > 1)
     issues.push({ level: "error", where: "Knowledge", text: "Only one language can be native." });
-  if (c.spells.length && !d.slots.spells && c.magicType !== "full" && c.magicType !== "aspected" && c.magicType !== "mystic")
-    issues.push({ level: "error", where: "Magic", text: "Only magicians and mystic adepts learn spells." });
+  const knowledgeLeft = d.free.knowledge - knowledgePoints(c);
+  if (knowledgeLeft > 0) issues.push({ level: "error", where: "Knowledge", text: `${knowledgeLeft} free knowledge point(s) unspent.` });
+  const spellPicks = c.spells.length + (c.rituals?.length ?? 0);
+  if (c.spells.length && !canLearnSpells(c))
+    issues.push({ level: "error", where: "Magic", text: "Spells require a spellcasting magic type and a rank in Sorcery or Enchanting." });
+  if (c.rituals?.length && !canSelectRituals(c.magicType))
+    issues.push({ level: "error", where: "Magic", text: "Rituals require a spellcasting magic type." });
+  if (!rules().buyCreationMagicWithKarma && spellPicks > d.slots.spells)
+    issues.push({ level: "error", where: "Magic", text: `Spells and rituals share ${d.slots.spells} creation pick(s).` });
+  if (!rules().buyCreationMagicWithKarma && c.complexForms.length > d.slots.complexForms)
+    issues.push({ level: "error", where: "Magic", text: `Only ${d.slots.complexForms} complex form(s) are available at creation.` });
+  if (c.magicType === "mystic" && c.mysticPriorityPP != null &&
+      (!Number.isInteger(c.mysticPriorityPP) || c.mysticPriorityPP !== d.slots.mysticPriorityPP))
+    issues.push({ level: "error", where: "Magic", text: "Reallocate priority Magic between spells and Power Points." });
   if (c.complexForms.length && c.magicType !== "technomancer") issues.push({ level: "error", where: "Magic", text: "Only technomancers learn complex forms." });
   const ppSpent = c.adeptPowers.reduce((s, x) => s + x.cost, 0);
   if (ppSpent > d.slots.powerPoints) issues.push({ level: "error", where: "Magic", text: `Adept powers cost ${ppSpent} but you only have ${d.slots.powerPoints} power points.` });
@@ -459,9 +491,14 @@ export function validate(c: Character): Issue[] {
 
   // karma and nuyen
   if (b.karma.left < 0) issues.push({ level: "error", where: "Karma", text: `${-b.karma.left} Karma over budget.` });
-  if (b.karma.left > KARMA.maxUnspent) issues.push({ level: "error", where: "Karma", text: `Begin play with at most ${KARMA.maxUnspent} unspent Karma (you have ${b.karma.left}).` });
+  if (b.karma.left > KARMA.maxUnspent) issues.push({ level: "warn", where: "Karma", text: `${b.karma.left - KARMA.maxUnspent} excess Karma will be lost when you finish.` });
   if (b.nuyen.left < 0) issues.push({ level: "error", where: "Gear", text: `${-b.nuyen.left}¥ over budget.` });
-  if (b.nuyen.left > 5000) issues.push({ level: "warn", where: "Gear", text: "You can start play with at most 5,000¥ unspent." });
+  const { creationAvail, maxStartingNuyen } = rules();
+  if (b.nuyen.left > maxStartingNuyen) issues.push({ level: "warn", where: "Gear", text: `${(b.nuyen.left - maxStartingNuyen).toLocaleString("en-US")}¥ will be lost when you finish.` });
+  for (const g of c.gear) {
+    if (g.avail != null && g.avail > creationAvail)
+      issues.push({ level: "error", where: "Gear", text: `${g.name}: Availability ${g.avail} exceeds the creation limit of ${creationAvail}.` });
+  }
 
   return issues;
 }

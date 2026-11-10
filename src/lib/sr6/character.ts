@@ -65,6 +65,10 @@ export interface GearItem {
   category: "weapon" | "armor" | "cyberware" | "bioware" | "commlink" | "vehicle" | "misc" | "ammo" | "magic";
   cost: number;
   qty: number;
+  avail?: number;
+  legal?: "L" | "I";
+  fitted?: boolean;
+  priceIncludesMarkup?: boolean;
   notes?: string;
   /** For armor: bonus to Defense Rating while worn. */
   armor?: number;
@@ -135,6 +139,8 @@ export interface Character {
   knowledge: KnowledgeSkill[];
   qualities: QualityPick[];
   spells: string[];
+  rituals?: string[];
+  mysticPriorityPP?: number;
   complexForms: string[];
   adeptPowers: { name: string; cost: number; level?: number; effect?: QualityEffect }[];
   gear: GearItem[];
@@ -207,6 +213,7 @@ export function newCharacter(): Character {
     knowledge: [],
     qualities: [],
     spells: [],
+    rituals: [],
     complexForms: [],
     adeptPowers: [],
     gear: [],

@@ -13,7 +13,7 @@ export function Review({ c }: StepProps) {
 
   return (
     <div>
-      <StepHeader title="Review and finish" lead="Every rule is checked against the book. Fix the red items before you save. Amber items are worth a look but will not stop you." />
+      <StepHeader title="Review and finish" lead="Resolve the errors before bringing this runner into play. Warnings show what to review before finishing." />
       {errors.length === 0 && <div className="mb-4"><Note>Everything checks out. Saving creates a live character sheet with all your numbers automated.</Note></div>}
       {errors.length > 0 && (
         <section className="mb-4" aria-label="Problems">

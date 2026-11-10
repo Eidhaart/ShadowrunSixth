@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { applyPostBoost, damageAfterSoak, glitchOdds, hitOdds, opposed, roll, tally, type Die } from "../src/lib/sr6/dice";
 import { newCharacter } from "../src/lib/sr6/character";
-import { budget, derive, validate } from "../src/lib/sr6/derive";
+import { budget, derive, reconcile, validate } from "../src/lib/sr6/derive";
 
 const die = (value: number, exploded = false): Die => ({ value, hit: value >= 5, exploded });
 
@@ -201,11 +201,12 @@ test("mystic adepts split the priority Magic between Power Points and spells", (
   c.magicType = "mystic";
   c.adjMagic = 3;
   let d = derive(c);
-  assert.equal(d.slots.powerPoints, 2, "Power Points come from the priority Magic, not adjustment points");
+  assert.equal(d.slots.powerPoints, 0, "unallocated priority Magic goes toward spells");
   assert.equal(d.slots.spells, 4);
   c.adeptPowers.push({ name: "Half point", cost: 0.5, level: 1 });
   d = derive(c);
-  assert.equal(d.slots.spells, 2, "a part-spent point of Magic no longer buys spells");
+  assert.equal(d.slots.spells, 2, "legacy builds infer the split from the powers taken");
+  assert.equal(d.slots.powerPoints, 1);
 });
 
 test("Exotic Weapons takes its weapon as a free, required specialization", () => {
@@ -255,7 +256,7 @@ test("mystic adept Magic for the split is the priority rating less Essence loss"
   const c = probe(); // Magic priority C: Magic 2
   c.magicType = "mystic";
   c.gear.push({ id: "g", name: "Cyberear", category: "cyberware", cost: 0, qty: 1, essence: 0.5 });
-  assert.equal(derive(c).slots.powerPoints, 1);
+  assert.equal(derive(c).slots.mysticPriorityMax, 1);
   assert.equal(derive(c).slots.spells, 2);
 });
 
@@ -301,4 +302,58 @@ test("Glass Jaw leaves at least 2 Stun boxes; trolls punch for Physical", async 
   const t = probe();
   t.metatype = "troll";
   assert.equal(weaponsFor(t).find((w) => w.name === "Unarmed strike")?.type, "P");
+});
+
+test("initiation Power Points leave the mystic adept's priority spell picks intact", () => {
+  const c = probe();
+  c.magicType = "mystic";
+  c.startGrade = 1;
+  c.startMeta = ["Power Point"];
+  c.adeptPowers = [{ name: "Power", cost: 1 }];
+  assert.equal(derive(c).slots.powerPoints, 1);
+  assert.equal(derive(c).slots.spells, 4);
+  c.mysticPriorityPP = 1;
+  assert.equal(derive(c).slots.powerPoints, 2);
+  assert.equal(derive(c).slots.spells, 2);
+  c.mysticPriorityPP = 3;
+  assert.ok(validate(c).some((i) => /Reallocate priority Magic/.test(i.text)));
+});
+
+test("changing from Human to Elf invalidates the seventh Edge rank even with Edge burn", () => {
+  const c = probe();
+  c.priorities = { metatype: "C", attributes: "A", skills: "B", magic: "E", resources: "D" };
+  c.adjEdge = 6;
+  const edgeIssue = () => validate(c).some((i) => /Edge exceeds/.test(i.text));
+  assert.equal(edgeIssue(), false);
+  c.metatype = "elf";
+  c.edgeBurned = 1;
+  reconcile(c);
+  assert.equal(edgeIssue(), true);
+  c.adjEdge--;
+  assert.equal(edgeIssue(), false);
+});
+
+test("an aspected magician needs Sorcery or Enchanting to learn spells", () => {
+  const c = probe();
+  c.magicType = "aspected";
+  c.spells = ["Heal"];
+  for (const skill of ["conjuring", "sorcery", "enchanting"]) {
+    c.skills = { [skill]: { pts: 1, kar: 0 } };
+    assert.equal(validate(c).some((i) => /Spells require/.test(i.text)), skill === "conjuring");
+  }
+  c.skills.enchanting.pts = 0;
+  assert.ok(validate(c).some((i) => /Spells require/.test(i.text)));
+});
+
+test("unspent skill and knowledge points and excess quality Karma block completion", () => {
+  const c = probe();
+  assert.ok(validate(c).some((i) => i.level === "error" && /skill point.*unspent/.test(i.text)));
+  assert.ok(validate(c).some((i) => i.level === "error" && /knowledge point.*unspent/.test(i.text)));
+  c.knowledge.push({ id: "k", name: "Seattle", kind: "knowledge" });
+  assert.ok(!validate(c).some((i) => /knowledge point.*unspent/.test(i.text)));
+
+  c.qualities.push({ id: "q", name: "Test quality", kind: "negative", karma: 20, level: 1 });
+  assert.ok(!validate(c).some((i) => i.where === "Qualities"));
+  c.qualities[0].karma++;
+  assert.ok(validate(c).some((i) => i.where === "Qualities" && i.level === "error"));
 });

@@ -165,6 +165,10 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
           <p className="mt-2 text-xs text-faint">Casting is Sorcery + Magic. Each sustained spell costs 2 dice on every test. Spells from outside the core book take a drain value you type in.</p>
         </Box>
 
+        {!!c.rituals?.length && (
+          <Box title="Rituals"><ul className="space-y-1">{c.rituals.map((name) => <li key={name}>{name}</li>)}</ul></Box>
+        )}
+
         <Box title="Spirits" right={<span className={clsx("num text-xs", forceTotal > forceCap ? "text-danger" : "text-dim")}>Force {forceTotal} / {forceCap}</span>}>
           <div className="no-print mb-3 flex flex-wrap items-center gap-2">
             <select className="field !w-28" aria-label="Spirit type" value={spirit.type} onChange={(ev) => setSpirit({ ...spirit, type: ev.target.value })}>{SPIRITS.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>

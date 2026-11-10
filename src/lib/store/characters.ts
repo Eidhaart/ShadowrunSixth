@@ -3,7 +3,8 @@ import { isPortrait } from "@/lib/portrait";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { newCharacter, type Character } from "@/lib/sr6/character";
-import { budget, derive } from "@/lib/sr6/derive";
+import { budget, derive, validate } from "@/lib/sr6/derive";
+import { rules } from "@/lib/house/rules";
 
 interface RunnersState {
   runners: Record<string, Character>;
@@ -47,8 +48,10 @@ export const useRunners = create<RunnersState>()(
       discardDraft: () => set({ draft: null }),
       finishDraft: () => {
         const d = get().draft;
-        if (!d) return null;
+        if (!d || validate(d).some((issue) => issue.level === "error")) return null;
         const done = { ...clone(d), stage: "complete" as const, updatedAt: Date.now() };
+        const derived = derive(done);
+        if (done.magicType === "mystic") done.mysticPriorityPP ??= derived.slots.mysticPriorityPP;
         const prev = get().runners[done.id];
         if (prev) {
           // Editing a runner that is already in play: keep the play state.
@@ -62,10 +65,10 @@ export const useRunners = create<RunnersState>()(
         } else {
           // Start play with a full Edge pool, the unspent Karma and the leftover nuyen.
           const b = budget(done);
-          done.edgeCurrent = derive(done).edge;
-          done.karmaEarned = Math.max(0, b.karma.left);
+          done.edgeCurrent = derived.edge;
+          done.karmaEarned = Math.min(rules().maxUnspent, b.karma.left);
           done.karmaSpent = 0;
-          done.nuyen = Math.max(0, b.nuyen.left);
+          done.nuyen = Math.min(rules().maxStartingNuyen, b.nuyen.left);
         }
         set((s) => ({ runners: { ...s.runners, [done.id]: done }, draft: null }));
         return done;

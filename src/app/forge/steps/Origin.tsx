@@ -33,13 +33,15 @@ export function Origin({ c, patch }: StepProps) {
     x.magicType = t;
     x.adjMagic = 0;
     x.karMagic = 0;
+    delete x.mysticPriorityPP;
+    if (t === "mundane" || t === "technomancer" || t === "adept") x.rituals = [];
     if (t === "mundane" || t === "technomancer") { x.spells = []; x.adeptPowers = []; }
     if (t !== "technomancer") x.complexForms = [];
     if (t === "adept") x.spells = [];
     for (const id of ["sorcery", "conjuring", "enchanting", "astral", "tasking"]) delete x.skills[id];
   });
 
-  const edgeCap = meta.ranges.edge[1] - 1; // ranks above the free 1
+  const edgeCap = meta.ranges.edge[1] - 1 - c.karEdge; // ranks above the free 1
   const magicCap = 6 - d.magicPriorityRating;
 
   return (
@@ -100,7 +102,7 @@ export function Origin({ c, patch }: StepProps) {
             <div className="font-display font-semibold">Edge</div>
             <Segments value={d.edge} max={meta.ranges.edge[1]} base={meta.ranges.edge[1]} />
           </div>
-          <Stepper label="Edge" value={c.adjEdge} min={0} max={edgeCap} disableUp={b.adjustment.left <= 0} onChange={(v) => patch((x) => { x.adjEdge = v; })} />
+          <Stepper label="Edge" value={c.adjEdge} min={0} max={Math.max(0, edgeCap)} disableUp={b.adjustment.left <= 0 || c.adjEdge >= edgeCap} onChange={(v) => patch((x) => { x.adjEdge = v; })} />
         </div>
         {hasMagic && (
           <div className="panel quiet flex items-center justify-between gap-3 p-3">

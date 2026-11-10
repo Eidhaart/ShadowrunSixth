@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRulebook } from "@/lib/store/rulebook";
 import { uid, type GearItem } from "@/lib/sr6/character";
 import { LIFESTYLES } from "@/lib/sr6/data";
-import { budget, derive } from "@/lib/sr6/derive";
+import { budget, creationGearPrice, derive } from "@/lib/sr6/derive";
 import { Budget, Field, Note, StepHeader, Stepper, type StepProps } from "../ui";
 import clsx from "clsx";
 import { GearBrowser, useGearDrop } from "@/components/compendium/GearBrowser";
-import { addToRunner } from "@/lib/compendium/catalog";
+import { addToRunner, catalogGear } from "@/lib/compendium/catalog";
 import type { CompItem } from "@/lib/compendium/types";
 
 const CATS: { id: GearItem["category"]; label: string }[] = [
@@ -37,29 +37,42 @@ export function GearStep({ c, patch }: StepProps) {
   const [lookup, setLookup] = useState("");
   const [contact, setContact] = useState({ name: "", role: "", connection: 1, loyalty: 1 });
   const [bought, setBought] = useState("");
-  const buy = (i: CompItem, qty: number) => { patch((x) => { addToRunner(x, i, { pay: false, qty }); }); setBought(`${i.name}${qty > 1 ? ` ×${qty}` : ""} added.`); };
-  const { over, props: drop } = useGearDrop((i) => { if ((i.avail ?? 0) > rules().creationAvail) setBought(`${i.name} has Availability ${i.avail}: not allowed at creation.`); else buy(i, 1); });
+  const { creationAvail, maxStartingNuyen } = rules();
+  const purchaseIssue = (g: Omit<GearItem, "id">, qty: number) => {
+    if (g.avail != null && g.avail > creationAvail) return `${g.name} exceeds the Availability limit of ${creationAvail}.`;
+    if (creationGearPrice(c.metatype, g) * qty > b.nuyen.left) return `Not enough nuyen for ${g.name}.`;
+  };
+  const buy = (i: CompItem, qty: number) => {
+    const issue = purchaseIssue(catalogGear(i), qty);
+    if (issue) { setBought(issue); return; }
+    patch((x) => { addToRunner(x, i, { pay: false, qty }); });
+    setBought(`${i.name}${qty > 1 ? ` ×${qty}` : ""} added.`);
+  };
+  const { over, props: drop } = useGearDrop((i) => buy(i, 1));
 
   const names = useMemo(() => (book?.sections ?? []).filter((s) => s.chapter === "Gear" && s.level >= 2 && /^[A-Z0-9]/.test(s.title) && s.title.length < 40).slice(0, 700).map((s) => s.title), [book]);
-  const hits = useMemo(() => (lookup.trim().length > 1 ? search(lookup, ["gear"], 5) : []), [lookup, search, book]);
+  const hits = lookup.trim().length > 1 ? search(lookup, ["gear"], 5) : [];
 
   const add = () => {
-    if (!item.name.trim()) return;
+    if (!item.name.trim() || item.avail == null) return;
+    const issue = purchaseIssue(item, item.qty);
+    if (issue) { setBought(issue); return; }
     const g: GearItem = { ...item, id: uid("g"), name: item.name.trim() };
     if (item.category === "weapon") g.ar = ar.map((v) => (v === "" ? null : Number(v))) as GearItem["ar"];
     patch((x) => { x.gear.push(g); });
+    setBought(`${g.name} added.`);
     setItem(blank());
     setAr(["", "", "", "", ""]);
   };
 
   return (
     <div>
-      <StepHeader title="Gear and lifestyle" lead="Spend your nuyen. Nothing with an Availability of 7 or higher at creation. Shop the compendium below or enter items by hand; armor, weapons and augmentations feed straight into your sheet." rule={/^Gear Stats$/i} />
+      <StepHeader title="Gear and lifestyle" lead={`Shop the compendium or enter gear by hand. The creation Availability limit is ${creationAvail}.`} rule={/^Gear Stats$/i} />
       <div className="mb-5 grid max-w-2xl gap-4 sm:grid-cols-2">
         <Budget label="Nuyen left" left={b.nuyen.left} total={b.nuyen.total} />
         <div className="text-xs text-dim">Gear <b className="num text-fg">{b.nuyen.gear.toLocaleString("en-US")}¥</b> · Lifestyle <b className="num text-fg">{b.nuyen.lifestyle.toLocaleString("en-US")}¥</b>{b.nuyen.fromKarma > 0 && <> · From Karma <b className="num text-fg">{b.nuyen.fromKarma.toLocaleString("en-US")}¥</b></>}</div>
       </div>
-      {b.nuyen.left > 5000 && <div className="mb-4"><Note tone="warn">You can start with at most 5,000¥ unspent. Buy more or lifestyle.</Note></div>}
+      {b.nuyen.left > maxStartingNuyen && <div className="mb-4"><Note tone="warn">Nuyen above {maxStartingNuyen.toLocaleString("en-US")}¥ is lost when you finish.</Note></div>}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="space-y-5">
@@ -67,7 +80,7 @@ export function GearStep({ c, patch }: StepProps) {
             <h3 className="mb-1 text-lg font-semibold">Shop the compendium</h3>
             <p className="mb-3 text-xs text-dim">Prices come off your nuyen budget automatically. Items with Availability {rules().creationAvail + 1} or more are locked at creation.</p>
             <div className="flex max-h-[34rem] min-h-80 flex-col">
-              <GearBrowser compact creation onAdd={buy} addLabel="Buy" nuyen={b.nuyen.left} />
+              <GearBrowser compact creation={c.metatype} onAdd={buy} addLabel="Buy" nuyen={b.nuyen.left} />
             </div>
             {bought && <p className="mt-2 text-sm text-ok" role="status">{bought}</p>}
           </section>
@@ -98,6 +111,24 @@ export function GearStep({ c, patch }: StepProps) {
                 <Field label="Cost (¥)"><input className="field num" type="number" min={0} value={item.cost} onChange={(e) => setItem({ ...item, cost: Math.max(0, Number(e.target.value) || 0) })} /></Field>
                 <Field label="Qty"><input className="field num" type="number" min={1} value={item.qty} onChange={(e) => setItem({ ...item, qty: Math.max(1, Number(e.target.value) || 1) })} /></Field>
               </div>
+              <Field label="Availability">
+                <input className="field num" type="number" min={0} step={1} value={item.avail ?? ""} onChange={(e) => {
+                  const value = e.target.valueAsNumber;
+                  setItem({ ...item, avail: Number.isInteger(value) && value >= 0 ? value : undefined });
+                }} />
+              </Field>
+              <Field label="Legality">
+                <select className="field" value={item.legal ?? ""} onChange={(e) => {
+                  const value = e.target.value;
+                  setItem({ ...item, legal: value === "L" || value === "I" ? value : undefined });
+                }}><option value="">Unrestricted</option><option value="L">License required</option><option value="I">Illegal</option></select>
+              </Field>
+              {c.metatype === "dwarf" && <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={item.fitted ?? (item.category === "armor")} onChange={(e) => setItem({ ...item, fitted: e.target.checked })} /> Fitted gear
+              </label>}
+              {(c.metatype === "dwarf" || c.metatype === "troll") && <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={item.priceIncludesMarkup ?? false} onChange={(e) => setItem({ ...item, priceIncludesMarkup: e.target.checked })} /> Price already includes size markup
+              </label>}
               {item.category === "armor" && <Field label="Armor rating (adds to Defense Rating)"><input className="field num" type="number" min={0} value={item.armor ?? 0} onChange={(e) => setItem({ ...item, armor: Math.max(0, Number(e.target.value) || 0), worn: true })} /></Field>}
               {(item.category === "cyberware" || item.category === "bioware") && <Field label="Essence cost"><input className="field num" type="number" step="0.05" min={0} value={item.essence ?? 0} onChange={(e) => setItem({ ...item, essence: Math.max(0, Number(e.target.value) || 0) })} /></Field>}
               {item.category === "weapon" && (
@@ -110,7 +141,7 @@ export function GearStep({ c, patch }: StepProps) {
                   </div>
                 </>
               )}
-              <div className="sm:col-span-2"><button className="btn primary" onClick={add} disabled={!item.name.trim()}>Add to gear</button></div>
+              <div className="sm:col-span-2"><button className="btn primary" onClick={add} disabled={!item.name.trim() || item.avail == null}>Add to gear</button></div>
             </div>
           </section>
         </div>
@@ -124,7 +155,8 @@ export function GearStep({ c, patch }: StepProps) {
                 <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <div className="min-w-0">
                     <div className="font-display font-semibold">{g.name}</div>
-                    <div className="text-xs text-dim">{CATS.find((k) => k.id === g.category)?.label} · {(g.cost * g.qty).toLocaleString("en-US")}¥
+                    <div className="text-xs text-dim">{CATS.find((k) => k.id === g.category)?.label} · {(creationGearPrice(c.metatype, g) * g.qty).toLocaleString("en-US")}¥
+                      {g.avail != null ? ` · Availability ${g.avail}${g.legal ?? ""}` : ""}
                       {g.armor ? ` · Armor ${g.armor}` : ""}{g.dv ? ` · DV ${g.dv}` : ""}{g.essence ? ` · Essence ${g.essence}` : ""}</div>
                   </div>
                   <div className="flex items-center gap-2">
