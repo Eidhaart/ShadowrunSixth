@@ -77,7 +77,25 @@ export interface GearItem {
   essence?: number;
   /** Rating bonuses from the item, e.g. wired reflexes. */
   effect?: QualityEffect;
+  /** Capacity this item offers for modifications (cybereyes, cyberlimbs, armor, goggles). */
+  capacity?: number;
+  /** Capacity it takes up when installed in something: the number the book prints in brackets. */
+  capCost?: number;
+  /** What kind of modification it can hold. Any weapon can take weapon accessories. */
+  holds?: GearSlot;
+  /** What it can be installed in or attached to. */
+  fits?: GearSlot;
+  /** The item it is installed in or attached to. */
+  inId?: string;
+  /** Weapon accessories: the mount they take. */
+  mount?: "top" | "under" | "barrel" | "top-under";
+  /** The weapon has a smartgun system built in. */
+  smartgun?: boolean;
+  /** "L" needs a license, "I" is illegal. */
+  legal?: "L" | "I";
 }
+
+export type GearSlot = "eyes" | "ears" | "limb" | "armor" | "optical" | "audio" | "weapon";
 
 export interface Contact {
   id: string;

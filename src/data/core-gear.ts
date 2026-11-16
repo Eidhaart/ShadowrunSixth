@@ -32,7 +32,7 @@ export const ARMOR: [string, number, number, string, number, string][] = [
  * Cyberware and bioware (p. 285–295). essence and cost may scale with rating: [base, perRating].
  * maxRating 0 means a single item.
  */
-export interface AugRow { name: string; group: string; ess: number; essPerRating?: boolean; cap?: string; avail: string; cost: number; costPerRating?: boolean; ratings?: [number, number]; plus?: string }
+export interface AugRow { name: string; group: string; ess: number; essPerRating?: boolean; cap?: string; avail: string; cost: number; costPerRating?: boolean; ratings?: [number, number]; plus?: string; /** Availability equals the rating; `avail` then only carries the legality. */ availPerRating?: boolean }
 
 export const CYBERWARE: AugRow[] = [
   // headware (cyberjacks come from the gear list)
@@ -93,6 +93,11 @@ export const CYBERWARE: AugRow[] = [
       { name: `${n}, synthetic`, group: "Cyberlimb", ess: e, cap: String(scap), avail: a, cost: sc },
       { name: `${n}, obvious`, group: "Cyberlimb", ess: e, cap: String(ocap), avail: a, cost: oc },
     ]),
+  // p. 289: Agility and Strength increases count only when the limb is used; armor always adds to Defense Rating
+  { name: "Cyberlimb armor", group: "Cyberlimb accessory", ess: 0, cap: "[Rating]", avail: "(L)", availPerRating: true, cost: 5000, costPerRating: true, ratings: [1, 4] },
+  { name: "Cyberlimb Agility increase", group: "Cyberlimb accessory", ess: 0, cap: "[Rating]", avail: "", availPerRating: true, cost: 5000, costPerRating: true, ratings: [1, 4] },
+  { name: "Cyberlimb Strength increase", group: "Cyberlimb accessory", ess: 0, cap: "[Rating]", avail: "", availPerRating: true, cost: 5000, costPerRating: true, ratings: [1, 4] },
+  { name: "Cyberlimb hydraulic jacks", group: "Cyberlimb accessory", ess: 0, cap: "[Rating]", avail: "4", cost: 2500, costPerRating: true, ratings: [1, 6] },
   { name: "Cyberlimb gyromount", group: "Cyberlimb accessory", ess: 0, cap: "[8]", avail: "5(I)", cost: 6000 },
   { name: "Cyberlimb slide", group: "Cyberlimb accessory", ess: 0, cap: "[3]", avail: "5(L)", cost: 3000 },
   { name: "Cyberlimb holster", group: "Cyberlimb accessory", ess: 0, cap: "[5]", avail: "4", cost: 2000 },
@@ -197,6 +202,8 @@ export const DRONES: VehRow[] = [
   ["GM-Nissan Flip-Flop", "Minidrone", "2/4", 8, 15, 50, 1, 0, 2, 1, "—", "2", 1000],
   ["Shiawase Inu", "Minidrone", "2/3", 6, 8, 24, 1, 0, 2, 2, "—", "2", 1100],
   ["Horizon Flying Eye", "Minidrone", "3", 15, 15, 40, 1, 0, 2, 2, "—", "2", 2000],
+  // Seattle pages: a Flying Eye with its modification space filled with mapping sensors
+  ["Horizon MapMaster drone", "Minidrone", "3", 15, 15, 40, 1, 0, 2, 2, "—", "5", 3500],
   ["MCT Hornet", "Minidrone", "3", 20, 15, 35, 1, 0, 2, 2, "—", "2", 2100],
   ["Chrysler-Nissan Pursuit V", "Small drone", "3/6", 30, 50, 280, 4, 2, 4, 3, "—", "3", 11000],
   ["Aztechnology Crawler", "Small drone", "3/4", 8, 10, 30, 6, 2, 2, 2, "—", "2", 4500],

@@ -32,8 +32,8 @@ import { ARMOR, BIOWARE, CYBERWARE, DRONES, VEHICLES } from "../src/data/core-ge
 test("core tables are complete and priced", () => {
   assert.equal(ARMOR.length, 13);
   assert.equal(VEHICLES.length, 30);
-  assert.equal(DRONES.length, 21);
-  assert.ok([...CYBERWARE, ...BIOWARE].every((r) => r.cost > 0 && r.avail));
+  assert.equal(DRONES.length, 22); // 21 in the core tables and the MapMaster drone from the Seattle pages
+  assert.ok([...CYBERWARE, ...BIOWARE].every((r) => r.cost > 0 && (r.avail || r.availPerRating)));
   assert.ok([...VEHICLES, ...DRONES].every((v) => v[12] > 0));
 });
 

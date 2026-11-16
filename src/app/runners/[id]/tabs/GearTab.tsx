@@ -9,6 +9,8 @@ import { Icon } from "@/components/Icon";
 import { uid, type GearItem } from "@/lib/sr6/character";
 import { LIFESTYLES, SKILLS } from "@/lib/sr6/data";
 import { Box, Empty, Num, Stepper } from "./ui";
+import { ordered } from "@/lib/sr6/loadout";
+import { HostNote, InstallSelect } from "@/components/gear/Install";
 import type { SheetCtx } from "./ctx";
 
 const CATS: { id: GearItem["category"]; label: string }[] = [
@@ -17,10 +19,10 @@ const CATS: { id: GearItem["category"]; label: string }[] = [
 ];
 const RANGES = ["Close", "Near", "Medium", "Far", "Extreme"];
 
-function ItemRow({ ctx, g }: { ctx: SheetCtx; g: GearItem }) {
+function ItemRow({ ctx, g, nested }: { ctx: SheetCtx; g: GearItem; nested?: boolean }) {
   const set = (fn: (t: GearItem) => void) => ctx.upd((x) => { const t = x.gear.find((q) => q.id === g.id); if (t) fn(t); });
   return (
-    <li className="py-2">
+    <li className={clsx("py-2", nested && "border-l-2 border-accent/40 pl-3")}>
       <div className="flex flex-wrap items-center gap-2">
         <input className="field !min-h-0 min-w-32 flex-1 !py-1 font-display font-semibold" value={g.name} aria-label="Item name" onChange={(ev) => set((t) => { t.name = ev.target.value; })} />
         <Stepper label={`${g.name} quantity`} value={g.qty} min={1} max={99} onChange={(n) => set((t) => { t.qty = n; })} />
@@ -28,6 +30,10 @@ function ItemRow({ ctx, g }: { ctx: SheetCtx; g: GearItem }) {
           <button className={clsx("btn small", g.worn !== false && "primary")} aria-pressed={g.worn !== false} onClick={() => set((t) => { t.worn = t.worn === false; })}>{g.worn !== false ? "Worn" : "Stowed"}</button>
         )}
         <button className="btn ghost small" aria-label={`Remove ${g.name}`} onClick={() => ctx.upd((x) => { x.gear = x.gear.filter((q) => q.id !== g.id); })}>×</button>
+      </div>
+      <div className="mt-1 space-y-1">
+        <HostNote c={ctx.c} g={g} />
+        <InstallSelect c={ctx.c} g={g} onChange={(id) => set((t) => { t.inId = id; })} />
       </div>
       <details className="mt-1">
         <summary className="cursor-pointer text-xs text-dim">
@@ -117,7 +123,7 @@ export function GearTab({ ctx }: { ctx: SheetCtx }) {
           {CATS.filter((k) => c.gear.some((g) => g.category === k.id)).map((k) => <button key={k.id} className={clsx("chip cursor-pointer", cat === k.id && "!border-accent !text-accent")} onClick={() => setCat(k.id)}>{k.label}</button>)}
         </div>
         <ul className="divide-y divide-line">
-          {items.map((g) => <ItemRow key={g.id} ctx={ctx} g={g} />)}
+          {ordered(c, items).map(({ g, host }) => <ItemRow key={g.id} ctx={ctx} g={g} nested={!!host} />)}
           {items.length === 0 && <li className="py-2"><Empty>Nothing here yet.</Empty></li>}
         </ul>
         <form className="no-print mt-3 flex flex-wrap gap-2" onSubmit={(ev) => { ev.preventDefault(); addItem(); }}>

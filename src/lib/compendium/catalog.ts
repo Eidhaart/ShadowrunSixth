@@ -6,6 +6,7 @@ import core from "@/data/gear-core.json";
 import { RATED, withBookFix } from "@/data/book-fixes";
 import { COMMLINKS, CYBERDECKS, CYBERJACKS, RCCS } from "@/lib/sr6/rules6";
 import { editExt, newVehicle } from "@/lib/sr6/ext";
+import { hostsFor, roomFor } from "@/lib/sr6/loadout";
 import { uid, type Character, type GearItem } from "@/lib/sr6/character";
 import { fixCat, type CompItem } from "./types";
 import { ARMOR, BIOWARE, CYBERWARE, DRONES, FOCI, FORMULAS, VEHICLES, av, type AugRow, type VehRow } from "@/data/core-gear";
@@ -78,7 +79,7 @@ export function implantEffect(name: string, rating: number): QualityEffect | und
   if (/^muscle augmentation/i.test(name)) return { attr: { strength: r } };
   if (/^muscle toner/i.test(name)) return { attr: { agility: r } };
   if (/^cerebral booster/i.test(name)) return { attr: { logic: r } };
-  if (/^(dermal plating|orthoskin)/i.test(name)) return { defense: r };
+  if (/^(dermal plating|orthoskin|cyberlimb armor)/i.test(name)) return { defense: r };
   if (/^suprathyroid gland/i.test(name)) return { attr: { agility: 1, body: 1, reaction: 1, strength: 1 }, lifestyleMult: 1.25 };
   return undefined;
 }
@@ -127,10 +128,24 @@ function moreTables(regularAmmo: CompItem[]): CompItem[] {
         ...(m.s ?? []).map(([k, v]) => [k, v.replace("Rating", String(r || "R"))] as [string, string]),
       ];
       const category = m.gc ?? (dv ? "weapon" : m.cat === "armor" ? "armor" : m.cat === "ammo" ? "ammo" : "misc");
+      const capStat = stats.find(([k]) => k === "Capacity")?.[1] ?? "";
+      const bracket = /^\[(\d+)\]$/.exec(capStat);
+      const offers = /^\d+$/.test(capStat) ? Number(capStat) : 0;
+      const mountStat = (m.s ?? []).find(([k]) => k === "Mount")?.[1];
+      const fit: Partial<GearItem> =
+        m.g === "Armor modification" ? (bracket ? { capCost: Number(bracket[1]), fits: "armor" } : {})
+        : m.g === "Visual enhancement" ? { capCost: Number(bracket?.[1] ?? 1), fits: "optical" }
+        : m.g === "Audio enhancement" ? { capCost: Number(bracket?.[1] ?? 1), fits: "audio" }
+        : m.g === "Optical device" && offers ? { capacity: offers, holds: "optical" }
+        : m.g === "Audio device" && offers ? { capacity: offers, holds: "audio" }
+        : m.cat === "armor" && m.dr && offers ? { capacity: offers, holds: "armor" }
+        : m.g === "Weapon accessory" && (mountStat || /^(airburst link|shock pad|smartgun system, internal)$/i.test(m.n))
+          ? { fits: "weapon", ...(mountStat ? { mount: mountStat === "Top" ? "top" : mountStat === "Under" ? "under" : mountStat === "Barrel" ? "barrel" : "top-under" } : {}) }
+        : {};
       out.push({
         id: `${m.cat}-${slug(name)}`, name, cat: m.cat, group: m.g, cost, per: m.per, avail, legal, stats, source: "built-in", book: "Core", page: m.p,
         ...(dv ? { dv, ar, skill: m.skill } : {}),
-        gear: { name, category, cost, qty: 1, ...(dv ? { dv, ar: ar as GearItem["ar"], skill: m.skill } : {}), ...(m.dr ? { armor: m.dr, worn: true } : {}) },
+        gear: { name, category, cost, qty: 1, ...(dv ? { dv, ar: ar as GearItem["ar"], skill: m.skill } : {}), ...(m.dr ? { armor: m.dr, worn: true } : {}), ...fit },
       });
     }
   }
@@ -154,21 +169,28 @@ function coreTables(): CompItem[] {
     const { avail, legal } = av(a);
     out.push({ id: `armor-${slug(name)}`, name, cat: "armor", group, cost, avail, legal, source: "built-in", book: "Core", page: group === "Armor" ? 267 : 268,
       stats: [["Defense", `+${dr}`], ["Capacity", String(cap)]],
-      gear: { name, category: "armor", cost, qty: 1, armor: dr, worn: group === "Armor" && name !== "Full body armor helmet" ? true : undefined } });
+      gear: { name, category: "armor", cost, qty: 1, armor: dr, worn: group === "Armor" && name !== "Full body armor helmet" ? true : undefined, ...(cap ? { capacity: cap, holds: "armor" as const } : {}) } });
   }
   const aug = (r: AugRow, cat: "cyberware" | "bioware") => {
-    const { avail, legal } = av(r.avail);
+    const base = av(r.avail);
+    const legal = base.legal;
     const [lo, hi] = r.ratings ?? [0, 0];
     for (let rating = lo; rating <= hi; rating++) {
       const name = rating ? `${r.name}, rating ${rating}` : r.name;
       const ess = r.essPerRating && rating ? r.ess * rating : r.ess;
       const cost = r.costPerRating && rating ? r.cost * rating : r.cost;
+      const avail = r.availPerRating ? rating : base.avail;
       const stats: [string, string][] = [["Essence", essText(ess)]];
+      // "[n]" is Capacity the implant takes inside cybereyes, cyberears or a limb; a bare number is Capacity it offers
+      const bracket = /^\[(.+)\]$/.exec(r.cap ?? "");
+      const fit: Partial<GearItem> = bracket
+        ? { capCost: bracket[1] === "Rating" ? rating : Number(bracket[1]), fits: r.group === "Eyeware" ? "eyes" : r.group === "Earware" ? "ears" : "limb" }
+        : r.cap && Number(r.cap) > 0 ? { capacity: Number(r.cap), holds: r.group === "Eyeware" ? "eyes" : r.group === "Earware" ? "ears" : "limb" } : {};
       if (r.cap) stats.push(["Capacity", r.cap.replace("Rating", String(rating || "R"))]);
       if (r.plus) stats.push(["Plus", r.plus]);
-      const effect = implantEffect(r.name, rating || Number(/rating (\d+)/.exec(r.name)?.[1] ?? 1));
+      const effect = r.group === "Cyberlimb" ? { physicalBoxes: 1 } : implantEffect(r.name, rating || Number(/rating (\d+)/.exec(r.name)?.[1] ?? 1));
       out.push({ id: `${cat}-${slug(name)}`, name, cat, group: r.group, cost, avail: r.group === "Cyberlimb accessory" ? avail : avail, legal, source: "built-in", book: "Core", page: cat === "bioware" ? 294 : 285,
-        stats, essence: ess, gear: { name, category: cat, cost, qty: 1, essence: ess, ...(effect ? { effect } : {}) } });
+        stats, essence: ess, gear: { name, category: cat, cost, qty: 1, essence: ess, ...(effect ? { effect } : {}), ...fit } });
     }
   };
   for (const r of CYBERWARE) aug(r, "cyberware");
@@ -287,6 +309,29 @@ export function useCatalog(): CoreItem[] {
   }, [imported, house, mine]);
 }
 
+const EST_NOTE = "Not in the gear list yet; check the price in the book.";
+let byName: Map<string, CompItem> | null = null;
+const nameKey = (n: string) => n.toLowerCase().replace(/\s*\(rating (\d+)\)/, ", rating $1").replace(/\s+/g, " ").trim();
+
+/**
+ * Gear saved before the catalog knew about Capacity, mounts, licenses and implant bonuses: fill those in
+ * from the catalog entry of the same name. Nothing the player set is overwritten.
+ */
+export function backfillGear(gear: GearItem[]): void {
+  byName ??= new Map(BUILT_IN.map((i) => [nameKey(i.name), i]));
+  for (const g of gear) {
+    const hit = byName.get(nameKey(g.name));
+    if (!hit) continue;
+    const t = hit.gear;
+    if (g.legal == null && hit.legal) g.legal = hit.legal;
+    if (g.smartgun == null && hit.cat === "weapons" && hit.stats.some(([k, v]) => k === "Smartgun" && /yes/i.test(v))) g.smartgun = true;
+    for (const k of ["capacity", "capCost", "holds", "fits", "mount"] as const) if (g[k] == null && t[k] != null) (g as unknown as Record<string, unknown>)[k] = t[k];
+    if ((g.category === "cyberware" || g.category === "bioware") && !g.effect && t.effect) g.effect = JSON.parse(JSON.stringify(t.effect));
+    // an estimate entered before the item was in the catalog takes the book price
+    if (g.notes === EST_NOTE && hit.cost != null) { g.cost = hit.cost; delete g.notes; }
+  }
+}
+
 export function findItem(list: CompItem[], id: string): CompItem | undefined {
   const hit = list.find((i) => i.id === id);
   if (hit) return hit;
@@ -307,8 +352,23 @@ export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; 
   const price = (item.cost ?? 0) * qty;
   if (opts.pay && price > c.nuyen) return { ok: false, msg: `${item.name} costs ${price.toLocaleString("en-US")}¥; ${c.alias || c.name || "the runner"} has ${c.nuyen.toLocaleString("en-US")}¥.` };
   const same = c.gear.find((g) => g.name === item.gear.name && g.category === item.gear.category && g.cost === item.gear.cost);
-  if (same && item.cat !== "cyberware" && item.cat !== "bioware" && !item.vehicle) same.qty += qty;
-  else c.gear.push({ ...(JSON.parse(JSON.stringify(item.gear)) as Omit<GearItem, "id">), id: uid("g"), qty });
+  let added: GearItem | undefined;
+  if (same && item.cat !== "cyberware" && item.cat !== "bioware" && !item.vehicle && !item.gear.fits && !item.gear.holds) same.qty += qty;
+  else {
+    added = {
+      ...(JSON.parse(JSON.stringify(item.gear)) as Omit<GearItem, "id">), id: uid("g"), qty,
+      ...(item.legal ? { legal: item.legal } : {}),
+      ...(item.cat === "weapons" && item.stats.some(([k, v]) => k === "Smartgun" && /yes/i.test(v)) ? { smartgun: true } : {}),
+    };
+    c.gear.push(added);
+  }
+  backfillGear(c.gear);
+  // a modification goes straight into the one thing that can take it; with a choice, the player picks
+  let installed = "";
+  if (added?.fits && added.fits !== "weapon") {
+    const open = hostsFor(c, added).filter((h) => roomFor(c, h, added!));
+    if (open.length === 1) { added.inId = open[0].id; installed = open[0].name; }
+  }
   // integrated parts come with the weapon, one set per weapon
   for (const part of item.parts ?? []) {
     const have = c.gear.find((g) => g.name === part.name);
@@ -339,6 +399,6 @@ export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; 
     equipped = "rig";
   }
   const paid = opts.pay && price ? ` for ${price.toLocaleString("en-US")}¥` : "";
-  const where = equipped === "focus" ? ` It is on the Magic tab; bond it there.` : equipped === "rig" ? ` It is on the Rigging tab.` : equipped ? ` Equipped as the ${equipped} on the ${equipped === "console" ? "Rigging" : "Matrix"} tab.` : "";
+  const where = installed ? ` Installed in the ${installed}.` : added?.fits ? ` Choose what it goes ${added.fits === "weapon" ? "on" : "in"} from your gear list.` : equipped === "focus" ? ` It is on the Magic tab; bond it there.` : equipped === "rig" ? ` It is on the Rigging tab.` : equipped ? ` Equipped as the ${equipped} on the ${equipped === "console" ? "Rigging" : "Matrix"} tab.` : "";
   return { ok: true, msg: `${item.name} added${paid}.${where}` };
 }

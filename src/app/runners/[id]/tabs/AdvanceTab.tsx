@@ -1,4 +1,6 @@
 "use client";
+import { MetaPick } from "@/components/MetaPick";
+import { gradeChoices } from "@/lib/sr6/data";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -283,7 +285,7 @@ export function AdvanceTab({ ctx }: { ctx: SheetCtx }) {
               <div className={clsx(!casts && !techno && c.magicType !== "mystic" && "md:col-span-2")}>
                 <div className="mb-1 text-sm font-semibold">{techno ? "Submersion" : "Initiation"} <span className="text-xs font-normal text-dim">grade {o.grade}{adv.metamagic.length ? ` · ${adv.metamagic.join(", ")}` : ""}</span></div>
                 <div className="flex flex-wrap gap-2">
-                  <input className="field min-w-36 flex-1" value={meta} onChange={(e) => setMeta(e.target.value)} placeholder={techno ? "Echo (optional)" : "Metamagic (optional)"} aria-label={techno ? "Echo" : "Metamagic"} />
+                  <MetaPick value={meta} onChange={setMeta} options={gradeChoices(c.magicType)} thing={techno ? "Echo" : "Metamagic"} optional />
                   <button className="btn small primary" disabled={!o.initiate?.ok} onClick={() => { buy({ k: "initiate", meta: meta.trim() || undefined }, `${techno ? "Submerged" : "Initiated"} to grade ${o.grade + 1}`, o.initiate!.cost); setMeta(""); }}>
                     Grade {o.grade + 1} · {o.initiate?.cost}
                   </button>

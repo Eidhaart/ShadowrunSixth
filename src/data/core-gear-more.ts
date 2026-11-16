@@ -80,6 +80,11 @@ export const MORE_GEAR: MoreRow[] = [
   ] as [string, string, string, string, number][]).map(([n, dv, blast, a, c]): MoreRow => ({
     n, cat: W, g: "Rocket and missile", a, c, p: 264, gc: "ammo", per: n === "Gas rocket" ? "plus 100 doses of the chemical" : undefined,
     s: [...(dv ? [["DV GZ/close/near", dv] as [string, string]] : []), ...(blast ? [["Blast", blast] as [string, string]] : [])] })),
+  // a missile is the rocket with a sensor: Availability one higher, the sensor's rating x 500 nuyen more, +2 Attack Rating
+  ...([
+    ["Anti-vehicle missile", "12P/8P/4P", "10 m", "6(I)", 2800], ["Fragmentation missile", "16P/12P/8P", "30 m", "6(I)", 2000], ["High explosive missile", "16P/10P/4P", "20 m", "6(I)", 2100],
+  ] as [string, string, string, string, number][]).map(([n, dv, blast, a, c]): MoreRow => ({
+    n, cat: W, g: "Rocket and missile", a, c: (r) => c + r * 500, p: 264, gc: "ammo", r: [1, 6], s: [["DV GZ/close/near", dv], ["Blast", blast], ["Attack Rating", "+2"]] })),
   { n: "Explosive package", cat: W, g: "Explosives", r: [1, 20], p: 264, gc: "ammo",
     a: (r) => `${r <= 3 ? 1 : r <= 6 ? 2 : r <= 9 ? 3 : r <= 12 ? 4 : r <= 15 ? 5 : r <= 18 ? 6 : 7}(I)`,
     c: (r) => r * (r <= 3 ? 10 : r <= 6 ? 50 : r <= 9 ? 100 : r <= 12 ? 250 : r <= 15 ? 500 : r <= 18 ? 1000 : 5000) },
@@ -92,6 +97,7 @@ export const MORE_GEAR: MoreRow[] = [
   { n: "Disposable cloak", cat: "armor", g: "Clothing", a: "1", c: 5, p: 335, gc: "misc" },
   { n: "Armorweave cloak", cat: "armor", g: "Armor", a: "2", c: 200, p: 335, dr: 1, s: [["Capacity", "4"]] },
   { n: "Trés Chic cloak", cat: "armor", g: "Armor", a: "4", c: 5000, p: 335, dr: 1, s: [["Capacity", "5"]] },
+  { n: "Water-repellent coating", cat: "armor", g: "Armor modification", a: "1", c: 100, p: 335, gc: "misc", s: [["Capacity", "none"]] },
   { n: "Chemical protection", cat: "armor", g: "Armor modification", r: [1, 6], a: "3", c: x(250), p: 266, s: [["Capacity", "[Rating]"]], gc: "misc" },
   { n: "Chemical seal", cat: "armor", g: "Armor modification", a: "5", c: 3000, p: 266, s: [["Capacity", "[6]"]], gc: "misc" },
   { n: "Cold resistance", cat: "armor", g: "Armor modification", r: [1, 6], a: "3", c: x(250), p: 266, s: [["Capacity", "[Rating]"]], gc: "misc" },

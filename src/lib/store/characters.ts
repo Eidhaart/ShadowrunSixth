@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { newCharacter, type Character } from "@/lib/sr6/character";
 import { budget, derive } from "@/lib/sr6/derive";
+import { backfillGear } from "@/lib/compendium/catalog";
 
 interface RunnersState {
   runners: Record<string, Character>;
@@ -86,6 +87,7 @@ export const useRunners = create<RunnersState>()(
         }),
       importOne: (c) => {
         const copy = clone(c);
+        backfillGear(copy.gear ?? []);
         if (copy.portrait && !isPortrait(copy.portrait)) delete copy.portrait;
         if (get().runners[copy.id]) copy.id = newCharacter().id;
         copy.updatedAt = Date.now();
@@ -93,6 +95,17 @@ export const useRunners = create<RunnersState>()(
         return copy;
       },
     }),
-    { name: "sixthdeck.runners", version: 1 },
+    {
+      name: "sixthdeck.runners", version: 2,
+      // v2: gear gains Capacity, mounts, licenses and implant bonuses from the catalog
+      migrate: (state, version) => {
+        const st = state as { runners?: Record<string, Character>; draft?: Character | null };
+        if (version < 2) {
+          for (const r of Object.values(st.runners ?? {})) backfillGear(r.gear ?? []);
+          if (st.draft) backfillGear(st.draft.gear ?? []);
+        }
+        return st as never;
+      },
+    },
   ),
 );

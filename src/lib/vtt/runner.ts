@@ -4,6 +4,7 @@ import { withAdv } from "@/lib/sr6/advance";
 import { ATTRIBUTES, ATTR_ABBR, METATYPES, SKILL_BY_ID } from "@/lib/sr6/data";
 import type { Bar, BarKey, Card, Npc, Weapon } from "./types";
 import { parseDv } from "./combat";
+import { weaponAR } from "@/lib/sr6/loadout";
 
 /** Condition monitors and Edge as token bars: current is boxes left. */
 export function barsFor(raw: Character): Record<BarKey, Bar> {
@@ -46,7 +47,7 @@ export function weaponsFor(raw: Character): Weapon[] {
   };
   const out: Weapon[] = c.gear.filter((g) => g.category === "weapon").map((w) => {
     const { dv, type } = parseDv(w.dv);
-    return { name: w.name, pool: poolFor(w.skill ?? "firearms"), dv, type, ar: (w.ar ?? [null, null, null, null, null]).map((v) => (v == null ? null : v)) };
+    return { name: w.name, pool: poolFor(w.skill ?? "firearms"), dv, type, ar: weaponAR(c, w).ar };
   });
   // Unarmed: base DV 2S (Close Combat, p. 94); AR is Reaction + Strength, Close only.
   // Half Strength is the damage for the grapple option, not for a strike. Dermal Deposits makes it Physical.

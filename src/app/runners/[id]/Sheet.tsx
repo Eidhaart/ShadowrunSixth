@@ -28,6 +28,7 @@ import { RiggingTab } from "./tabs/RiggingTab";
 import { GearTab } from "./tabs/GearTab";
 import { AdvanceTab } from "./tabs/AdvanceTab";
 import { advance, withAdv } from "@/lib/sr6/advance";
+import { weaponAR } from "@/lib/sr6/loadout";
 
 const STATUSES = ["Burning", "Chilled", "Corrosive", "Dazed", "Deafened", "Fatigued", "Frightened", "Hazed", "Hobbled", "Immobilized", "Nauseated", "Panicked", "Poisoned", "Prone", "Stilled", "Wet", "Zapped"];
 const RANGES = ["Close", "Near", "Medium", "Far", "Extreme"] as const;
@@ -418,7 +419,8 @@ export function Sheet({ id }: { id: string }) {
                 {weapons.map((w) => {
                   const sk = w.skill ?? "firearms";
                   const rank = skillRank(sk);
-                  const ar0 = w.ar?.[target.range];
+                  const fitted = weaponAR(c, w); // accessories: smartgun with a smartlink, or a laser sight
+                  const ar0 = fitted.ar[target.range];
                   const ar = ar0 ?? null; // Sixth World melee weapons use their listed AR; only unarmed adds Strength
                   const base = (SKILL_BY_ID[sk] ? (rank > 0 ? rank : -1) : 0) + d.attrs[SKILL_BY_ID[sk]?.attr as AttrKey ?? "agility"];
                   const diff = ar == null ? 0 : ar - target.dr;
@@ -427,7 +429,7 @@ export function Sheet({ id }: { id: string }) {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="font-display font-semibold">{w.name}</div>
-                          <div className="num text-xs text-dim">DV {w.dv || "?"} · AR {(w.ar ?? []).map((v) => (v == null ? "—" : v)).join("/")}</div>
+                          <div className="num text-xs text-dim">DV {w.dv || "?"} · AR {fitted.ar.map((v) => (v == null ? "—" : v)).join("/")}{fitted.why && <span className="text-ok"> · {fitted.why}</span>}</div>
                           {ar == null ? <div className="text-xs text-danger">Cannot attack at {RANGES[target.range]} range.</div> : diff >= rules().edgeGap ? <div className="text-xs text-ok">AR beats DR by {diff}: you gain {rules().edgeGain} Edge.</div> : diff <= -rules().edgeGap ? <div className="text-xs text-danger">DR beats AR by {-diff}: the target gains {rules().edgeGain} Edge.</div> : null}
                         </div>
                         <div className="no-print flex shrink-0 gap-1.5">

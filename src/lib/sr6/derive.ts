@@ -1,6 +1,7 @@
 import type { Character, QualityEffect } from "./character";
 import { rules } from "@/lib/house/rules";
 import { QUALITY_EFFECTS } from "./qualities";
+import { essenceOf, loadoutIssues } from "./loadout";
 import {
   ASPECT_SKILLS,
   ATTRIBUTES,
@@ -139,7 +140,7 @@ export function derive(c: Character): Derived {
   }
 
   const essenceMult = c.qualities.reduce<number>((m, q) => Math.max(m, q.effect?.essenceMult ?? 1), 1);
-  const gearEssence = c.gear.reduce((s, g) => s + (g.essence ?? 0) * (g.qty || 1), 0) * essenceMult;
+  const gearEssence = c.gear.reduce((s, g) => s + essenceOf(c, g), 0) * essenceMult;
   const essenceUsed = c.essenceLoss + gearEssence;
   const essence = Math.max(0, +(6 - essenceUsed).toFixed(2));
   const essenceMagicLoss = essenceUsed > 0 ? Math.ceil(essenceUsed - 1e-9) : 0;
@@ -439,6 +440,11 @@ export function validate(c: Character): Issue[] {
   clash(/^reaction enhancers/i, /^synaptic booster/i, "Reaction enhancers do not work with other Reaction implants.");
   clash(/^muscle replacement/i, /^muscle (augmentation|toner)/i, "Muscle replacement does not combine with muscle augmentation or muscle toner.");
   clash(/^dermal plating/i, /^orthoskin/i, "Dermal plating does not combine with orthoskin.");
+
+  for (const i of loadoutIssues(c)) issues.push({ level: i.level, where: "Gear", text: i.text });
+  const restricted = c.gear.filter((g) => g.legal === "L");
+  if (restricted.length && !c.gear.some((g) => /licen[sc]e/i.test(g.name)))
+    issues.push({ level: "warn", where: "Gear", text: `${restricted.slice(0, 3).map((g) => g.name).join(", ")}${restricted.length > 3 ? ` and ${restricted.length - 3} more` : ""} need${restricted.length === 1 ? "s" : ""} a license: buy a fake license for each kind of restricted gear.` });
 
   // skills
   const maxSkill = (id: string) => (c.qualities.some((q) => q.name.startsWith("Aptitude") && q.note === id) ? 7 : 6);

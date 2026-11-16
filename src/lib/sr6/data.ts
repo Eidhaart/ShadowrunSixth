@@ -307,3 +307,16 @@ export const LIFESTYLES = [
 /** Karma to bond a focus, per point of Force (Magical Goods table, p. 295). */
 const BOND_PER_FORCE: Record<string, number> = { Power: 6, Weapon: 3, Enchanting: 3, Metamagic: 3, Spell: 2, Spirit: 2, Qi: 2 };
 export const bondKarma = (f: { kind: string; rating: number }) => (BOND_PER_FORCE[f.kind] ?? 2) * f.rating;
+
+/** Metamagics an initiate can learn (p. 167). Adept Centering is for adepts and mystic adepts. */
+export const METAMAGICS = ["Centering", "Fixation", "Flexible Signature", "Masking", "Quickening", "Shielding", "Spell Shaping"] as const;
+export const ADEPT_METAMAGICS = ["Adept Centering"] as const;
+/** Echoes a technomancer can take when submerging (p. 195). */
+export const ECHOES = ["Living Network", "Machine Mind", "Matrix Attribute Upgrade", "NeuroFilter", "Overclocking", "Resonance Link", "Skinlink"] as const;
+
+/** The choices for one grade of initiation or submersion. */
+export function gradeChoices(magic: MagicType): string[] {
+  if (magic === "technomancer") return [...ECHOES];
+  if (magic === "adept" || magic === "mystic") return [...ADEPT_METAMAGICS, ...METAMAGICS];
+  return [...METAMAGICS];
+}

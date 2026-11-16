@@ -5,7 +5,8 @@ import { adeptPowerList, complexFormList, spellList, type BookEntry } from "@/li
 import { derive } from "@/lib/sr6/derive";
 import { POWER_POINT } from "@/lib/sr6/advance";
 import { rules } from "@/lib/house/rules";
-import { bondKarma } from "@/lib/sr6/data";
+import { bondKarma, gradeChoices } from "@/lib/sr6/data";
+import { MetaPick } from "@/components/MetaPick";
 import { editExt } from "@/lib/sr6/ext";
 import { Budget, Note, StepHeader, type StepProps } from "../ui";
 
@@ -110,8 +111,7 @@ function Initiation({ c, patch }: StepProps) {
                 </label>
               )}
               {!/^power point$/i.test(meta[i] ?? "") && (
-                <input className="field min-w-48 flex-1" value={meta[i] ?? ""} onChange={(e) => setMeta(i, e.target.value)}
-                  placeholder={techno ? "Echo, for example Overclocking" : "Metamagic, for example Centering"} aria-label={`${thing} for grade ${i + 1}`} />
+                <MetaPick value={meta[i] ?? ""} onChange={(v) => setMeta(i, v)} options={gradeChoices(c.magicType)} thing={techno ? "Echo" : "Metamagic"} />
               )}
             </li>
           ))}

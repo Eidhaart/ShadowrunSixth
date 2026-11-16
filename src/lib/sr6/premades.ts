@@ -5,6 +5,7 @@
  *     at the first step so the player walks through and changes anything;
  *   - premade: the full runner with name, story, gear and contacts, ready to play.
  */
+import { backfillGear } from "@/lib/compendium/catalog";
 import core from "@/data/gear-core.json";
 import { withBookFix } from "@/data/book-fixes";
 import { COMMLINKS, CYBERDECKS, RCCS } from "./rules6";
@@ -213,7 +214,7 @@ export const PREMADES: Premade[] = [
     gear: [
       item("augmentations-cyberjack-2"), item("weapons-fichetti-security-600"), item("ammo-light-pistol-rounds", { qty: 4 }),
       est("Armor clothing", "armor", 500, { armor: 2, worn: true }),
-      item("identity-fake-sin", { rating: 4, name: "Fake SIN" }), item("identity-docwagon-gold-contract-1-year"),
+      item("identity-fake-sin", { rating: 4, name: "Fake SIN" }), item("identity-fake-license", { rating: 4, name: "Firearms license" }), item("identity-docwagon-gold-contract-1-year"),
       item("electronics-rfid-tags-stealth", { qty: 2 }), item("tools-tool-kit", { name: "Electronics tool kit" }),
     ],
     lifestyle: "middle", months: 9, deck: 2, link: 3,
@@ -227,7 +228,7 @@ export const PREMADES: Premade[] = [
       item("weapons-fichetti-security-600"), item("ammo-light-pistol-rounds", { qty: 2 }),
       item("magic-magical-lodge-material", { qty: 2 }), item("magic-reagent", { qty: 20, name: "Reagents (drams)" }),
       est("Lined coat", "armor", 900, { armor: 3, worn: true }),
-      item("identity-fake-sin", { rating: 3, name: "Fake SIN" }),
+      item("identity-fake-sin", { rating: 3, name: "Fake SIN" }), item("identity-fake-license", { rating: 3, name: "Firearms license" }),
     ],
     lifestyle: "low", months: 7, link: 1,
     contacts: [{ name: "Professor Hask", role: "Talismonger", connection: 3, loyalty: 3 }, { name: "Juno", role: "Fixer", connection: 3, loyalty: 1 }],
@@ -264,7 +265,7 @@ export const PREMADES: Premade[] = [
     gear: [
       item("weapons-colt-america-l36"), item("ammo-light-pistol-rounds", { qty: 2 }),
       est("Armor clothing", "armor", 500, { armor: 2, worn: true }),
-      item("identity-fake-sin", { rating: 2, name: "Fake SIN" }), item("identity-docwagon-basic-contract-1-month"),
+      item("identity-fake-sin", { rating: 2, name: "Fake SIN" }), item("identity-fake-license", { rating: 2, name: "Firearms license" }), item("identity-docwagon-basic-contract-1-month"),
     ],
     lifestyle: "low", months: 4,
     contacts: [{ name: "Patch", role: "Hardware fence", connection: 2, loyalty: 2 }, { name: "Echo", role: "Otaku mentor", connection: 2, loyalty: 2 }],
@@ -319,7 +320,7 @@ export const PREMADES: Premade[] = [
       item("weapons-ruger-super-warhawk"), item("ammo-heavy-pistol-rounds", { qty: 2 }),
       est("Lined coat", "armor", 900, { armor: 3, worn: true }),
       item("magic-reagent", { qty: 30, name: "Reagents (drams)" }), item("magic-magical-lodge-material"),
-      item("identity-fake-sin", { rating: 2, name: "Fake SIN" }), item("identity-docwagon-basic-contract-1-year"),
+      item("identity-fake-sin", { rating: 2, name: "Fake SIN" }), item("identity-fake-license", { rating: 2, name: "Firearms license" }), item("identity-docwagon-basic-contract-1-year"),
     ],
     lifestyle: "low", months: 6, link: 1,
     contacts: [{ name: "Old Saul", role: "Talismonger", connection: 2, loyalty: 3 }, { name: "Mr. Shiro", role: "Fixer", connection: 3, loyalty: 1 }],
@@ -403,6 +404,7 @@ export function fromPremade(p: Premade): Character {
   c.concept = p.concept;
   c.background = p.background;
   c.gear = p.gear.map((g) => ({ ...JSON.parse(JSON.stringify(g)), id: uid("g") }));
+  backfillGear(c.gear);
   c.lifestyle = p.lifestyle;
   c.lifestyleMonths = p.months;
   c.contacts = p.contacts.map((x) => ({ ...x, id: uid("ct") }));
