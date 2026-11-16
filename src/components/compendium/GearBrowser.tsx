@@ -7,7 +7,7 @@ import clsx from "clsx";
 import { Icon } from "@/components/Icon";
 import { useRulebook } from "@/lib/store/rulebook";
 import { COMP_CATS, RANGE_NAMES, type CompCat, type CompItem } from "@/lib/compendium/types";
-import { DRAG_TYPE, findItem, useCatalog, useGearList } from "@/lib/compendium/catalog";
+import { DRAG_TYPE, GRADES, findItem, useCatalog, useGearList, withGrade, type Grade } from "@/lib/compendium/catalog";
 
 const yen = (n: number | null) => (n == null ? "—" : `${n.toLocaleString("en-US")}¥`);
 
@@ -137,7 +137,10 @@ export interface BrowserProps {
 }
 
 export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact, hint, initialQuery }: BrowserProps) {
-  const list = useCatalog();
+  const catalog = useCatalog();
+  const [grade, setGrade] = useState<Grade>("standard");
+  // implants are listed in the chosen grade: Essence, price and Availability follow the Implant Grades table
+  const list = useMemo(() => (grade === "standard" ? catalog : catalog.map((i) => withGrade(i, grade))), [catalog, grade]);
   const [q, setQ] = useState(initialQuery ?? "");
   const [cat, setCat] = useState<CompCat | "all">("all");
   const [group, setGroup] = useState("");
@@ -205,6 +208,11 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
             </optgroup>
           ))}
         </select>
+        {(cat === "all" || cat === "cyberware" || cat === "bioware") && (
+          <select className={clsx("field !min-h-0 !w-auto !py-1 text-xs", grade !== "standard" && "!border-accent")} value={grade} onChange={(e) => setGrade(e.target.value as Grade)} aria-label="Implant grade" title="Grade of cyberware and bioware: changes Essence, price and Availability">
+            {(Object.keys(GRADES) as Grade[]).map((g) => <option key={g} value={g}>{g === "standard" ? "Implants: standard grade" : `Implants: ${GRADES[g].label.toLowerCase()}`}</option>)}
+          </select>
+        )}
         <select className="field !min-h-0 !w-auto !py-1 text-xs" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort by">
           <option value="name">Sort by name</option><option value="type">Sort by type</option><option value="cost">Sort by price</option><option value="avail">Sort by availability</option>
         </select>

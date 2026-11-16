@@ -24,7 +24,7 @@ export interface MatrixGear {
 export type SimMode = "ar" | "cold" | "hot";
 export interface Sprite { id: string; type: string; level: number; tasks: number; registered: boolean; damage: number; note: string }
 export interface Spirit { id: string; type: string; force: number; services: number; bound: boolean; damage: number; note: string }
-export interface Focus { id: string; name: string; kind: string; rating: number; bonded: boolean; active: boolean }
+export interface Focus { id: string; name: string; kind: string; rating: number; bonded: boolean; active: boolean; /** Karma paid to bond it in play; foci bonded at creation are paid from creation Karma. */ karma?: number }
 export interface Vehicle {
   id: string; name: string; kind: "vehicle" | "drone";
   handlingOn: number; handlingOff: number; accel: number; speedInterval: number; topSpeed: number;
@@ -305,7 +305,8 @@ export function spellDamage(kind: "direct" | "indirect", magic: number, netHits:
 /** Drain turns Physical when what gets through is higher than Magic. */
 export const drainIsPhysical = (damage: number, magic: number) => damage > magic;
 
-export const FOCUS_KINDS = ["Power", "Spell", "Spirit", "Weapon", "Qi", "Sustaining", "Banishing", "Other"];
+export const FOCUS_KINDS = ["Power", "Spell", "Spirit", "Weapon", "Qi", "Enchanting", "Metamagic", "Sustaining", "Banishing", "Other"];
+export { bondKarma } from "./data";
 
 export interface SpiritBlock {
   attrs: number[]; init: number; initDice: number; astralInit: number; defense: number; boxes: number; attackRating: number;

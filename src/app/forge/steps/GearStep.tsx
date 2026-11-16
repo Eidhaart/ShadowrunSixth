@@ -10,6 +10,7 @@ import { Budget, Field, Note, StepHeader, Stepper, type StepProps } from "../ui"
 import clsx from "clsx";
 import { GearBrowser, useGearDrop } from "@/components/compendium/GearBrowser";
 import { addToRunner } from "@/lib/compendium/catalog";
+import { editExt } from "@/lib/sr6/ext";
 import type { CompItem } from "@/lib/compendium/types";
 
 const CATS: { id: GearItem["category"]; label: string }[] = [
@@ -130,7 +131,7 @@ export function GearStep({ c, patch }: StepProps) {
                   <div className="flex items-center gap-2">
                     {g.category === "armor" && <label className="flex items-center gap-1 text-xs"><input type="checkbox" className="accent-[var(--accent)]" checked={g.worn !== false} onChange={(e) => patch((x) => { x.gear[i].worn = e.target.checked; })} /> worn</label>}
                     <Stepper size="sm" label={`${g.name} quantity`} value={g.qty} min={1} onChange={(v) => patch((x) => { x.gear[i].qty = v; })} />
-                    <button className="hover:text-danger" onClick={() => patch((x) => { x.gear.splice(i, 1); })} aria-label={`Remove ${g.name}`}>×</button>
+                    <button className="hover:text-danger" onClick={() => patch((x) => { const [gone] = x.gear.splice(i, 1); if (gone?.category === "magic" && x.ext?.foci.some((f) => f.name === gone.name)) editExt(x, (ex) => { ex.foci = ex.foci.filter((f) => f.name !== gone.name); }); })} aria-label={`Remove ${g.name}`}>×</button>
                   </div>
                 </li>
               ))}

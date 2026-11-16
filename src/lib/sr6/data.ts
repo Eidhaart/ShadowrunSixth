@@ -303,3 +303,7 @@ export const LIFESTYLES = [
   { id: "high", name: "High", cost: 10000 },
   { id: "luxury", name: "Luxury", cost: 100000 },
 ] as const;
+
+/** Karma to bond a focus, per point of Force (Magical Goods table, p. 295). */
+const BOND_PER_FORCE: Record<string, number> = { Power: 6, Weapon: 3, Enchanting: 3, Metamagic: 3, Spell: 2, Spirit: 2, Qi: 2 };
+export const bondKarma = (f: { kind: string; rating: number }) => (BOND_PER_FORCE[f.kind] ?? 2) * f.rating;

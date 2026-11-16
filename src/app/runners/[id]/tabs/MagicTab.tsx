@@ -9,7 +9,7 @@ import { spellList } from "@/lib/sr6/bookLists";
 import { ATTR_LABEL, KARMA, type AttrKey } from "@/lib/sr6/data";
 import { SPELLS, SPIRITS, SPIRIT_ATTR_LABELS, SPIRIT_FORCE_CAP, type SpellDef } from "@/lib/sr6/rules6";
 import {
-  FOCUS_KINDS, SUSTAIN_PENALTY, adjustCap, drainValue, editExt, findSpell, getExt, nextPendingId, rollHits, spellDamage, spiritBlock, spiritType, sustainPenalty, xid,
+  FOCUS_KINDS, SUSTAIN_PENALTY, bondKarma, adjustCap, drainValue, editExt, findSpell, getExt, nextPendingId, rollHits, spellDamage, spiritBlock, spiritType, sustainPenalty, xid,
 } from "@/lib/sr6/ext";
 import { Box, Empty, Stat, Stepper } from "./ui";
 import { basePool, type SheetCtx } from "./ctx";
@@ -58,6 +58,8 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
   const ppUsed = c.adeptPowers.reduce((s, p) => s + p.cost, 0);
   const adept = c.magicType === "adept" || c.magicType === "mystic";
   const bonded = e.foci.filter((f) => f.bonded).length;
+  const inPlay = c.stage === "complete";
+  const karmaLeft = c.karmaEarned - c.karmaSpent;
   const bondedForce = e.foci.filter((f) => f.bonded).reduce((sum, f) => sum + f.rating, 0);
   const forceTotal = e.spirits.reduce((s, x) => s + x.force, 0);
   const forceCap = d.magic * SPIRIT_FORCE_CAP;
@@ -238,7 +240,18 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
             {e.foci.map((f) => (
               <li key={f.id} className="flex flex-wrap items-center gap-2 py-1.5">
                 <span className="flex-1"><b className="font-display">{f.name}</b> <span className="text-xs text-dim">{f.kind} focus, rating {f.rating}</span></span>
-                <button className={clsx("btn small", f.bonded && "primary")} aria-pressed={f.bonded} disabled={!f.bonded && (bonded >= d.magic || f.rating > d.magic || bondedForce + f.rating > d.magic * 5)} title={f.bonded ? undefined : "You can bond up to Magic foci, each no higher than Magic, Force Magic × 5 in all"} onClick={() => upd((x) => editExt(x, (ex) => { const t = ex.foci.find((q) => q.id === f.id); if (t) { t.bonded = !t.bonded; if (!t.bonded) t.active = false; } }))}>{f.bonded ? "Bonded" : "Bond"}</button>
+                <button className={clsx("btn small", f.bonded && "primary")} aria-pressed={f.bonded} disabled={!f.bonded && (bonded >= d.magic || f.rating > d.magic || bondedForce + f.rating > d.magic * 5 || (inPlay && karmaLeft < bondKarma(f)))}
+                  title={f.bonded ? (f.karma ? `Unbond and take back ${f.karma} Karma` : undefined) : inPlay && karmaLeft < bondKarma(f) ? `Bonding costs ${bondKarma(f)} Karma; you have ${karmaLeft}` : `Bonding costs ${bondKarma(f)} Karma. Up to Magic foci, each no higher than Magic, Force Magic × 5 in all`}
+                  onClick={() => upd((x) => {
+                    // in play, bonding is paid from earned Karma; before play it comes out of creation Karma
+                    const cost = bondKarma(f);
+                    editExt(x, (ex) => {
+                      const t = ex.foci.find((q) => q.id === f.id);
+                      if (!t) return;
+                      if (!t.bonded) { t.bonded = true; if (x.stage === "complete") { t.karma = cost; x.karmaSpent += cost; } }
+                      else { t.bonded = false; t.active = false; if (t.karma) { x.karmaSpent = Math.max(0, x.karmaSpent - t.karma); delete t.karma; } }
+                    });
+                  })}>{f.bonded ? "Bonded" : `Bond · ${bondKarma(f)} Karma`}</button>
                 <button className={clsx("btn small", f.active && "primary")} disabled={!f.bonded} aria-pressed={f.active} onClick={() => upd((x) => editExt(x, (ex) => { const t = ex.foci.find((q) => q.id === f.id); if (t) t.active = !t.active; }))}>{f.active ? "Active" : "Inactive"}</button>
                 <button className="btn ghost small" aria-label={`Remove ${f.name}`} onClick={() => upd((x) => editExt(x, (ex) => { ex.foci = ex.foci.filter((q) => q.id !== f.id); }))}>×</button>
               </li>

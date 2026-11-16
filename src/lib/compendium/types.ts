@@ -54,6 +54,8 @@ export interface CompItem {
   equip?: Equip;
   /** Vehicles and drones: added to the Rigging tab with these stats. */
   vehicle?: { kind: "vehicle" | "drone"; handlingOn: number; handlingOff: number; accel: number; speedInterval: number; topSpeed: number; body: number; armor: number; pilot: number; sensor: number; seats: number };
+  /** Foci: added to the Magic tab, where they are bonded. */
+  focus?: { kind: string; force: number };
   /** Built-in parts sold only with this item (an underbarrel launcher); they come along when it is added. */
   parts?: Omit<GearItem, "id">[];
   source: "built-in" | "imported" | "house" | "mine";

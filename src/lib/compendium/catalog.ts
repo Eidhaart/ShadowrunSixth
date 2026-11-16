@@ -9,6 +9,8 @@ import { editExt, newVehicle } from "@/lib/sr6/ext";
 import { uid, type Character, type GearItem } from "@/lib/sr6/character";
 import { fixCat, type CompItem } from "./types";
 import { ARMOR, BIOWARE, CYBERWARE, DRONES, FOCI, FORMULAS, VEHICLES, av, type AugRow, type VehRow } from "@/data/core-gear";
+import { AMMO_TYPES, MORE_GEAR } from "@/data/core-gear-more";
+import type { QualityEffect } from "@/lib/sr6/character";
 import { effective, useHouse } from "@/lib/house/store";
 import type { HouseItem } from "@/lib/house/rules";
 import { readXlsx } from "./xlsx";
@@ -67,6 +69,84 @@ function foldParts(items: CoreItem[]): CoreItem[] {
 const slug = (s: string) => s.toLowerCase().replace(/['’]/g, "").replace(/\W+/g, "-").replace(/^-|-$/g, "");
 const essText = (n: number) => String(Math.round(n * 100) / 100);
 
+/** What an implant does to the sheet on its own, by rating (pp. 283-294). Conditional bonuses are left to the player. */
+export function implantEffect(name: string, rating: number): QualityEffect | undefined {
+  const r = Math.max(1, rating);
+  if (/^wired reflexes/i.test(name) || /^synaptic booster/i.test(name)) return { attr: { reaction: r }, initiativeDice: r };
+  if (/^reaction enhancers/i.test(name)) return { attr: { reaction: r } };
+  if (/^muscle replacement/i.test(name)) return { attr: { strength: r, agility: r } };
+  if (/^muscle augmentation/i.test(name)) return { attr: { strength: r } };
+  if (/^muscle toner/i.test(name)) return { attr: { agility: r } };
+  if (/^cerebral booster/i.test(name)) return { attr: { logic: r } };
+  if (/^(dermal plating|orthoskin)/i.test(name)) return { defense: r };
+  if (/^suprathyroid gland/i.test(name)) return { attr: { agility: 1, body: 1, reaction: 1, strength: 1 }, lifestyleMult: 1.25 };
+  return undefined;
+}
+
+/** Implant grades (p. 282): Essence multiplier, cost multiplier, Availability change. */
+export const GRADES = {
+  standard: { label: "Standard", ess: 1, cost: 1, avail: 0 },
+  used: { label: "Used", ess: 1.1, cost: 0.5, avail: -1 },
+  alphaware: { label: "Alphaware", ess: 0.8, cost: 1.2, avail: 1 },
+  betaware: { label: "Betaware", ess: 0.7, cost: 1.5, avail: 2 },
+  deltaware: { label: "Deltaware", ess: 0.5, cost: 2.5, avail: 3 },
+} as const;
+export type Grade = keyof typeof GRADES;
+
+/** The same implant in another grade. */
+export function withGrade(i: CompItem, grade: Grade): CompItem {
+  if (grade === "standard" || (i.cat !== "cyberware" && i.cat !== "bioware") || i.essence == null) return i;
+  const g = GRADES[grade];
+  const ess = Math.round(i.essence * g.ess * 1000) / 1000;
+  const cost = i.cost == null ? null : Math.round(i.cost * g.cost);
+  const name = `${i.name} (${g.label.toLowerCase()})`;
+  return {
+    ...i, id: `${i.id}-${grade}`, name, cost, essence: ess, avail: i.avail == null ? undefined : Math.max(0, i.avail + g.avail),
+    stats: i.stats.map(([k, v]) => (k === "Essence" ? [k, essText(ess)] : [k, v]) as [string, string]),
+    gear: { ...i.gear, name, cost: cost ?? 0, essence: ess },
+  };
+}
+
+/** The rest of the core gear tables, one entry per rating where the book prices by rating. */
+function moreTables(regularAmmo: CompItem[]): CompItem[] {
+  const out: CompItem[] = [];
+  for (const m of MORE_GEAR) {
+    const [lo, hi] = m.r ?? [0, 0];
+    for (let r = lo; r <= hi; r++) {
+      const label = m.rl ?? "Rating";
+      const name = r ? `${m.n}, ${label.toLowerCase()} ${r}` : m.n;
+      const cost = typeof m.c === "function" ? m.c(r) : m.c;
+      const { avail, legal } = av(typeof m.a === "function" ? m.a(r) : m.a);
+      const dv = typeof m.dv === "function" ? m.dv(r) : m.dv;
+      const ar = typeof m.ar === "function" ? m.ar(r) : m.ar;
+      const stats: [string, string][] = [
+        ...(dv ? [["DV", dv] as [string, string]] : []),
+        ...(ar ? [["AR", ar.map((v) => v ?? "–").join("/")] as [string, string]] : []),
+        ...(m.dr ? [["Defense", `+${m.dr}`] as [string, string]] : []),
+        ...(r ? [[label, String(r)] as [string, string]] : []),
+        ...(m.s ?? []).map(([k, v]) => [k, v.replace("Rating", String(r || "R"))] as [string, string]),
+      ];
+      const category = m.gc ?? (dv ? "weapon" : m.cat === "armor" ? "armor" : m.cat === "ammo" ? "ammo" : "misc");
+      out.push({
+        id: `${m.cat}-${slug(name)}`, name, cat: m.cat, group: m.g, cost, per: m.per, avail, legal, stats, source: "built-in", book: "Core", page: m.p,
+        ...(dv ? { dv, ar, skill: m.skill } : {}),
+        gear: { name, category, cost, qty: 1, ...(dv ? { dv, ar: ar as GearItem["ar"], skill: m.skill } : {}), ...(m.dr ? { armor: m.dr, worn: true } : {}) },
+      });
+    }
+  }
+  // special ammunition: the class's regular price times the type's multiplier. Tasers, darts, DMSO and assault cannons only take their own rounds.
+  for (const a of regularAmmo) {
+    if (/taser|dart|dmso|assault cannon/i.test(a.name) || a.cost == null) continue;
+    const cls = a.name.replace(/ rounds$/i, "");
+    for (const [type, arMod, dvMod, mult] of AMMO_TYPES) {
+      const name = `${type} rounds, ${cls}`;
+      const cost = Math.round(a.cost * mult * 100) / 100;
+      out.push({ ...a, id: `ammo-${slug(name)}`, name, group: `${type} ammo`, cost, stats: [["AR", arMod], ["DV", dvMod]], gear: { ...a.gear, name, cost, notes: `AR ${arMod}, DV ${dvMod}` } });
+    }
+  }
+  return out;
+}
+
 /** Armor, cyberware, bioware, foci, vehicles and drones from the core rulebook tables. */
 function coreTables(): CompItem[] {
   const out: CompItem[] = [];
@@ -86,8 +166,9 @@ function coreTables(): CompItem[] {
       const stats: [string, string][] = [["Essence", essText(ess)]];
       if (r.cap) stats.push(["Capacity", r.cap.replace("Rating", String(rating || "R"))]);
       if (r.plus) stats.push(["Plus", r.plus]);
+      const effect = implantEffect(r.name, rating || Number(/rating (\d+)/.exec(r.name)?.[1] ?? 1));
       out.push({ id: `${cat}-${slug(name)}`, name, cat, group: r.group, cost, avail: r.group === "Cyberlimb accessory" ? avail : avail, legal, source: "built-in", book: "Core", page: cat === "bioware" ? 294 : 285,
-        stats, essence: ess, gear: { name, category: cat, cost, qty: 1, essence: ess } });
+        stats, essence: ess, gear: { name, category: cat, cost, qty: 1, essence: ess, ...(effect ? { effect } : {}) } });
     }
   };
   for (const r of CYBERWARE) aug(r, "cyberware");
@@ -98,7 +179,8 @@ function coreTables(): CompItem[] {
       // power and weapon foci are harder to find: Availability Force + 3 (p. 295)
       const avail = /^(Power|Weapon) focus$/.test(n) ? f + 3 : f;
       out.push({ id: `magic-${slug(name)}`, name, cat: "magic", group: "Focus", cost: perForce * f, avail, legal: "L", source: "built-in", book: "Core", page: 295,
-        stats: [["Force", String(f)], ["Bonding", `${karma * f} Karma`]], gear: { name, category: "magic", cost: perForce * f, qty: 1 } });
+        stats: [["Force", String(f)], ["Bonding", `${karma * f} Karma`]], gear: { name, category: "magic", cost: perForce * f, qty: 1 },
+        focus: { kind: n.replace(/ focus$/, ""), force: f } });
     }
   for (const [kind, a, cost] of FORMULAS) {
     const { avail, legal } = av(a);
@@ -141,7 +223,8 @@ function rated(items: CoreItem[]): CoreItem[] {
 
 const coreOnly = (items: CoreItem[]) => rated(items.filter((i) => !i.book || i.book === "Core").map((i) => withBookFix({ ...i, cat: fixCat(i.cat, i.group) })));
 
-const BUILT_IN: CoreItem[] = foldParts([...coreOnly(core as unknown as CoreItem[]), ...MATRIX, ...coreTables()]);
+const FROM_LIST = coreOnly(core as unknown as CoreItem[]);
+const BUILT_IN: CoreItem[] = foldParts([...FROM_LIST, ...MATRIX, ...coreTables(), ...moreTables(FROM_LIST.filter((i) => i.cat === "ammo" && i.group === "Regular ammo"))]);
 /** The bundled catalog, for tests and scripts. */
 export const BUILT_IN_ITEMS: readonly CompItem[] = BUILT_IN;
 
@@ -205,7 +288,12 @@ export function useCatalog(): CoreItem[] {
 }
 
 export function findItem(list: CompItem[], id: string): CompItem | undefined {
-  return list.find((i) => i.id === id);
+  const hit = list.find((i) => i.id === id);
+  if (hit) return hit;
+  // an implant dragged in another grade carries the grade at the end of its id
+  const m = /^(.*)-(used|alphaware|betaware|deltaware)$/.exec(id);
+  const base = m && list.find((i) => i.id === m[1]);
+  return base ? withGrade(base, m![2] as Grade) : undefined;
 }
 
 export const DRAG_TYPE = "application/x-sixthdeck-gear";
@@ -240,12 +328,17 @@ export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; 
       if (e.kind === "rcc" && !ex.rcc) { const r = RCCS[e.index]; if (r) { ex.rcc = { ...r }; equipped = "console"; } }
     });
   }
+  // a focus also shows up on the Magic tab, unbonded: bonding costs Karma
+  if (item.focus) {
+    for (let n = 0; n < qty; n++) editExt(c, (ex) => { ex.foci.push({ id: uid("f"), name: item.name, kind: item.focus!.kind, rating: item.focus!.force, bonded: false, active: false }); });
+    equipped = "focus";
+  }
   // vehicles and drones go straight onto the Rigging tab, ready to drive
   if (item.vehicle) {
     for (let n = 0; n < qty; n++) editExt(c, (ex) => { ex.vehicles.push({ ...newVehicle(item.vehicle!.kind), ...item.vehicle!, name: item.name }); });
     equipped = "rig";
   }
   const paid = opts.pay && price ? ` for ${price.toLocaleString("en-US")}¥` : "";
-  const where = equipped === "rig" ? ` It is on the Rigging tab.` : equipped ? ` Equipped as the ${equipped} on the ${equipped === "console" ? "Rigging" : "Matrix"} tab.` : "";
+  const where = equipped === "focus" ? ` It is on the Magic tab; bond it there.` : equipped === "rig" ? ` It is on the Rigging tab.` : equipped ? ` Equipped as the ${equipped} on the ${equipped === "console" ? "Rigging" : "Matrix"} tab.` : "";
   return { ok: true, msg: `${item.name} added${paid}.${where}` };
 }

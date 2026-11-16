@@ -11,6 +11,7 @@ import {
   PRIORITY_TABLE,
   SKILL_BY_ID,
   SKILLS,
+  bondKarma,
   skillAvailable,
   specialRacialAttrs,
   type AttrKey,
@@ -75,7 +76,7 @@ export interface Budget {
     base: number;
     negativeBonus: number;
     spent: number;
-    cost: { attributes: number; skills: number; qualities: number; edgeMagic: number; knowledge: number; magic: number; initiation: number; nuyen: number };
+    cost: { attributes: number; skills: number; qualities: number; edgeMagic: number; knowledge: number; magic: number; initiation: number; foci: number; nuyen: number };
     left: number;
   };
   /** net: negative bonus minus positive cost; the book caps it at 20. */
@@ -317,7 +318,9 @@ export function budget(c: Character): Budget {
   // initiation or submersion at creation: 10 + new grade Karma per grade, like the advancement table
   let initiationKarma = 0;
   for (let g = 1; g <= (c.startGrade ?? 0); g++) initiationKarma += Math.max(1, Math.round(((10 + g) * rules().karmaCostPct) / 100));
-  const karmaSpent = attrKarma + skillKarma + positive + edgeMagicKarma + knowledgeKarma + magicKarma + initiationKarma + c.karmaToNuyen;
+  // foci bonded before play are bonded with creation Karma (Force x the type's bonding cost)
+  const fociKarma = (c.ext?.foci ?? []).filter((f) => f.bonded && !f.karma).reduce((s, f) => s + bondKarma(f), 0);
+  const karmaSpent = attrKarma + skillKarma + positive + edgeMagicKarma + knowledgeKarma + magicKarma + initiationKarma + fociKarma + c.karmaToNuyen;
   const karmaPool = KARMA.customization + negativeBonus;
 
   const resources = p.resources ? PRIORITY_TABLE[p.resources].resources : 0;
@@ -325,7 +328,9 @@ export function budget(c: Character): Budget {
   const ls = LIFESTYLES.find((l) => l.id === c.lifestyle);
   // picks made before the effect existed are matched by name
   const lsMult = c.qualities.reduce<number>((m, q) => Math.max(m, q.effect?.lifestyleMult ?? QUALITY_EFFECTS[q.name.replace(/\(.*?\)/g, "").trim().toLowerCase()]?.lifestyleMult ?? 1), 1);
-  const lifestyle = Math.round((ls?.cost ?? 0) * c.lifestyleMonths * lsMult);
+  // a suprathyroid gland eats for two: its 25 percent comes on top
+  const gearLs = c.gear.reduce((m, g) => m * (g.effect?.lifestyleMult ?? 1), 1);
+  const lifestyle = Math.round((ls?.cost ?? 0) * c.lifestyleMonths * lsMult * gearLs);
   const nuyenTotal = resources + nuyenFromKarma;
   const contactTotal = d.natural.charisma * 6;
   const contactSpent = c.contacts.reduce((s, k) => s + k.connection + k.loyalty, 0);
@@ -354,6 +359,7 @@ export function budget(c: Character): Budget {
         knowledge: knowledgeKarma,
         magic: magicKarma,
         initiation: initiationKarma,
+        foci: fociKarma,
         nuyen: c.karmaToNuyen,
       },
       left: karmaPool - karmaSpent,
@@ -415,6 +421,25 @@ export function validate(c: Character): Issue[] {
   if (c.magicType !== "adept" && c.magicType !== "mystic" && (c.startMeta ?? []).some((m) => /^power point$/i.test(m.trim())))
     issues.push({ level: "error", where: "Magic", text: "Only adepts and mystic adepts can take a Power Point at initiation." });
 
+  const foci = (c.ext?.foci ?? []).filter((f) => f.bonded);
+  if (foci.length) {
+    if (c.magicType === "mundane" || c.magicType === "technomancer") issues.push({ level: "error", where: "Magic", text: "Only the Awakened can bond foci." });
+    else {
+      if (foci.length > d.magic) issues.push({ level: "error", where: "Magic", text: `You can bond at most ${d.magic} foci (your Magic).` });
+      if (foci.some((f) => f.rating > d.magic)) issues.push({ level: "error", where: "Magic", text: `A bonded focus cannot have a Force above your Magic (${d.magic}).` });
+      if (foci.reduce((n, f) => n + f.rating, 0) > d.magic * 5) issues.push({ level: "error", where: "Magic", text: `Bonded foci total more than Magic x 5 Force (${d.magic * 5}).` });
+    }
+  }
+
+  // augmentations
+  if (d.essenceUsed > 0 && d.essence <= 0) issues.push({ level: "error", where: "Gear", text: "Essence cannot drop to 0: remove an implant or pick a better grade." });
+  const has = (re: RegExp) => c.gear.some((g) => (g.category === "cyberware" || g.category === "bioware") && re.test(g.name));
+  const clash = (a: RegExp, b: RegExp, text: string) => { if (has(a) && has(b)) issues.push({ level: "error", where: "Gear", text }); };
+  clash(/^wired reflexes/i, /^(reaction enhancers|synaptic booster)/i, "Wired reflexes do not work with other Reaction implants.");
+  clash(/^reaction enhancers/i, /^synaptic booster/i, "Reaction enhancers do not work with other Reaction implants.");
+  clash(/^muscle replacement/i, /^muscle (augmentation|toner)/i, "Muscle replacement does not combine with muscle augmentation or muscle toner.");
+  clash(/^dermal plating/i, /^orthoskin/i, "Dermal plating does not combine with orthoskin.");
+
   // skills
   const maxSkill = (id: string) => (c.qualities.some((q) => q.name.startsWith("Aptitude") && q.note === id) ? 7 : 6);
   let skillsAtMax = 0;
@@ -462,6 +487,9 @@ export function validate(c: Character): Issue[] {
   if (b.karma.left > KARMA.maxUnspent) issues.push({ level: "error", where: "Karma", text: `Begin play with at most ${KARMA.maxUnspent} unspent Karma (you have ${b.karma.left}).` });
   if (b.nuyen.left < 0) issues.push({ level: "error", where: "Gear", text: `${-b.nuyen.left}¥ over budget.` });
   if (b.nuyen.left > 5000) issues.push({ level: "warn", where: "Gear", text: "You can start play with at most 5,000¥ unspent." });
+  if (c.lifestyle !== "street" && c.lifestyleMonths === 0) issues.push({ level: "warn", where: "Gear", text: "No lifestyle month is paid: prepay at least one, or you start on the street." });
+  if (c.gear.length > 0 && !c.qualities.some((q) => /^sinner/i.test(q.name)) && !c.gear.some((g) => /fake sin/i.test(g.name)))
+    issues.push({ level: "warn", where: "Gear", text: "No SIN: without the SINner quality or a fake SIN you cannot rent, travel or pay like a citizen." });
 
   return issues;
 }

@@ -5,6 +5,8 @@ import { adeptPowerList, complexFormList, spellList, type BookEntry } from "@/li
 import { derive } from "@/lib/sr6/derive";
 import { POWER_POINT } from "@/lib/sr6/advance";
 import { rules } from "@/lib/house/rules";
+import { bondKarma } from "@/lib/sr6/data";
+import { editExt } from "@/lib/sr6/ext";
 import { Budget, Note, StepHeader, type StepProps } from "../ui";
 
 function Picker({ label, entries, picked, onAdd, onRemove, limit, allowFree = true }: {
@@ -119,6 +121,55 @@ function Initiation({ c, patch }: StepProps) {
   );
 }
 
+/** The two traditions in the core book, plus a slot for a tradition from another book. The attribute joins Willpower against drain. */
+const TRADITIONS: [value: string, label: string][] = [["logic", "Hermetic (Logic)"], ["charisma", "Shamanic (Charisma)"], ["intuition", "Another tradition (Intuition)"]];
+
+function Tradition({ c, patch }: StepProps) {
+  const d = derive(c);
+  const attr = (c.tradition || "logic") as "logic" | "charisma" | "intuition";
+  return (
+    <section className="mb-10">
+      <h3 className="mb-1 text-xl font-semibold">Tradition</h3>
+      <p className="mb-3 max-w-2xl text-sm text-dim">How you understand magic. Its attribute is rolled with Willpower to resist drain and sets the Attack Rating of your spells with Magic.</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <select className="field !w-auto" aria-label="Tradition" value={attr} onChange={(e) => patch((x) => { x.tradition = e.target.value; })}>
+          {TRADITIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+        <span className="text-sm text-dim">Drain pool <b className="num text-fg">{d.attrs.willpower + d.attrs[attr]}</b> dice</span>
+      </div>
+    </section>
+  );
+}
+
+/** Foci bought on the gear step. Bonding one costs Karma: Force times the type's cost on the Magical Goods table. */
+function Foci({ c, patch }: StepProps) {
+  const d = derive(c);
+  const foci = c.ext?.foci ?? [];
+  if (!foci.length) return null;
+  const bonded = foci.filter((f) => f.bonded);
+  const force = bonded.reduce((n, f) => n + f.rating, 0);
+  return (
+    <section className="mb-10">
+      <h3 className="mb-1 text-xl font-semibold">Foci</h3>
+      <p className="mb-3 max-w-2xl text-sm text-dim">A focus does nothing until it is bonded. Bonding costs Karma; you can bond up to your Magic in foci, none with a Force above your Magic, and Magic × 5 Force in all.</p>
+      <ul className="max-w-2xl divide-y divide-line border-y border-line">
+        {foci.map((f) => {
+          const full = !f.bonded && (bonded.length >= d.magic || f.rating > d.magic || force + f.rating > d.magic * 5);
+          return (
+            <li key={f.id} className="flex items-center justify-between gap-3 py-2">
+              <span><b className="font-display">{f.name}</b> <span className="num text-xs text-dim">{bondKarma(f)} Karma</span></span>
+              <button className={f.bonded ? "btn small primary" : "btn small"} aria-pressed={f.bonded} disabled={full} title={full ? "Over your bonding limits" : undefined}
+                onClick={() => patch((x) => editExt(x, (ex) => { const t = ex.foci.find((q) => q.id === f.id); if (t) { t.bonded = !t.bonded; if (!t.bonded) t.active = false; } }))}>
+                {f.bonded ? "Bonded" : "Bond"}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export function MagicStep({ c, patch }: StepProps) {
   const book = useRulebook((s) => s.book);
   const d = derive(c);
@@ -197,6 +248,8 @@ export function MagicStep({ c, patch }: StepProps) {
         </section>
       )}
 
+      {(c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic") && <Tradition c={c} patch={patch} />}
+      {c.magicType !== "mundane" && c.magicType !== "technomancer" && <Foci c={c} patch={patch} />}
       {c.magicType !== "mundane" && <Initiation c={c} patch={patch} />}
 
       {c.magicType === "mundane" && <Note>Your runner is mundane, so there is nothing to choose here. Skip ahead to qualities.</Note>}
