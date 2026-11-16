@@ -28,6 +28,7 @@ import { RiggingTab } from "./tabs/RiggingTab";
 import { GearTab } from "./tabs/GearTab";
 import { AdvanceTab } from "./tabs/AdvanceTab";
 import { advance, withAdv } from "@/lib/sr6/advance";
+import { OfficialPrintButton } from "@/components/OfficialPrintButton";
 
 const STATUSES = ["Burning", "Chilled", "Corrosive", "Dazed", "Deafened", "Fatigued", "Frightened", "Hazed", "Hobbled", "Immobilized", "Nauseated", "Panicked", "Poisoned", "Prone", "Stilled", "Wet", "Zapped"];
 const RANGES = ["Close", "Near", "Medium", "Far", "Extreme"] as const;
@@ -268,7 +269,7 @@ export function Sheet({ id }: { id: string }) {
         </div>
         <div className="no-print grid w-full grid-cols-3 gap-2 max-md:[&_.btn]:px-2 max-md:[&_.btn]:text-xs md:flex md:w-auto md:flex-wrap">
           <Link href={`/forge?edit=${c.id}`} className="btn small"><Icon name="forge" size={14} /> Edit build</Link>
-          <button className="btn small" onClick={() => window.print()}><Icon name="print" size={14} /> Print</button>
+          <OfficialPrintButton character={c} derived={d} />
           <button className="btn small" onClick={exportJson}><Icon name="download" size={14} /> Export</button>
           <button className="btn small" onClick={exportFoundry}><Icon name="link" size={14} /> For Foundry</button>
           <button className="btn small" disabled={commsStatus === "off"} onClick={shareToChat}><Icon name="comms" size={14} /> Share</button>
