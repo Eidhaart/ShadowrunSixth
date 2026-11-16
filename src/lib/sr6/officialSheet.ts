@@ -2,7 +2,7 @@
 
 import type { Character } from "@/lib/sr6/character";
 import type { Derived } from "@/lib/sr6/derive";
-import { ATTR_ABBR, ATTR_LABEL, LIFESTYLES, METATYPES, SKILL_BY_ID } from "@/lib/sr6/data";
+import { ATTR_ABBR, LIFESTYLES, METATYPES, SKILL_BY_ID } from "@/lib/sr6/data";
 import { getExt } from "@/lib/sr6/ext";
 import { idbGet, idbSet } from "@/lib/idb";
 
@@ -135,8 +135,8 @@ function markTrack(ctx: CanvasRenderingContext2D, x: number, y: number, total: n
   const cell = 32.9;
   for (let i = 0; i < cols * rowCount; i++) {
     if (i >= total || i < filled) {
-      const cx = x + (i % cols) * cell + 8;
-      const cy = y + Math.floor(i / cols) * cell + 11;
+      const cx = x + (i % cols) * cell + cell / 2;
+      const cy = y + Math.floor(i / cols) * cell + cell / 2;
       ctx.save();
       ctx.strokeStyle = i >= total ? "#929292" : "#202020";
       ctx.lineWidth = i >= total ? 0.9 : 1.7;
@@ -164,10 +164,9 @@ function fillFirst(ctx: CanvasRenderingContext2D, c: Character, d: Derived): voi
 
   put(ctx, c.name && c.alias ? c.name + " / " + c.alias : who, 135, 121, 157, 7.2, true);
   put(ctx, METATYPES[c.metatype].name, 103, 135, 57);
-  put(ctx, c.magicType === "mystic" ? "Mystic Adept" : c.magicType, 200, 135, 91, 6);
+  put(ctx, c.magicType === "mystic" ? "Mystic Adept" : c.magicType, 210, 169, 79, 6);
   put(ctx, String(c.karmaEarned - c.karmaSpent), 91, 169, 24);
   put(ctx, c.karmaEarned, 155, 169, 32);
-  put(ctx, d.edge, 184, 158, 22);
 
   const left = ["body", "agility", "reaction", "strength", "willpower", "logic", "intuition", "charisma"] as const;
   left.forEach((a, i) => put(ctx, d.attrs[a], 102, 210 + i * 11.85, 55, 7.3, true));
@@ -181,7 +180,12 @@ function fillFirst(ctx: CanvasRenderingContext2D, c: Character, d: Derived): voi
   ];
   right.forEach(([y, v]) => put(ctx, v, 229, y, 62, 7));
   put(ctx, d.edge, 102, 304, 34, 7, true);
-  put(ctx, c.edgeCurrent + " / " + d.edge, 104, 316, 61, 6);
+  // Fill the official seven Edge hexagons instead of printing text over them.
+  ctx.save();
+  for (let i = 0; i < Math.min(7, c.edgeCurrent); i++) {
+    ctx.beginPath(); ctx.arc(111.5 + i * 8, 321.5, 2.05, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
   put(ctx, d.unarmedAR, 103, 328, 57, 7);
 
   const skills = Object.entries(c.skills)
