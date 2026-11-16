@@ -125,8 +125,9 @@ function put(ctx: CanvasRenderingContext2D, value: unknown, x: number, y: number
 }
 
 function rows(ctx: CanvasRenderingContext2D, values: string[], x: number, y: number, width: number, step: number, limit: number, size = 7): void {
-  values.slice(0, limit).forEach((s, i) => put(ctx, s, x, y + step * i, width, size));
-  if (values.length > limit) put(ctx, "+" + (values.length - limit) + " more (see digital sheet)", x, y + step * (limit - 1), width, 5);
+  const shown = values.length > limit ? limit - 1 : limit;
+  values.slice(0, shown).forEach((s, i) => put(ctx, s, x, y + step * i, width, size));
+  if (values.length > limit) put(ctx, "+" + (values.length - shown) + " more (see digital sheet)", x, y + step * shown, width, 5);
 }
 
 function markTrack(ctx: CanvasRenderingContext2D, x: number, y: number, total: number, filled: number, rowCount: number): void {
@@ -271,11 +272,12 @@ function fillSecond(ctx: CanvasRenderingContext2D, c: Character, d: Derived): vo
   });
 
   const other = c.gear.filter((g) => !["weapon", "armor", "cyberware", "bioware"].includes(g.category));
-  other.slice(0, 14).forEach((g, i) => {
+  other.slice(0, other.length > 14 ? 13 : 14).forEach((g, i) => {
     const y = 485 + i * 14.2;
     put(ctx, g.name, 63, y, 192, 7);
     put(ctx, g.qty > 1 ? "x" + g.qty : "-", 266, y, 20, 7);
   });
+  if (other.length > 14) put(ctx, "+" + (other.length - 13) + " more (see digital sheet)", 63, 485 + 13 * 14.2, 192, 6);
 
   const ext = getExt(c);
   if (ext.matrix.link || ext.matrix.deck) {
