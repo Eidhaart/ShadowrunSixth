@@ -354,6 +354,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const moreActive = NAV.some((n) => !MOBILE_PRIMARY.includes(n.href) && active(n.href));
   useEffect(() => { setMore(false); }, [pathname]); // eslint-disable-line react-hooks/set-state-in-effect
 
+  // printable sheets: paper only, no navigation
+  if (pathname.endsWith("/print"))
+    return (
+      <div className="isolate min-h-dvh">
+        <ApplySettings />
+        {children}
+      </div>
+    );
+
   if (bare)
     return (
       <div className="isolate min-h-dvh">

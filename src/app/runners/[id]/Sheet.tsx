@@ -273,7 +273,7 @@ export function Sheet({ id }: { id: string }) {
         </div>
         <div className="no-print grid w-full grid-cols-3 gap-2 max-md:[&_.btn]:px-2 max-md:[&_.btn]:text-xs md:flex md:w-auto md:flex-wrap">
           <Link href={`/forge?edit=${c.id}`} className="btn small"><Icon name="forge" size={14} /> Edit build</Link>
-          <button className="btn small" onClick={() => window.print()}><Icon name="print" size={14} /> Print</button>
+          <Link href={`/runners/${c.id}/print`} className="btn small" title="Printable sheet: Expanded or Minimal"><Icon name="print" size={14} /> Print</Link>
           <button className="btn small" onClick={exportJson}><Icon name="download" size={14} /> Export</button>
           <button className="btn small" onClick={exportFoundry}><Icon name="link" size={14} /> For Foundry</button>
           <button className="btn small" disabled={commsStatus === "off"} onClick={shareToChat}><Icon name="comms" size={14} /> Share</button>
