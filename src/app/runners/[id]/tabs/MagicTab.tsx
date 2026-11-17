@@ -1,4 +1,5 @@
 "use client";
+import { TRADITIONS } from "@/lib/sr6/data";
 import { ADV_COST, advance } from "@/lib/sr6/advance";
 import { useMemo, useState } from "react";
 import clsx from "clsx";
@@ -119,9 +120,14 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
           <div className="no-print mt-3 flex flex-wrap items-end gap-4">
             <label className="text-xs text-dim">Amp Up<div className="mt-1"><Stepper label="Amp Up" value={amp} min={0} max={Math.max(0, cap - area)} onChange={setAmp} /></div></label>
             <label className="text-xs text-dim">Increase Area<div className="mt-1"><Stepper label="Increase Area" value={area} min={0} max={Math.max(0, cap - amp)} onChange={setArea} /></div></label>
-            <label className="text-xs text-dim">Drain attribute
-              <select className="field mt-1 !w-32" value={c.tradition} onChange={(ev) => upd((x) => { x.tradition = ev.target.value; })}>
-                {DRAIN_ATTRS.map((a) => <option key={a} value={a}>{ATTR_LABEL[a]}</option>)}
+            <label className="text-xs text-dim">Tradition
+              <select className="field mt-1 !w-auto" value={c.traditionName != null ? `other:${c.tradition}` : c.tradition}
+                onChange={(ev) => upd((x) => {
+                  const v = ev.target.value;
+                  if (v.startsWith("other:")) { x.tradition = v.slice(6); x.traditionName ??= ""; } else { x.tradition = v; delete x.traditionName; }
+                })}>
+                {TRADITIONS.map((t) => <option key={t.name} value={t.attr}>{t.name} ({ATTR_LABEL[t.attr]})</option>)}
+                {DRAIN_ATTRS.map((a) => <option key={a} value={`other:${a}`}>{c.traditionName?.trim() || "Other"} ({ATTR_LABEL[a]})</option>)}
               </select>
             </label>
             <button className="btn small" onClick={() => setPending(drainPrompt("Drain", 3))}>Resist drain by hand</button>

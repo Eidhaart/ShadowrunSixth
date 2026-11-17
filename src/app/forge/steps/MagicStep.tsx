@@ -5,7 +5,8 @@ import { adeptPowerList, complexFormList, spellList, type BookEntry } from "@/li
 import { derive } from "@/lib/sr6/derive";
 import { POWER_POINT } from "@/lib/sr6/advance";
 import { rules } from "@/lib/house/rules";
-import { bondKarma, gradeChoices } from "@/lib/sr6/data";
+import { TRADITIONS, TRADITION_ATTRS, bondKarma, gradeChoices } from "@/lib/sr6/data";
+import clsx from "clsx";
 import { MetaPick } from "@/components/MetaPick";
 import { editExt } from "@/lib/sr6/ext";
 import { Budget, Note, StepHeader, type StepProps } from "../ui";
@@ -121,21 +122,45 @@ function Initiation({ c, patch }: StepProps) {
   );
 }
 
-/** The two traditions in the core book, plus a slot for a tradition from another book. The attribute joins Willpower against drain. */
-const TRADITIONS: [value: string, label: string][] = [["logic", "Hermetic (Logic)"], ["charisma", "Shamanic (Charisma)"], ["intuition", "Another tradition (Intuition)"]];
+const ATTR_NAME: Record<string, string> = { logic: "Logic", charisma: "Charisma", intuition: "Intuition", willpower: "Willpower" };
 
+/** Hermetic or shamanic, the two traditions in the core book, or one from another book with its own attribute. */
 function Tradition({ c, patch }: StepProps) {
   const d = derive(c);
-  const attr = (c.tradition || "logic") as "logic" | "charisma" | "intuition";
+  const attr = (c.tradition || "logic") as (typeof TRADITION_ATTRS)[number];
+  const custom = c.traditionName != null;
+  const pool = (a: string) => d.attrs.willpower + (a === "willpower" ? d.attrs.willpower : d.attrs[a as "logic"]);
+  const pick = (name: string | undefined, a: string) => patch((x) => { x.tradition = a; if (name == null) delete x.traditionName; else x.traditionName = name; });
   return (
     <section className="mb-10">
       <h3 className="mb-1 text-xl font-semibold">Tradition</h3>
-      <p className="mb-3 max-w-2xl text-sm text-dim">How you understand magic. Its attribute is rolled with Willpower to resist drain and sets the Attack Rating of your spells with Magic.</p>
-      <div className="flex flex-wrap items-center gap-3">
-        <select className="field !w-auto" aria-label="Tradition" value={attr} onChange={(e) => patch((x) => { x.tradition = e.target.value; })}>
-          {TRADITIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-        </select>
-        <span className="text-sm text-dim">Drain pool <b className="num text-fg">{d.attrs.willpower + d.attrs[attr]}</b> dice</span>
+      <p className="mb-3 max-w-2xl text-sm text-dim">How your runner understands magic. The tradition attribute is rolled with Willpower to resist drain, and added to Magic for astral Attack Rating.</p>
+      <div className="grid max-w-4xl gap-3 sm:grid-cols-3">
+        {TRADITIONS.map((t) => {
+          const on = !custom && attr === t.attr;
+          return (
+            <button key={t.name} type="button" aria-pressed={on} onClick={() => pick(undefined, t.attr)}
+              className={clsx("flex flex-col items-start justify-start rounded border p-3 text-left transition", on ? "border-accent bg-accent/10" : "border-line hover:border-accent/50")}>
+              <div className="font-display text-lg font-semibold">{t.name}</div>
+              <div className="text-xs text-dim">{ATTR_NAME[t.attr]} + Willpower · <b className="num text-fg">{pool(t.attr)}</b> dice vs drain</div>
+              <p className="mt-2 text-sm text-dim">{t.blurb}</p>
+            </button>
+          );
+        })}
+        <div className={clsx("rounded border p-3", custom ? "border-accent bg-accent/10" : "border-line")}>
+          <button type="button" aria-pressed={custom} className="text-left" onClick={() => pick(c.traditionName ?? "", attr)}>
+            <div className="font-display text-lg font-semibold">From another book</div>
+            <div className="text-xs text-dim">Any other tradition, with its own attribute</div>
+          </button>
+          {custom && (
+            <div className="mt-2 space-y-2">
+              <input className="field" value={c.traditionName ?? ""} placeholder="Tradition name" aria-label="Tradition name" onChange={(e) => pick(e.target.value, attr)} />
+              <select className="field" aria-label="Tradition attribute" value={attr} onChange={(e) => pick(c.traditionName ?? "", e.target.value)}>
+                {TRADITION_ATTRS.map((a) => <option key={a} value={a}>{ATTR_NAME[a]} ({pool(a)} dice)</option>)}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -182,6 +207,8 @@ export function MagicStep({ c, patch }: StepProps) {
   return (
     <div>
       <StepHeader title="Spells, powers and forms" lead="Your free picks come from the Magic or Resonance priority. They use the rating on the priority table, not what you raise it to with Karma." rule={/^Magic Basics$/i} />
+
+      {(c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic") && <Tradition c={c} patch={patch} />}
 
       {(c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic") && (
         <section className="mb-10">
@@ -248,7 +275,6 @@ export function MagicStep({ c, patch }: StepProps) {
         </section>
       )}
 
-      {(c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic") && <Tradition c={c} patch={patch} />}
       {c.magicType !== "mundane" && c.magicType !== "technomancer" && <Foci c={c} patch={patch} />}
       {c.magicType !== "mundane" && <Initiation c={c} patch={patch} />}
 

@@ -181,6 +181,8 @@ export interface Character {
   edgeBurned: number;
   /** Attribute added to Willpower for Drain resistance (logic, charisma, intuition...). */
   tradition: string;
+  /** Name of a tradition from another book; empty means the core tradition that goes with the attribute. */
+  traditionName?: string;
   statuses: string[];
   /** Free-form on-sheet modifier applied to every dice pool (temporary buffs). */
   poolMod: number;

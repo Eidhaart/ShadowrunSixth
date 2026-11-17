@@ -320,3 +320,16 @@ export function gradeChoices(magic: MagicType): string[] {
   if (magic === "adept" || magic === "mystic") return [...ADEPT_METAMAGICS, ...METAMAGICS];
   return [...METAMAGICS];
 }
+
+/** The two traditions in the core rulebook (p. 127). Others come from other books with their own attribute. */
+export const TRADITIONS = [
+  { name: "Hermetic", attr: "logic", blurb: "Magic can be understood through study, experiment and theory." },
+  { name: "Shamanic", attr: "charisma", blurb: "Magic is felt and performed, not studied in a lab." },
+] as const;
+/** Attributes a tradition from another book can use. */
+export const TRADITION_ATTRS = ["logic", "charisma", "intuition", "willpower"] as const;
+
+export function traditionName(c: { tradition: string; traditionName?: string }): string {
+  if (c.traditionName?.trim()) return c.traditionName.trim();
+  return TRADITIONS.find((t) => t.attr === (c.tradition || "logic"))?.name ?? "Other";
+}

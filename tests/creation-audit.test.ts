@@ -224,3 +224,16 @@ test("missiles, the MapMaster drone and grade choices come from the book", () =>
   assert.ok(gradeChoices("full").includes("Centering") && !gradeChoices("full").includes("Adept Centering"));
   assert.ok(gradeChoices("adept").includes("Adept Centering"));
 });
+
+import { TRADITIONS, traditionName } from "../src/lib/sr6/data";
+
+test("the core book's two traditions, and a named one from another book", () => {
+  assert.deepEqual(TRADITIONS.map((t) => [t.name, t.attr]), [["Hermetic", "logic"], ["Shamanic", "charisma"]]);
+  const c = mage();
+  assert.equal(traditionName(c), "Hermetic");
+  c.tradition = "charisma";
+  assert.equal(traditionName(c), "Shamanic");
+  c.tradition = "intuition"; c.traditionName = "Wuxing";
+  assert.equal(traditionName(c), "Wuxing");
+  assert.equal(derive(c).attrs.intuition + derive(c).attrs.willpower > 0, true);
+});
