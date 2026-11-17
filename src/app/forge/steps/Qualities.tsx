@@ -6,6 +6,7 @@ import { parseQualities, type QualityDef } from "@/lib/sr6/qualities";
 import { uid } from "@/lib/sr6/character";
 import { ATTRIBUTES, ATTR_LABEL, KARMA, SKILLS } from "@/lib/sr6/data";
 import { budget } from "@/lib/sr6/derive";
+import { QualityRow } from "@/components/QualityRow";
 import { Budget, Note, StepHeader, Stepper, type StepProps } from "../ui";
 
 export function Qualities({ c, patch }: StepProps) {
@@ -75,27 +76,31 @@ export function Qualities({ c, patch }: StepProps) {
             {c.qualities.map((qk, i) => {
               const def = defs.find((d) => d.id === qk.id);
               return (
-                <li key={qk.id + i} className="panel quiet p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-display font-semibold">{qk.name} <span className="num text-sm font-normal text-dim">{qk.kind === "positive" ? "-" : "+"}{qk.karma * qk.level} Karma</span></div>
-                    <button className="hover:text-danger" onClick={() => patch((x) => { x.qualities.splice(i, 1); })} aria-label={`Remove ${qk.name}`}>×</button>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-3">
-                    {def?.perLevel && <Stepper size="sm" label={`${qk.name} level`} value={qk.level} min={def.minLevel} max={def.maxLevel} onChange={(v) => patch((x) => { x.qualities[i].level = v; })} />}
-                    {def?.needs === "skill" && (
-                      <select className="field w-48" aria-label="Skill" value={qk.note} onChange={(e) => patch((x) => { x.qualities[i].note = e.target.value; })}>
-                        {SKILLS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                      </select>
+                <li key={qk.id + i}>
+                  <QualityRow q={qk} def={def} onRemove={() => patch((x) => { x.qualities.splice(i, 1); })}>
+                    {(def?.perLevel || def?.needs) && (
+                      <div className="flex flex-wrap items-center gap-3">
+                        {def?.perLevel && <Stepper size="sm" label={`${qk.name} level`} value={qk.level} min={def.minLevel} max={def.maxLevel} onChange={(v) => patch((x) => { x.qualities[i].level = v; })} />}
+                        {def?.needs === "skill" && (
+                          <select className="field w-48" aria-label="Skill" value={qk.note} onChange={(e) => patch((x) => { x.qualities[i].note = e.target.value; })}>
+                            {SKILLS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                          </select>
+                        )}
+                        {def?.needs === "attribute" && (
+                          <select className="field w-48" aria-label="Attribute" value={qk.note} onChange={(e) => patch((x) => { x.qualities[i].note = e.target.value; })}>
+                            {ATTRIBUTES.map((a) => <option key={a} value={a}>{ATTR_LABEL[a]}</option>)}
+                          </select>
+                        )}
+                        {def?.needs === "text" && (
+                          <input className="field w-56" aria-label={def.needsLabel} placeholder={def.needsLabel} value={qk.note ?? ""} onChange={(e) => patch((x) => { x.qualities[i].note = e.target.value; })} />
+                        )}
+                      </div>
                     )}
-                    {def?.needs === "attribute" && (
-                      <select className="field w-48" aria-label="Attribute" value={qk.note} onChange={(e) => patch((x) => { x.qualities[i].note = e.target.value; })}>
-                        {ATTRIBUTES.map((a) => <option key={a} value={a}>{ATTR_LABEL[a]}</option>)}
-                      </select>
+                    {def?.needs !== "skill" && def?.needs !== "attribute" && def?.needs !== "text" && (
+                      <textarea className="field min-h-16 text-sm [field-sizing:content]" rows={Math.max(2, Math.ceil((qk.note?.length ?? 0) / 36))} placeholder="Your note: what it means for this runner (optional)" aria-label={`${qk.name} note`}
+                        value={qk.note ?? ""} onChange={(e) => patch((x) => { x.qualities[i].note = e.target.value || undefined; })} />
                     )}
-                    {def?.needs === "text" && (
-                      <input className="field w-56" aria-label={def.needsLabel} placeholder={def.needsLabel} value={qk.note ?? ""} onChange={(e) => patch((x) => { x.qualities[i].note = e.target.value; })} />
-                    )}
-                  </div>
+                  </QualityRow>
                 </li>
               );
             })}

@@ -1,10 +1,15 @@
 "use client";
-import clsx from "clsx";
 import { ATTRIBUTES, ATTR_LABEL, METATYPES, SKILL_BY_ID, MAGIC_TYPE_LABEL } from "@/lib/sr6/data";
 import { budget, derive, validate } from "@/lib/sr6/derive";
 import { Note, StepHeader, type StepProps } from "../ui";
+import { useMemo } from "react";
+import { useRulebook } from "@/lib/store/rulebook";
+import { parseQualities } from "@/lib/sr6/qualities";
+import { QualityRow } from "@/components/QualityRow";
 
 export function Review({ c }: StepProps) {
+  const book = useRulebook((s) => s.book);
+  const qdefs = useMemo(() => parseQualities(book), [book]);
   const d = derive(c);
   const b = budget(c);
   const issues = validate(c);
@@ -44,9 +49,9 @@ export function Review({ c }: StepProps) {
           </ul>
         </section>
         <section className="panel quiet p-4">
-          <h3 className="mb-2 text-lg font-semibold">Qualities</h3>
-          <ul className="text-sm">
-            {c.qualities.map((q, i) => <li key={i} className="flex justify-between"><span>{q.name}{q.level > 1 ? ` ${q.level}` : ""}{q.note ? ` (${SKILL_BY_ID[q.note]?.name ?? q.note})` : ""}</span><span className={clsx("num", q.kind === "positive" ? "text-dim" : "text-cyan")}>{q.kind === "positive" ? "-" : "+"}{q.karma * q.level} K</span></li>)}
+          <h3 className="mb-2 flex items-baseline justify-between text-lg font-semibold">Qualities<span className="text-xs font-normal text-faint">tap one to read it</span></h3>
+          <ul className="divide-y divide-line">
+            {c.qualities.map((q, i) => <li key={i}><QualityRow compact q={q} def={qdefs.find((d) => d.id === q.id)} /></li>)}
             {c.qualities.length === 0 && <li className="text-dim">None.</li>}
           </ul>
         </section>

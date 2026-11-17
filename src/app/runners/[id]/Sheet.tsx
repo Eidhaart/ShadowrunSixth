@@ -29,6 +29,8 @@ import { GearTab } from "./tabs/GearTab";
 import { AdvanceTab } from "./tabs/AdvanceTab";
 import { advance, withAdv } from "@/lib/sr6/advance";
 import { weaponAR } from "@/lib/sr6/loadout";
+import { parseQualities } from "@/lib/sr6/qualities";
+import { QualityRow } from "@/components/QualityRow";
 
 const STATUSES = ["Burning", "Chilled", "Corrosive", "Dazed", "Deafened", "Fatigued", "Frightened", "Hazed", "Hobbled", "Immobilized", "Nauseated", "Panicked", "Poisoned", "Prone", "Stilled", "Wet", "Zapped"];
 const RANGES = ["Close", "Near", "Medium", "Far", "Extreme"] as const;
@@ -141,6 +143,7 @@ export function Sheet({ id }: { id: string }) {
   const c = useMemo(() => (raw ? withAdv(raw) : raw), [raw]);
   const update = useRunners((s) => s.update);
   const book = useRulebook((s) => s.book);
+  const qdefs = useMemo(() => parseQualities(book), [book]);
   const commsStatus = useComms((s) => s.status);
   const send = useComms((s) => s.send);
 
@@ -492,9 +495,9 @@ export function Sheet({ id }: { id: string }) {
           </Box>
 
           <Box title="Qualities and gear">
-            <ul className="mb-3 text-sm">
-              {c.qualities.map((q, i) => <li key={i}>{q.name}{q.level > 1 ? ` ${q.level}` : ""}{q.note ? ` (${SKILL_BY_ID[q.note]?.name ?? q.note})` : ""}<span className={clsx("ml-1 text-xs", q.kind === "negative" ? "text-cyan" : "text-faint")}>{q.kind === "negative" ? "negative" : ""}</span>{q.effect && <span className="ml-1 text-xs text-ok">auto</span>}</li>)}
-              {meta.racial.map((r) => <li key={r} className="text-dim">{r} <span className="text-xs text-faint">racial</span></li>)}
+            <ul className="mb-3 divide-y divide-line text-sm">
+              {c.qualities.map((q, i) => <li key={i}><QualityRow compact q={q} def={qdefs.find((d) => d.id === q.id)} /></li>)}
+              {meta.racial.map((r) => <li key={r} className="py-1.5 pl-6 text-dim">{r} <span className="text-xs text-faint">racial</span></li>)}
             </ul>
             <ul className="divide-y divide-line text-sm">
               {c.gear.map((g) => <li key={g.id} className="flex justify-between py-1"><span>{g.name}{g.qty > 1 ? ` ×${g.qty}` : ""}</span><span className="num text-xs text-dim">{g.armor ? `Armor ${g.armor}` : g.dv ? `DV ${g.dv}` : g.essence ? `Ess ${g.essence}` : ""}</span></li>)}
