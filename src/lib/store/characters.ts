@@ -2,7 +2,7 @@
 import { isPortrait } from "@/lib/portrait";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { newCharacter, type Character } from "@/lib/sr6/character";
+import { newCharacter, normalizeCharacter, type Character } from "@/lib/sr6/character";
 import { budget, derive } from "@/lib/sr6/derive";
 import { backfillGear } from "@/lib/compendium/catalog";
 
@@ -83,11 +83,14 @@ export const useRunners = create<RunnersState>()(
         set((s) => {
           const r = { ...s.runners };
           delete r[id];
-          return { runners: r };
+          // a Forge draft of a deleted runner would come back over a later import with the same id
+          return { runners: r, draft: s.draft?.id === id ? null : s.draft };
         }),
       importOne: (c) => {
-        const copy = clone(c);
+        const copy = normalizeCharacter(clone(c));
         backfillGear(copy.gear ?? []);
+        // an old draft with this id is stale: the file is what the player means to load
+        if (get().draft?.id === copy.id && !get().runners[copy.id]) set({ draft: null });
         if (copy.portrait && !isPortrait(copy.portrait)) delete copy.portrait;
         if (get().runners[copy.id]) copy.id = newCharacter().id;
         copy.updatedAt = Date.now();
@@ -96,13 +99,18 @@ export const useRunners = create<RunnersState>()(
       },
     }),
     {
-      name: "sixthdeck.runners", version: 2,
+      name: "sixthdeck.runners", version: 3,
       // v2: gear gains Capacity, mounts, licenses and implant bonuses from the catalog
+      // v3: mystic adepts store their Magic split; missing fields take defaults
       migrate: (state, version) => {
         const st = state as { runners?: Record<string, Character>; draft?: Character | null };
         if (version < 2) {
           for (const r of Object.values(st.runners ?? {})) backfillGear(r.gear ?? []);
           if (st.draft) backfillGear(st.draft.gear ?? []);
+        }
+        if (version < 3) {
+          for (const r of Object.values(st.runners ?? {})) normalizeCharacter(r);
+          if (st.draft) normalizeCharacter(st.draft);
         }
         return st as never;
       },

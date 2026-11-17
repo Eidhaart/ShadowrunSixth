@@ -1,5 +1,6 @@
 "use client";
 import { TRADITIONS } from "@/lib/sr6/data";
+import { toggleBond } from "@/lib/sr6/foci";
 import { ADV_COST, advance } from "@/lib/sr6/advance";
 import { useMemo, useState } from "react";
 import clsx from "clsx";
@@ -110,7 +111,7 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
       <div className="space-y-4">
-        <Box title="Spellcasting" right={<span className="num text-xs text-dim">{c.spells.length} / {d.slots.spells || "—"} spells</span>}>
+        <Box title="Spellcasting" right={<span className="num text-xs text-dim" title="Starting spells come from the build; spells learned in play are bought on the Advance tab">{c.spells.length} spells · {d.slots.spells} starting{c.adv?.spells.length ? ` + ${c.adv.spells.length} learned` : ""}</span>}>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Stat label="Magic" value={d.magic} tone="accent" />
             <Stat label="Attack rating" value={d.magic + tradVal} sub={`Magic + ${ATTR_LABEL[tradAttr]}`} />
@@ -245,19 +246,16 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
           <ul className="divide-y divide-line text-sm">
             {e.foci.map((f) => (
               <li key={f.id} className="flex flex-wrap items-center gap-2 py-1.5">
-                <span className="flex-1"><b className="font-display">{f.name}</b> <span className="text-xs text-dim">{f.kind} focus, rating {f.rating}</span></span>
+                <span className="flex-1"><b className="font-display">{f.name}</b> <span className="text-xs text-dim">{f.kind} focus, Force {f.rating}</span>
+                  {f.kind === "Weapon" && (() => {
+                    const item = c.gear.find((g) => g.id === f.gearId);
+                    const weapon = item?.inId ? c.gear.find((g) => g.id === item.inId) : undefined;
+                    return <span className={clsx("block text-xs", weapon ? "text-dim" : "text-faint")}>{weapon ? `Part of your ${weapon.name}: +${f.rating} ${f.rating === 1 ? "die" : "dice"} to its Attack tests while bonded and active` : "Not part of a weapon yet: pick the melee weapon on the Gear tab"}</span>;
+                  })()}
+                </span>
                 <button className={clsx("btn small", f.bonded && "primary")} aria-pressed={f.bonded} disabled={!f.bonded && (bonded >= d.magic || f.rating > d.magic || bondedForce + f.rating > d.magic * 5 || (inPlay && karmaLeft < bondKarma(f)))}
-                  title={f.bonded ? (f.karma ? `Unbond and take back ${f.karma} Karma` : undefined) : inPlay && karmaLeft < bondKarma(f) ? `Bonding costs ${bondKarma(f)} Karma; you have ${karmaLeft}` : `Bonding costs ${bondKarma(f)} Karma. Up to Magic foci, each no higher than Magic, Force Magic × 5 in all`}
-                  onClick={() => upd((x) => {
-                    // in play, bonding is paid from earned Karma; before play it comes out of creation Karma
-                    const cost = bondKarma(f);
-                    editExt(x, (ex) => {
-                      const t = ex.foci.find((q) => q.id === f.id);
-                      if (!t) return;
-                      if (!t.bonded) { t.bonded = true; if (x.stage === "complete") { t.karma = cost; x.karmaSpent += cost; } }
-                      else { t.bonded = false; t.active = false; if (t.karma) { x.karmaSpent = Math.max(0, x.karmaSpent - t.karma); delete t.karma; } }
-                    });
-                  })}>{f.bonded ? "Bonded" : `Bond · ${bondKarma(f)} Karma`}</button>
+                  title={f.bonded ? (inPlay ? "Unbond: the Karma spent bonding it is not given back" : "Unbond: frees its creation Karma") : inPlay && karmaLeft < bondKarma(f) ? `Bonding costs ${bondKarma(f)} Karma; you have ${karmaLeft}` : `Bonding costs ${bondKarma(f)} Karma. Up to Magic foci, each no higher than Magic, Force Magic × 5 in all`}
+                  onClick={() => upd((x) => { toggleBond(x, f.id, d.magic); })}>{f.bonded ? "Bonded" : `Bond · ${bondKarma(f)} Karma`}</button>
                 <button className={clsx("btn small", f.active && "primary")} disabled={!f.bonded} aria-pressed={f.active} onClick={() => upd((x) => editExt(x, (ex) => { const t = ex.foci.find((q) => q.id === f.id); if (t) t.active = !t.active; }))}>{f.active ? "Active" : "Inactive"}</button>
                 <button className="btn ghost small" aria-label={`Remove ${f.name}`} onClick={() => upd((x) => editExt(x, (ex) => { ex.foci = ex.foci.filter((q) => q.id !== f.id); }))}>×</button>
               </li>
@@ -274,7 +272,7 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
         </Box>
 
         {adept && (
-          <Box title="Adept powers" right={<span className="num text-xs text-dim">{ppUsed.toFixed(2).replace(/\.?0+$/, "")} / {d.slots.powerPoints} PP</span>}>
+          <Box title="Adept powers" right={<span className="num text-xs text-dim" title={d.slots.ppExtra ? `${d.slots.ppStart} from ${c.magicType === "mystic" ? "the Magic split" : "Magic"}, ${d.slots.ppExtra} from initiation` : undefined}>{ppUsed.toFixed(2).replace(/\.?0+$/, "")} / {d.slots.powerPoints} PP</span>}>
             <ul className="divide-y divide-line text-sm">
               {c.adeptPowers.map((p, i) => (
                 <li key={i} className="flex items-center justify-between py-1.5">

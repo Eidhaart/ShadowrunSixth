@@ -93,9 +93,11 @@ export interface GearItem {
   smartgun?: boolean;
   /** "L" needs a license, "I" is illegal. */
   legal?: "L" | "I";
+  /** Availability from the catalog, checked against the creation limit. */
+  avail?: number;
 }
 
-export type GearSlot = "eyes" | "ears" | "limb" | "armor" | "optical" | "audio" | "weapon";
+export type GearSlot = "eyes" | "ears" | "limb" | "armor" | "optical" | "audio" | "weapon" | "melee";
 
 export interface Contact {
   id: string;
@@ -167,6 +169,11 @@ export interface Character {
   adv?: import("./advance").Advancement;
   /** Power points bought with Karma (mystic adepts). Filled in by withAdv. */
   extraPP?: number;
+  /**
+   * Mystic adepts: how many points of the Priority table's Magic rating go to adept powers (1 Power Point
+   * each). The rest go to spellcasting (2 starting spells each). Missing on older saves: see mysticSplit().
+   */
+  mysticPP?: number;
   /** Initiation or submersion bought with creation Karma: grades and the metamagic or echo taken at each. */
   startGrade?: number;
   startMeta?: string[];
@@ -245,4 +252,38 @@ export function newCharacter(): Character {
     statuses: [],
     poolMod: 0,
   };
+}
+
+/**
+ * Bring a saved or imported runner up to the current shape without changing what was built: missing
+ * fields take their defaults, numbers that came in as text are read as numbers, and a mystic adept from
+ * before the stored split gets the split its powers imply. Returns the same object.
+ */
+export function normalizeCharacter(c: Character): Character {
+  const base = newCharacter() as unknown as Record<string, unknown>;
+  const x = c as unknown as Record<string, unknown>;
+  for (const [k, v] of Object.entries(base)) {
+    if (k === "id" || k === "createdAt" || k === "updatedAt") continue;
+    if (x[k] == null) x[k] = JSON.parse(JSON.stringify(v));
+    else if (typeof v === "number" && typeof x[k] === "string" && x[k] !== "" && !isNaN(Number(x[k]))) x[k] = Number(x[k]);
+  }
+  for (const k of ["attrPts", "attrKar"] as const) c[k] = { ...zeroAttrs(), ...c[k] };
+  c.damage = Object.assign({ physical: 0, stun: 0, overflow: 0 }, c.damage);
+  for (const e of Object.values(c.skills)) { e.pts = Number(e.pts) || 0; e.kar = Number(e.kar) || 0; }
+  // foci from before they were tied to their gear item: link by name, one item each
+  const foci = (c.ext as { foci?: { name: string; gearId?: string }[] } | undefined)?.foci;
+  if (Array.isArray(foci)) {
+    const taken = new Set(foci.map((f) => f.gearId).filter(Boolean));
+    for (const f of foci) {
+      if (f.gearId) continue;
+      const g = c.gear.find((x) => x.category === "magic" && x.name === f.name && !taken.has(x.id));
+      if (g) { f.gearId = g.id; taken.add(g.id); }
+    }
+  }
+  if (c.magicType === "mystic" && c.mysticPP == null) {
+    const startPP = (c.startMeta ?? []).filter((m) => /^power point$/i.test(m.trim())).length;
+    const spent = c.adeptPowers.reduce((s, p) => s + (Number(p.cost) || 0), 0);
+    c.mysticPP = Math.max(0, Math.ceil(spent - startPP - 1e-9));
+  }
+  return c;
 }

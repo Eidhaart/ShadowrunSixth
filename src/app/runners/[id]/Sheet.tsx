@@ -29,6 +29,7 @@ import { GearTab } from "./tabs/GearTab";
 import { AdvanceTab } from "./tabs/AdvanceTab";
 import { advance, withAdv } from "@/lib/sr6/advance";
 import { weaponAR } from "@/lib/sr6/loadout";
+import { weaponFocus } from "@/lib/sr6/foci";
 import { parseQualities } from "@/lib/sr6/qualities";
 import { QualityRow } from "@/components/QualityRow";
 
@@ -425,7 +426,10 @@ export function Sheet({ id }: { id: string }) {
                   const fitted = weaponAR(c, w); // accessories: smartgun with a smartlink, or a laser sight
                   const ar0 = fitted.ar[target.range];
                   const ar = ar0 ?? null; // Sixth World melee weapons use their listed AR; only unarmed adds Strength
-                  const base = (SKILL_BY_ID[sk] ? (rank > 0 ? rank : -1) : 0) + d.attrs[SKILL_BY_ID[sk]?.attr as AttrKey ?? "agility"];
+                  const skillBase = (SKILL_BY_ID[sk] ? (rank > 0 ? rank : -1) : 0) + d.attrs[SKILL_BY_ID[sk]?.attr as AttrKey ?? "agility"];
+                  // a bonded, active weapon focus adds its Force in dice to the Attack test (p. 155)
+                  const wf = weaponFocus(c, w);
+                  const base = skillBase + (wf?.bonus ?? 0);
                   const diff = ar == null ? 0 : ar - target.dr;
                   return (
                     <li key={w.id} className="py-2">
@@ -433,11 +437,12 @@ export function Sheet({ id }: { id: string }) {
                         <div>
                           <div className="font-display font-semibold">{w.name}</div>
                           <div className="num text-xs text-dim">DV {w.dv || "?"} · AR {fitted.ar.map((v) => (v == null ? "—" : v)).join("/")}{fitted.why && <span className="text-ok"> · {fitted.why}</span>}</div>
+                          {wf && <div className={clsx("text-xs", wf.bonus ? "text-ok" : "text-dim")}>{wf.bonus ? `Weapon focus Force ${wf.force}: +${wf.bonus} ${wf.bonus === 1 ? "die" : "dice"} (pool ${Math.max(0, skillBase)} + ${wf.bonus})` : `Weapon focus Force ${wf.force}, ${wf.why}: no bonus`}</div>}
                           {ar == null ? <div className="text-xs text-danger">Cannot attack at {RANGES[target.range]} range.</div> : diff >= rules().edgeGap ? <div className="text-xs text-ok">AR beats DR by {diff}: you gain {rules().edgeGain} Edge.</div> : diff <= -rules().edgeGap ? <div className="text-xs text-danger">DR beats AR by {-diff}: the target gains {rules().edgeGain} Edge.</div> : null}
                         </div>
                         <div className="no-print flex shrink-0 gap-1.5">
                           {diff >= rules().edgeGap && rules().edgeGain > 0 && <button className="btn small ghost" onClick={() => upd((x) => { x.edgeCurrent = Math.min(rules().maxEdge, x.edgeCurrent + rules().edgeGain); })}>+{rules().edgeGain} Edge</button>}
-                          <button className="btn small primary" disabled={ar == null} onClick={() => rollPool(`${w.name} (${SKILL_BY_ID[sk]?.name ?? "Attack"})`, Math.max(0, base))}>Attack {poolOf(base)}</button>
+                          <button className="btn small primary" disabled={ar == null} onClick={() => rollPool(`${w.name} (${SKILL_BY_ID[sk]?.name ?? "Attack"}${wf?.bonus ? `, weapon focus +${wf.bonus}` : ""})`, Math.max(0, base))}>Attack {poolOf(base)}</button>
                         </div>
                       </div>
                     </li>

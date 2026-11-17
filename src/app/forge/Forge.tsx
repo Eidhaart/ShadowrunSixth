@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import { Icon } from "@/components/Icon";
 import { useRunners } from "@/lib/store/characters";
-import { budget, validate } from "@/lib/sr6/derive";
+import { budget, derive, validate } from "@/lib/sr6/derive";
 import type { Character } from "@/lib/sr6/character";
 import { Readout } from "./Readout";
 import { Paths } from "./Paths";
@@ -39,6 +39,16 @@ const STEPS: StepDef[] = [
   { id: "gear", label: "Gear and lifestyle", done: (c) => { const n = budget(c).nuyen.left; return n >= 0 && n <= 5000 && c.gear.length > 0; }, Comp: GearStep },
   { id: "review", label: "Review", done: (c) => validate(c).every((i) => i.level !== "error"), Comp: Review },
 ];
+
+/** Power Points, spells and forms left, for runners that have them. */
+function magicChips(c: Character): [string, number][] {
+  const sl = derive(c).slots;
+  const out: [string, number][] = [];
+  if (c.magicType === "adept" || c.magicType === "mystic") out.push(["PP", sl.ppLeft]);
+  if (c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic") out.push(["Spells", sl.spells - c.spells.length]);
+  if (c.magicType === "technomancer") out.push(["Forms", sl.complexForms - c.complexForms.length]);
+  return out;
+}
 
 export function Forge() {
   const router = useRouter();
@@ -105,7 +115,7 @@ export function Forge() {
         </div>
         <div className="mt-1 h-1 bg-line" aria-hidden><div className="h-full bg-accent transition-[width]" style={{ width: `${((idx + 1) / steps.length) * 100}%` }} /></div>
         <button className="mt-1.5 flex w-full gap-1.5 overflow-x-auto text-left" onClick={() => { setSheet(true); setStepsOpen(false); }} aria-label="Open the runner summary">
-          {[["Attr", bud.attributes.left], ["Adj", bud.adjustment.left], ["Skills", bud.skills.left], ["Karma", bud.karma.left]].map(([l, v]) => (
+          {([["Attr", bud.attributes.left], ["Adj", bud.adjustment.left], ["Skills", bud.skills.left], ["Karma", bud.karma.left], ...magicChips(draft)] as [string, number][]).map(([l, v]) => (
             <span key={l as string} className={clsx("chip shrink-0 !py-0.5 text-xs", (v as number) < 0 && "!border-danger text-danger", v === 0 && "!border-ok text-ok")}>{l} <b className="num">{v}</b></span>
           ))}
           <span className={clsx("chip shrink-0 !py-0.5 text-xs", bud.nuyen.left < 0 && "!border-danger text-danger")}>¥ <b className="num">{bud.nuyen.left.toLocaleString("en-US")}</b></span>

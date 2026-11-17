@@ -197,15 +197,23 @@ test("bonus Initiative Dice from different sources do not stack", () => {
 });
 
 test("mystic adepts split the priority Magic between Power Points and spells", () => {
-  const c = probe();
+  const c = probe(); // Magic priority C: Magic 2
   c.magicType = "mystic";
   c.adjMagic = 3;
+  c.mysticPP = 0;
   let d = derive(c);
-  assert.equal(d.slots.powerPoints, 2, "Power Points come from the priority Magic, not adjustment points");
-  assert.equal(d.slots.spells, 4);
+  assert.equal(d.slots.powerPoints, 0, "Power Points come only from the points given to powers");
+  assert.equal(d.slots.spells, 4, "adjustment points do not add to the split");
+  c.mysticPP = 1;
+  d = derive(c);
+  assert.equal(d.slots.powerPoints, 1);
+  assert.equal(d.slots.spells, 2);
+  // an older save without the field: the powers bought decide, as before
+  delete c.mysticPP;
   c.adeptPowers.push({ name: "Half point", cost: 0.5, level: 1 });
   d = derive(c);
-  assert.equal(d.slots.spells, 2, "a part-spent point of Magic no longer buys spells");
+  assert.equal(d.slots.mysticPP, 1, "a part-spent point of Magic is a whole point given to powers");
+  assert.equal(d.slots.spells, 2);
 });
 
 test("Exotic Weapons takes its weapon as a free, required specialization", () => {
@@ -254,9 +262,11 @@ test("at creation a contact's Connection and Loyalty cannot exceed Charisma", ()
 test("mystic adept Magic for the split is the priority rating less Essence loss", () => {
   const c = probe(); // Magic priority C: Magic 2
   c.magicType = "mystic";
+  c.mysticPP = 1;
   c.gear.push({ id: "g", name: "Cyberear", category: "cyberware", cost: 0, qty: 1, essence: 0.5 });
+  assert.equal(derive(c).slots.mysticMagic, 1);
   assert.equal(derive(c).slots.powerPoints, 1);
-  assert.equal(derive(c).slots.spells, 2);
+  assert.equal(derive(c).slots.spells, 0);
 });
 
 test("the quality limit is on the net bonus: negatives minus positives", () => {

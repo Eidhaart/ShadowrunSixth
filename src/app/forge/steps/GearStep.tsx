@@ -13,6 +13,7 @@ import { addToRunner } from "@/lib/compendium/catalog";
 import { editExt } from "@/lib/sr6/ext";
 import { ordered } from "@/lib/sr6/loadout";
 import { HostNote, InstallSelect } from "@/components/gear/Install";
+import { WeaponFocusControl } from "@/components/gear/WeaponFocus";
 import type { CompItem } from "@/lib/compendium/types";
 
 const CATS: { id: GearItem["category"]; label: string }[] = [
@@ -131,11 +132,13 @@ export function GearStep({ c, patch }: StepProps) {
                       {g.armor ? ` · Armor ${g.armor}` : ""}{g.dv ? ` · DV ${g.dv}` : ""}{g.essence ? (host ? " · no Essence, uses Capacity" : ` · Essence ${g.essence}`) : ""}{g.capCost ? ` · Capacity [${g.capCost}]` : ""}</div>
                     <HostNote c={c} g={g} />
                     <InstallSelect c={c} g={g} onChange={(id) => patch((x) => { x.gear[i].inId = id; })} />
+                    <WeaponFocusControl c={c} w={g} creation budget={budget(c).nuyen.left} apply={patch} />
                   </div>
                   <div className="flex items-center gap-2">
                     {g.category === "armor" && <label className="flex items-center gap-1 text-xs"><input type="checkbox" className="accent-[var(--accent)]" checked={g.worn !== false} onChange={(e) => patch((x) => { x.gear[i].worn = e.target.checked; })} /> worn</label>}
-                    <Stepper size="sm" label={`${g.name} quantity`} value={g.qty} min={1} onChange={(v) => patch((x) => { x.gear[i].qty = v; })} />
-                    <button className="hover:text-danger" onClick={() => patch((x) => { const [gone] = x.gear.splice(i, 1); if (gone?.category === "magic" && x.ext?.foci.some((f) => f.name === gone.name)) editExt(x, (ex) => { ex.foci = ex.foci.filter((f) => f.name !== gone.name); }); })} aria-label={`Remove ${g.name}`}>×</button>
+                    {/* each focus is bonded on its own: one per entry */}
+                    {!/ focus, Force \d/i.test(g.name) && <Stepper size="sm" label={`${g.name} quantity`} value={g.qty} min={1} onChange={(v) => patch((x) => { x.gear[i].qty = v; })} />}
+                    <button className="hover:text-danger" onClick={() => patch((x) => { const [gone] = x.gear.splice(i, 1); if (gone?.category === "magic") editExt(x, (ex) => { const f = ex.foci.find((q) => q.gearId === gone.id) ?? ex.foci.find((q) => !q.gearId && q.name === gone.name); if (f) ex.foci = ex.foci.filter((q) => q !== f); }); })} aria-label={`Remove ${g.name}`}>×</button>
                   </div>
                 </li>
               ); })}

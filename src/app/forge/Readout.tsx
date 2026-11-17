@@ -56,6 +56,15 @@ export function Readout({ c, onGo }: { c: Character; onGo?: (where: string) => v
         <Budget label="Adjustment points" left={b.adjustment.left} total={b.adjustment.total} />
         <Budget label="Skill points" left={b.skills.left} total={b.skills.total} />
         <Budget label="Karma" left={b.karma.left} total={b.karma.base + b.karma.negativeBonus} />
+        {(c.magicType === "adept" || c.magicType === "mystic") && (
+          <div>
+            <Budget label={c.magicType === "mystic" ? `Power Points (${d.slots.mysticPP} of ${d.slots.mysticMagic} Magic to powers)` : "Power Points"} left={d.slots.ppLeft} total={d.slots.powerPoints} />
+            {d.slots.ppExtra > 0 && <div className="text-[11px] text-faint">includes {d.slots.ppExtra} from initiation</div>}
+          </div>
+        )}
+        {(c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic") && <Budget label="Starting spells" left={d.slots.spells - c.spells.length} total={d.slots.spells} />}
+        {c.magicType === "technomancer" && <Budget label="Starting complex forms" left={d.slots.complexForms - c.complexForms.length} total={d.slots.complexForms} />}
+        {b.karma.cost.foci > 0 && <div className="flex items-baseline justify-between text-xs text-dim"><span>Karma on bonding foci</span><span className="num">{b.karma.cost.foci}</span></div>}
         <div>
           <div className="flex items-baseline justify-between text-xs text-dim"><span>Nuyen left</span><span className={clsx("num", b.nuyen.left < 0 && "text-danger")}>{b.nuyen.left.toLocaleString("en-US")}¥</span></div>
         </div>

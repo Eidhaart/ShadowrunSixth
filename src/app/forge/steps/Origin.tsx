@@ -4,7 +4,8 @@ import {
   ATTR_LABEL, MAGIC_TYPE_LABEL, METATYPES, METATYPE_ORDER, PRIORITY_TABLE, specialRacialAttrs,
   type MagicType, type MetatypeId,
 } from "@/lib/sr6/data";
-import { budget, derive, reconcile } from "@/lib/sr6/derive";
+import { budget, changeMagicType, derive, reconcile } from "@/lib/sr6/derive";
+import { useState } from "react";
 import { Budget, Note, Segments, StepHeader, Stepper, type StepProps } from "../ui";
 
 const MAGIC_BLURB: Record<MagicType, string> = {
@@ -29,15 +30,14 @@ export function Origin({ c, patch }: StepProps) {
   const hasMagic = c.magicType !== "mundane";
 
   const setMeta = (m: MetatypeId) => patch((x) => { x.metatype = m; reconcile(x); });
-  const setMagic = (t: MagicType) => patch((x) => {
-    x.magicType = t;
-    x.adjMagic = 0;
-    x.karMagic = 0;
-    if (t === "mundane" || t === "technomancer") { x.spells = []; x.adeptPowers = []; }
-    if (t !== "technomancer") x.complexForms = [];
-    if (t === "adept") x.spells = [];
-    for (const id of ["sorcery", "conjuring", "enchanting", "astral", "tasking"]) delete x.skills[id];
-  });
+  // switching type keeps what the new type can use; anything that would go is listed first
+  const [pending, setPending] = useState<{ t: MagicType; lost: string[] } | null>(null);
+  const setMagic = (t: MagicType) => {
+    if (t === c.magicType) { setPending(null); return; }
+    const lost = changeMagicType(JSON.parse(JSON.stringify(c)), t);
+    if (lost.length) setPending({ t, lost });
+    else { setPending(null); patch((x) => { changeMagicType(x, t); }); }
+  };
 
   const edgeCap = meta.ranges.edge[1] - 1; // ranks above the free 1
   const magicCap = 6 - d.magicPriorityRating;
@@ -89,6 +89,19 @@ export function Origin({ c, patch }: StepProps) {
           );
         })}
       </div>
+
+      {pending && (
+        <div className="mt-3 max-w-2xl" role="alertdialog" aria-label="Confirm magic type change">
+          <Note tone="warn">
+            <div className="font-semibold">Switch to {MAGIC_TYPE_LABEL[pending.t]}?</div>
+            <p className="mt-1">A {MAGIC_TYPE_LABEL[pending.t].toLowerCase()} cannot use these, so they will be removed: {pending.lost.join(", ")}.</p>
+            <div className="mt-2 flex gap-2">
+              <button className="btn small primary" onClick={() => { const t = pending.t; setPending(null); patch((x) => { changeMagicType(x, t); }); }}>Switch and remove them</button>
+              <button className="btn small" onClick={() => setPending(null)}>Keep {MAGIC_TYPE_LABEL[c.magicType]}</button>
+            </div>
+          </Note>
+        </div>
+      )}
 
       <h3 className="mb-1 mt-8 text-lg font-semibold">Adjustment points</h3>
       <p className="mb-3 max-w-2xl text-sm text-dim">Spend your Metatype points on Edge, {hasMagic ? `${magicLabel}, ` : ""}and any attribute your metatype can push past 6. Edge starts at 1 and each point adds a rank.</p>

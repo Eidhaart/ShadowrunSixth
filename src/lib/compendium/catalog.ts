@@ -201,7 +201,7 @@ function coreTables(): CompItem[] {
       // power and weapon foci are harder to find: Availability Force + 3 (p. 295)
       const avail = /^(Power|Weapon) focus$/.test(n) ? f + 3 : f;
       out.push({ id: `magic-${slug(name)}`, name, cat: "magic", group: "Focus", cost: perForce * f, avail, legal: "L", source: "built-in", book: "Core", page: 295,
-        stats: [["Force", String(f)], ["Bonding", `${karma * f} Karma`]], gear: { name, category: "magic", cost: perForce * f, qty: 1 },
+        stats: [["Force", String(f)], ["Bonding", `${karma * f} Karma`]], gear: { name, category: "magic", cost: perForce * f, qty: 1, ...(n === "Weapon focus" ? { fits: "melee" as const } : {}) },
         focus: { kind: n.replace(/ focus$/, ""), force: f } });
     }
   for (const [kind, a, cost] of FORMULAS) {
@@ -326,6 +326,7 @@ export function backfillGear(gear: GearItem[]): void {
     if (g.legal == null && hit.legal) g.legal = hit.legal;
     if (g.smartgun == null && hit.cat === "weapons" && hit.stats.some(([k, v]) => k === "Smartgun" && /yes/i.test(v))) g.smartgun = true;
     for (const k of ["capacity", "capCost", "holds", "fits", "mount"] as const) if (g[k] == null && t[k] != null) (g as unknown as Record<string, unknown>)[k] = t[k];
+    if (g.avail == null && hit.avail != null) g.avail = hit.avail;
     if ((g.category === "cyberware" || g.category === "bioware") && !g.effect && t.effect) g.effect = JSON.parse(JSON.stringify(t.effect));
     // an estimate entered before the item was in the catalog takes the book price
     if (g.notes === EST_NOTE && hit.cost != null) { g.cost = hit.cost; delete g.notes; }
@@ -347,8 +348,9 @@ export interface AddResult { ok: boolean; msg: string }
 
 /** Put a compendium item on a runner. Stacks with an identical item, equips Matrix hardware into an
  *  empty slot, and pays for it from the runner's nuyen when `pay` is set. */
-export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; qty?: number }): AddResult {
-  const qty = opts.qty ?? 1;
+export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; qty?: number; /** Weapon foci: the melee weapon it becomes part of. */ onto?: string }): AddResult {
+  // each focus is its own item: it is bonded, and for a weapon focus attached, on its own
+  const qty = item.focus ? 1 : opts.qty ?? 1;
   const price = (item.cost ?? 0) * qty;
   if (opts.pay && price > c.nuyen) return { ok: false, msg: `${item.name} costs ${price.toLocaleString("en-US")}¥; ${c.alias || c.name || "the runner"} has ${c.nuyen.toLocaleString("en-US")}¥.` };
   const same = c.gear.find((g) => g.name === item.gear.name && g.category === item.gear.category && g.cost === item.gear.cost);
@@ -358,14 +360,19 @@ export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; 
     added = {
       ...(JSON.parse(JSON.stringify(item.gear)) as Omit<GearItem, "id">), id: uid("g"), qty,
       ...(item.legal ? { legal: item.legal } : {}),
+      ...(item.avail != null ? { avail: item.avail } : {}),
       ...(item.cat === "weapons" && item.stats.some(([k, v]) => k === "Smartgun" && /yes/i.test(v)) ? { smartgun: true } : {}),
     };
     c.gear.push(added);
   }
+  if (added && opts.onto && added.fits) {
+    const host = c.gear.find((g) => g.id === opts.onto);
+    if (host && hostsFor(c, added).includes(host) && roomFor(c, host, added)) added.inId = host.id;
+  }
   backfillGear(c.gear);
   // a modification goes straight into the one thing that can take it; with a choice, the player picks
   let installed = "";
-  if (added?.fits && added.fits !== "weapon") {
+  if (added?.fits && added.fits !== "weapon" && added.fits !== "melee") {
     const open = hostsFor(c, added).filter((h) => roomFor(c, h, added!));
     if (open.length === 1) { added.inId = open[0].id; installed = open[0].name; }
   }
@@ -390,7 +397,7 @@ export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; 
   }
   // a focus also shows up on the Magic tab, unbonded: bonding costs Karma
   if (item.focus) {
-    for (let n = 0; n < qty; n++) editExt(c, (ex) => { ex.foci.push({ id: uid("f"), name: item.name, kind: item.focus!.kind, rating: item.focus!.force, bonded: false, active: false }); });
+    editExt(c, (ex) => { ex.foci.push({ id: uid("f"), name: item.name, kind: item.focus!.kind, rating: item.focus!.force, bonded: false, active: false, gearId: added?.id }); });
     equipped = "focus";
   }
   // vehicles and drones go straight onto the Rigging tab, ready to drive
@@ -399,6 +406,7 @@ export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; 
     equipped = "rig";
   }
   const paid = opts.pay && price ? ` for ${price.toLocaleString("en-US")}¥` : "";
-  const where = installed ? ` Installed in the ${installed}.` : added?.fits ? ` Choose what it goes ${added.fits === "weapon" ? "on" : "in"} from your gear list.` : equipped === "focus" ? ` It is on the Magic tab; bond it there.` : equipped === "rig" ? ` It is on the Rigging tab.` : equipped ? ` Equipped as the ${equipped} on the ${equipped === "console" ? "Rigging" : "Matrix"} tab.` : "";
+  const onWeapon = added?.fits === "melee" && added.inId ? c.gear.find((g) => g.id === added!.inId)?.name : "";
+  const where = onWeapon ? ` Your ${onWeapon} is now the focus; bond it on the Magic tab.` : installed ? ` Installed in the ${installed}.` : added?.fits === "melee" ? ` Choose the melee weapon it is in your gear list, then bond it on the Magic tab.` : added?.fits ? ` Choose what it goes ${added.fits === "weapon" ? "on" : "in"} from your gear list.` : equipped === "focus" ? ` It is on the Magic tab; bond it there.` : equipped === "rig" ? ` It is on the Rigging tab.` : equipped ? ` Equipped as the ${equipped} on the ${equipped === "console" ? "Rigging" : "Matrix"} tab.` : "";
   return { ok: true, msg: `${item.name} added${paid}.${where}` };
 }

@@ -11,6 +11,9 @@ import { LIFESTYLES, SKILLS } from "@/lib/sr6/data";
 import { Box, Empty, Num, Stepper } from "./ui";
 import { ordered } from "@/lib/sr6/loadout";
 import { HostNote, InstallSelect } from "@/components/gear/Install";
+import { WeaponFocusControl } from "@/components/gear/WeaponFocus";
+import { editExt } from "@/lib/sr6/ext";
+import { budget } from "@/lib/sr6/derive";
 import type { SheetCtx } from "./ctx";
 
 const CATS: { id: GearItem["category"]; label: string }[] = [
@@ -25,15 +28,20 @@ function ItemRow({ ctx, g, nested }: { ctx: SheetCtx; g: GearItem; nested?: bool
     <li className={clsx("py-2", nested && "border-l-2 border-accent/40 pl-3")}>
       <div className="flex flex-wrap items-center gap-2">
         <input className="field !min-h-0 min-w-32 flex-1 !py-1 font-display font-semibold" value={g.name} aria-label="Item name" onChange={(ev) => set((t) => { t.name = ev.target.value; })} />
-        <Stepper label={`${g.name} quantity`} value={g.qty} min={1} max={99} onChange={(n) => set((t) => { t.qty = n; })} />
+        {!/ focus, Force \d/i.test(g.name) && <Stepper label={`${g.name} quantity`} value={g.qty} min={1} max={99} onChange={(n) => set((t) => { t.qty = n; })} />}
         {g.category === "armor" && (
           <button className={clsx("btn small", g.worn !== false && "primary")} aria-pressed={g.worn !== false} onClick={() => set((t) => { t.worn = t.worn === false; })}>{g.worn !== false ? "Worn" : "Stowed"}</button>
         )}
-        <button className="btn ghost small" aria-label={`Remove ${g.name}`} onClick={() => ctx.upd((x) => { x.gear = x.gear.filter((q) => q.id !== g.id); })}>×</button>
+        <button className="btn ghost small" aria-label={`Remove ${g.name}`} onClick={() => ctx.upd((x) => {
+          x.gear = x.gear.filter((q) => q.id !== g.id);
+          // a focus that is gone is gone from the Magic tab too; Karma spent bonding it stays spent
+          if (g.category === "magic") editExt(x, (ex) => { ex.foci = ex.foci.filter((f) => f.gearId !== g.id); });
+        })}>×</button>
       </div>
       <div className="mt-1 space-y-1">
         <HostNote c={ctx.c} g={g} />
         <InstallSelect c={ctx.c} g={g} onChange={(id) => set((t) => { t.inId = id; })} />
+        <WeaponFocusControl c={ctx.c} w={g} budget={ctx.c.stage === "complete" ? ctx.c.nuyen : budget(ctx.c).nuyen.left} creation={ctx.c.stage !== "complete"} apply={ctx.upd} />
       </div>
       <details className="mt-1">
         <summary className="cursor-pointer text-xs text-dim">

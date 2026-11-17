@@ -24,7 +24,13 @@ export interface MatrixGear {
 export type SimMode = "ar" | "cold" | "hot";
 export interface Sprite { id: string; type: string; level: number; tasks: number; registered: boolean; damage: number; note: string }
 export interface Spirit { id: string; type: string; force: number; services: number; bound: boolean; damage: number; note: string }
-export interface Focus { id: string; name: string; kind: string; rating: number; bonded: boolean; active: boolean; /** Karma paid to bond it in play; foci bonded at creation are paid from creation Karma. */ karma?: number }
+export interface Focus {
+  id: string; name: string; kind: string; rating: number; bonded: boolean; active: boolean;
+  /** Karma paid to bond it in play; foci bonded at creation are paid from creation Karma. */
+  karma?: number;
+  /** The gear item that is this focus (its price and, for a weapon focus, the weapon it is part of). */
+  gearId?: string;
+}
 export interface Vehicle {
   id: string; name: string; kind: "vehicle" | "drone";
   handlingOn: number; handlingOff: number; accel: number; speedInterval: number; topSpeed: number;

@@ -59,7 +59,21 @@ export interface Derived {
   memory: number;
   movement: { walk: number; sprint: number };
   skills: SkillPool[];
-  slots: { spells: number; complexForms: number; powerPoints: number };
+  slots: {
+    spells: number;
+    complexForms: number;
+    /** All Power Points: the creation pool plus initiation and advancement. */
+    powerPoints: number;
+    /** Power Points from creation: Magic for adepts, the mystic split for mystic adepts. */
+    ppStart: number;
+    /** Power Points from initiation grades and Karma after creation. */
+    ppExtra: number;
+    ppSpent: number;
+    ppLeft: number;
+    /** Mystic adepts: the Priority table Magic they split, and the part given to powers. */
+    mysticMagic: number;
+    mysticPP: number;
+  };
   free: { knowledge: number };
   unconscious: boolean;
   dead: boolean;
@@ -118,6 +132,17 @@ export function magicPriorityRating(c: Character): number {
   const lvl = c.priorities.magic;
   if (!lvl || c.magicType === "mundane") return 0;
   return PRIORITY_TABLE[lvl].magic[c.magicType] ?? 0;
+}
+
+/**
+ * Mystic adepts: priority Magic points given to adept powers. Saves from before the split was stored
+ * get the old reading: as many whole points as the powers bought at creation need.
+ */
+export function mysticSplit(c: Pick<Character, "mysticPP" | "adeptPowers" | "extraPP" | "startMeta">): number {
+  if (c.mysticPP != null) return Math.max(0, Math.floor(c.mysticPP));
+  const startPP = (c.startMeta ?? []).filter((m) => /^power point$/i.test(m.trim())).length;
+  const spent = c.adeptPowers.reduce((s, p) => s + p.cost, 0);
+  return Math.max(0, Math.ceil(spent - (c.extraPP ?? 0) - startPP - 1e-9));
 }
 
 export function derive(c: Character): Derived {
@@ -203,12 +228,16 @@ export function derive(c: Character): Derived {
 
   // Mystic adepts split the priority Magic rating: each whole point is either one Power Point or two spells.
   // That rating is the one from the Priority table, reduced by Essence loss.
+  // Adjustment points and Karma raise the final Magic, not the pool that is split.
   const mysticMagic = c.magicType === "mystic" ? Math.max(0, mpr - essenceMagicLoss) : 0;
-  const mysticPP = Math.min(mysticMagic, Math.ceil(Math.max(0, c.adeptPowers.reduce((s, p) => s + p.cost, 0) - (c.extraPP ?? 0)) - 1e-9));
+  const mysticPP = c.magicType === "mystic" ? Math.min(mysticMagic, mysticSplit(c)) : 0;
   const spells = awakened && c.magicType !== "adept" ? (c.magicType === "mystic" ? mysticMagic - mysticPP : mpr) * 2 : 0;
   // a grade taken at creation can be a Power Point instead of a metamagic
   const startPP = c.magicType === "adept" || c.magicType === "mystic" ? (c.startMeta ?? []).filter((m) => /^power point$/i.test(m.trim())).length : 0;
-  const powerPoints = (c.magicType === "adept" ? magic : mysticMagic) + (c.extraPP ?? 0) + startPP;
+  const ppStart = c.magicType === "adept" ? magic : mysticPP;
+  const ppExtra = c.magicType === "adept" || c.magicType === "mystic" ? (c.extraPP ?? 0) + startPP : 0;
+  const powerPoints = ppStart + ppExtra;
+  const ppSpent = +c.adeptPowers.reduce((s, p) => s + p.cost, 0).toFixed(2);
 
   const con = c.damage;
   const unconscious = con.stun >= stunBoxes || con.physical >= physicalBoxes;
@@ -244,7 +273,10 @@ export function derive(c: Character): Derived {
     memory: attrs.logic + attrs.intuition,
     movement: { walk: 10, sprint: 15 },
     skills,
-    slots: { spells, complexForms: c.magicType === "technomancer" ? mpr * 2 : 0, powerPoints },
+    slots: {
+      spells, complexForms: c.magicType === "technomancer" ? mpr * 2 : 0, powerPoints,
+      ppStart, ppExtra, ppSpent, ppLeft: +(powerPoints - ppSpent).toFixed(2), mysticMagic, mysticPP,
+    },
     // free knowledge points equal Logic, not counting augmentations
     free: { knowledge: natural.logic },
     unconscious,
@@ -312,10 +344,9 @@ export function budget(c: Character): Budget {
 
   const perKarma = c.qualities.reduce<number>((m, q) => Math.max(m, q.effect?.nuyenPerKarma ?? 0), KARMA.nuyenPerKarma);
   const nuyenFromKarma = c.karmaToNuyen * perKarma;
-  // spells, rituals and complex forms past the free picks are bought like any advancement: 5 Karma each
-  const magicKarma =
-    Math.max(0, c.spells.length - d.slots.spells) * KARMA.spell +
-    Math.max(0, c.complexForms.length - d.slots.complexForms) * KARMA.complexForm;
+  // New spells and complex forms cannot be bought with Karma during creation (Karma table, p. 68):
+  // past the free picks it is a validation error, not a cost.
+  const magicKarma = 0;
   // initiation or submersion at creation: 10 + new grade Karma per grade, like the advancement table
   let initiationKarma = 0;
   for (let g = 1; g <= (c.startGrade ?? 0); g++) initiationKarma += Math.max(1, Math.round(((10 + g) * rules().karmaCostPct) / 100));
@@ -422,6 +453,8 @@ export function validate(c: Character): Issue[] {
   if (c.magicType !== "adept" && c.magicType !== "mystic" && (c.startMeta ?? []).some((m) => /^power point$/i.test(m.trim())))
     issues.push({ level: "error", where: "Magic", text: "Only adepts and mystic adepts can take a Power Point at initiation." });
 
+  if ((c.ext?.foci ?? []).some((f) => f.kind === "Qi") && c.magicType !== "adept" && c.magicType !== "mystic")
+    issues.push({ level: "warn", where: "Magic", text: "Qi foci only work for adepts and mystic adepts." });
   const foci = (c.ext?.foci ?? []).filter((f) => f.bonded);
   if (foci.length) {
     if (c.magicType === "mundane" || c.magicType === "technomancer") issues.push({ level: "error", where: "Magic", text: "Only the Awakened can bond foci." });
@@ -479,8 +512,18 @@ export function validate(c: Character): Issue[] {
   if (c.spells.length && !d.slots.spells && c.magicType !== "full" && c.magicType !== "aspected" && c.magicType !== "mystic")
     issues.push({ level: "error", where: "Magic", text: "Only magicians and mystic adepts learn spells." });
   if (c.complexForms.length && c.magicType !== "technomancer") issues.push({ level: "error", where: "Magic", text: "Only technomancers learn complex forms." });
-  const ppSpent = c.adeptPowers.reduce((s, x) => s + x.cost, 0);
-  if (ppSpent > d.slots.powerPoints) issues.push({ level: "error", where: "Magic", text: `Adept powers cost ${ppSpent} but you only have ${d.slots.powerPoints} power points.` });
+  const sl = d.slots;
+  if (sl.ppSpent > sl.powerPoints + 1e-9)
+    issues.push({ level: "error", where: "Magic", text: c.magicType === "mystic"
+      ? `Adept powers cost ${sl.ppSpent} PP, but only ${sl.mysticPP} of your ${sl.mysticMagic} priority Magic ${sl.mysticPP === 1 ? "point goes" : "points go"} to powers${sl.ppExtra ? ` (+${sl.ppExtra} from initiation and Karma)` : ""}. Move a point from spellcasting or drop a power.`
+      : `Adept powers cost ${sl.ppSpent} PP but you have ${sl.powerPoints} Power Points (one per point of Magic${sl.ppExtra ? `, +${sl.ppExtra} from initiation and Karma` : ""}).` });
+  if (c.magicType === "mystic" && c.mysticPP != null && c.mysticPP > sl.mysticMagic)
+    issues.push({ level: "error", where: "Magic", text: `${c.mysticPP} points are given to adept powers, but your priority Magic is ${sl.mysticMagic}.` });
+  // starting spells and forms are a hard limit: more can only be learned in play
+  if (c.spells.length > sl.spells && sl.spells + c.spells.length > 0 && (c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic"))
+    issues.push({ level: "error", where: "Magic", text: `${c.spells.length} spells, but you start with ${sl.spells}${c.magicType === "mystic" ? ` (2 for each of the ${sl.mysticMagic - sl.mysticPP} priority Magic points given to spellcasting)` : " (priority Magic x 2)"}. New spells cannot be bought with Karma during creation; learn them in play.` });
+  if (c.complexForms.length > sl.complexForms && c.magicType === "technomancer")
+    issues.push({ level: "error", where: "Magic", text: `${c.complexForms.length} complex forms, but you start with ${sl.complexForms} (priority Resonance x 2). New forms cannot be bought with Karma during creation; learn them in play.` });
 
   // contacts
   if (b.contacts.left < 0) issues.push({ level: "error", where: "Contacts", text: `Contacts use ${b.contacts.spent} points but Charisma x 6 gives only ${b.contacts.total}.` });
@@ -489,9 +532,20 @@ export function validate(c: Character): Issue[] {
       issues.push({ level: "error", where: "Contacts", text: `${k.name}: Connection and Loyalty cannot be higher than your Charisma (${d.natural.charisma}) at creation.` });
 
   // karma and nuyen
-  if (b.karma.left < 0) issues.push({ level: "error", where: "Karma", text: `${-b.karma.left} Karma over budget.` });
+  if (b.karma.left < 0) {
+    const k = b.karma.cost;
+    const parts = ([["attributes", k.attributes], ["skills", k.skills], ["qualities", k.qualities], ["Edge and Magic", k.edgeMagic], ["knowledge", k.knowledge], ["initiation", k.initiation], ["bonding foci", k.foci], ["nuyen", k.nuyen]] as [string, number][])
+      .filter(([, v]) => v > 0).map(([n, v]) => `${n} ${v}`);
+    issues.push({ level: "error", where: "Karma", text: `${-b.karma.left} Karma over budget. Spent on ${parts.join(", ")}.${k.foci ? " Unbond a focus or spend less elsewhere." : ""}` });
+  }
   if (b.karma.left > KARMA.maxUnspent) issues.push({ level: "error", where: "Karma", text: `Begin play with at most ${KARMA.maxUnspent} unspent Karma (you have ${b.karma.left}).` });
-  if (b.nuyen.left < 0) issues.push({ level: "error", where: "Gear", text: `${-b.nuyen.left}¥ over budget.` });
+  if (b.nuyen.left < 0) issues.push({ level: "error", where: "Gear", text: `${(-b.nuyen.left).toLocaleString("en-US")}¥ over budget: gear ${b.nuyen.gear.toLocaleString("en-US")}¥ and lifestyle ${b.nuyen.lifestyle.toLocaleString("en-US")}¥ against ${b.nuyen.total.toLocaleString("en-US")}¥.` });
+  // a runner in play may own things bought later; the creation limit is for the build
+  if (c.stage !== "complete") {
+    const cap = rules().creationAvail;
+    for (const g of c.gear.filter((x) => (x.avail ?? 0) > cap))
+      issues.push({ level: "error", where: "Gear", text: `${g.name} has Availability ${g.avail}; at creation nothing above ${cap} can be bought.` });
+  }
   if (b.nuyen.left > 5000) issues.push({ level: "warn", where: "Gear", text: "You can start play with at most 5,000¥ unspent." });
   if (c.lifestyle !== "street" && c.lifestyleMonths === 0) issues.push({ level: "warn", where: "Gear", text: "No lifestyle month is paid: prepay at least one, or you start on the street." });
   if (c.gear.length > 0 && !c.qualities.some((q) => /^sinner/i.test(q.name)) && !c.gear.some((g) => /fake sin/i.test(g.name)))
@@ -520,4 +574,50 @@ export function reconcile(c: Character): void {
   // Racial adjustment points only apply to attributes the metatype can push past 6.
   const special = specialRacialAttrs(c.metatype);
   for (const k of Object.keys(c.adjRacial) as AttrKey[]) if (!special.includes(k)) delete c.adjRacial[k];
+}
+
+const CASTERS: MagicType[] = ["full", "aspected", "mystic"];
+const POWER_USERS: MagicType[] = ["adept", "mystic"];
+const MAGIC_FAMILY: MagicType[] = ["full", "aspected", "mystic", "adept"];
+/** Which magic types can use each Magic or Resonance skill. */
+const SKILL_USERS: Record<string, MagicType[]> = {
+  sorcery: CASTERS, conjuring: CASTERS, enchanting: CASTERS, astral: MAGIC_FAMILY, tasking: ["technomancer"],
+};
+
+/**
+ * Switch magic type, keeping everything the new type can still use. Returns what had to go, in words,
+ * so the Forge can ask first. Choosing the type the runner already has changes nothing.
+ */
+export function changeMagicType(c: Character, t: MagicType): string[] {
+  const from = c.magicType;
+  if (from === t) return [];
+  const lost: string[] = [];
+  const sameAttr = (MAGIC_FAMILY.includes(from) && MAGIC_FAMILY.includes(t)) || (from === "technomancer" && t === "technomancer");
+  const attrName = from === "technomancer" ? "Resonance" : "Magic";
+  c.magicType = t;
+  if (!sameAttr) {
+    if (c.adjMagic) lost.push(`${c.adjMagic} adjustment ${c.adjMagic === 1 ? "point" : "points"} on ${attrName}`);
+    if (c.karMagic) lost.push(`${c.karMagic} Karma ${c.karMagic === 1 ? "rank" : "ranks"} of ${attrName}`);
+    c.adjMagic = 0;
+    c.karMagic = 0;
+  } else {
+    // the new type may start higher: keep the attribute within 6 at creation
+    const cap = Math.max(0, 6 - magicPriorityRating(c));
+    if (c.adjMagic > cap) { lost.push(`${c.adjMagic - cap} adjustment ${c.adjMagic - cap === 1 ? "point" : "points"} on Magic over 6`); c.adjMagic = cap; }
+    const karCap = Math.max(0, cap - c.adjMagic);
+    if (c.karMagic > karCap) { lost.push(`${c.karMagic - karCap} Karma ${c.karMagic - karCap === 1 ? "rank" : "ranks"} of Magic over 6`); c.karMagic = karCap; }
+  }
+  if (!CASTERS.includes(t) && c.spells.length) { lost.push(`${c.spells.length} ${c.spells.length === 1 ? "spell" : "spells"}`); c.spells = []; }
+  if (!POWER_USERS.includes(t) && c.adeptPowers.length) { lost.push(`${c.adeptPowers.length} adept ${c.adeptPowers.length === 1 ? "power" : "powers"}`); c.adeptPowers = []; }
+  if (t !== "technomancer" && c.complexForms.length) { lost.push(`${c.complexForms.length} complex ${c.complexForms.length === 1 ? "form" : "forms"}`); c.complexForms = []; }
+  for (const [id, users] of Object.entries(SKILL_USERS)) {
+    const e = c.skills[id];
+    if (!e || users.includes(t)) continue;
+    const ranks = e.pts + e.kar;
+    if (ranks || e.spec) lost.push(`${SKILL_BY_ID[id]?.name ?? id} ${ranks}${e.pts ? ` (${e.pts} skill ${e.pts === 1 ? "point" : "points"})` : ""}`);
+    delete c.skills[id];
+  }
+  // a new mystic adept starts with the split their powers need; leaving mystic forgets the split
+  if (t !== "mystic") delete c.mysticPP;
+  return lost;
 }

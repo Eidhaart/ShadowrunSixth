@@ -100,15 +100,16 @@ test("language levels take knowledge points; the native language is free", () =>
   assert.ok(validate(c).some((i) => /one language can be native/.test(i.text)));
 });
 
-test("spells past the free picks cost 5 Karma instead of being refused", () => {
+test("spells past the starting allowance are a validation error, not a Karma cost (p. 68)", () => {
   const c = newCharacter();
   c.priorities = { metatype: "E", attributes: "B", magic: "A", skills: "C", resources: "D" } as never;
   c.magicType = "full";
   const free = 8; // Magic 4 from Priority A, times two
   c.spells = Array.from({ length: free + 2 }, (_, i) => `Spell ${i}`);
   const b = budget(c);
-  assert.equal(b.karma.cost.magic, 10);
-  assert.ok(!validate(c).some((i) => /Too many spells/.test(i.text)));
+  assert.equal(b.karma.cost.magic, 0);
+  assert.ok(validate(c).some((i) => i.level === "error" && /10 spells, but you start with 8/.test(i.text)));
+  assert.equal(c.spells.length, 10, "the list is not trimmed");
 });
 
 import { withAdv } from "../src/lib/sr6/advance";

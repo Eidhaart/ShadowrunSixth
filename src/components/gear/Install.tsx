@@ -10,13 +10,13 @@ export function InstallSelect({ c, g, onChange }: { c: Pick<Character, "gear">; 
   if (!g.fits) return null;
   const hosts = hostsFor(c, g);
   const cur = hostOf(c, g);
-  const weapon = g.fits === "weapon";
+  const weapon = g.fits === "weapon" || g.fits === "melee";
   return (
     <label className="flex items-center gap-1.5 text-xs text-dim">
-      {weapon ? "On" : "In"}
+      {g.fits === "melee" ? "Part of" : weapon ? "On" : "In"}
       <select className={clsx("field !min-h-0 !w-auto max-w-[13rem] !py-1 text-xs", !cur && !g.essence && "!border-accent")} value={cur?.id ?? ""} aria-label={`${g.name}: ${weapon ? "attached to" : "installed in"}`}
         onChange={(e) => onChange(e.target.value || undefined)}>
-        <option value="">{weapon ? "Not attached" : g.essence ? "Implanted on its own" : "Not installed"}</option>
+        <option value="">{g.fits === "melee" ? "Not part of a weapon" : weapon ? "Not attached" : g.essence ? "Implanted on its own" : "Not installed"}</option>
         {hosts.map((h) => {
           const fits = roomFor(c, h, g);
           return <option key={h.id} value={h.id} disabled={!fits && h.id !== cur?.id}>{h.name}{weapon ? "" : ` (${capacityUsed(c, h)}/${h.capacity ?? 0})`}{fits || h.id === cur?.id ? "" : " full"}</option>;
@@ -29,7 +29,8 @@ export function InstallSelect({ c, g, onChange }: { c: Pick<Character, "gear">; 
 
 /** One line on what a host carries: Capacity used, or a weapon's accessories and adjusted Attack Ratings. */
 export function HostNote({ c, g }: { c: Pick<Character, "gear">; g: GearItem }) {
-  const kids = installedIn(c, g);
+  // a weapon focus is shown by its own control on the weapon's row
+  const kids = installedIn(c, g).filter((k) => k.fits !== "melee");
   if (g.category === "weapon") {
     if (!kids.length && !g.smartgun) return null;
     const { ar, why } = weaponAR(c, g);

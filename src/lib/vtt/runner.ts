@@ -5,6 +5,7 @@ import { ATTRIBUTES, ATTR_ABBR, METATYPES, SKILL_BY_ID } from "@/lib/sr6/data";
 import type { Bar, BarKey, Card, Npc, Weapon } from "./types";
 import { parseDv } from "./combat";
 import { weaponAR } from "@/lib/sr6/loadout";
+import { weaponFocusBonus } from "@/lib/sr6/foci";
 
 /** Condition monitors and Edge as token bars: current is boxes left. */
 export function barsFor(raw: Character): Record<BarKey, Bar> {
@@ -26,7 +27,8 @@ function pools(c: Character) {
     const e = c.skills[sk];
     const rank = e ? e.pts + e.kar : 0;
     const attr = def?.attr === "magic" ? d.magic : def?.attr === "resonance" ? d.resonance : d.attrs[(def?.attr ?? "agility") as keyof typeof d.attrs] ?? 0;
-    out.push({ label: `${w.name}${w.dv ? ` (${w.dv})` : ""}`, dice: Math.max(0, attr + (rank > 0 ? rank : -1)) });
+    const focus = weaponFocusBonus(c, w);
+    out.push({ label: `${w.name}${w.dv ? ` (${w.dv})` : ""}${focus ? ` +${focus} focus` : ""}`, dice: Math.max(0, attr + (rank > 0 ? rank : -1)) + focus });
   }
   for (const s of [...d.skills].sort((a, b) => b.pool - a.pool).slice(0, 8)) out.push({ label: s.name, dice: s.pool });
   out.push({ label: "Defend (REA + INT)", dice: d.attrs.reaction + d.attrs.intuition });
@@ -47,7 +49,9 @@ export function weaponsFor(raw: Character): Weapon[] {
   };
   const out: Weapon[] = c.gear.filter((g) => g.category === "weapon").map((w) => {
     const { dv, type } = parseDv(w.dv);
-    return { name: w.name, pool: poolFor(w.skill ?? "firearms"), dv, type, ar: weaponAR(c, w).ar };
+    // a bonded, active weapon focus adds its Force in dice; damage and Attack Rating stay the weapon's
+    const focus = weaponFocusBonus(c, w);
+    return { name: focus ? `${w.name} (focus +${focus})` : w.name, pool: poolFor(w.skill ?? "firearms") + focus, dv, type, ar: weaponAR(c, w).ar };
   });
   // Unarmed: base DV 2S (Close Combat, p. 94); AR is Reaction + Strength, Close only.
   // Half Strength is the damage for the grapple option, not for a strike. Dermal Deposits makes it Physical.

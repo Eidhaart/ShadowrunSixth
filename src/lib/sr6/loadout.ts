@@ -7,10 +7,15 @@ import type { Character, GearItem, GearSlot } from "./character";
 type Gear = Pick<Character, "gear">;
 
 export const SLOT_LABEL: Record<GearSlot, string> = {
-  eyes: "cybereyes", ears: "cyberears", limb: "a cyberlimb", armor: "armor", optical: "an optical device", audio: "an audio device", weapon: "a weapon",
+  eyes: "cybereyes", ears: "cyberears", limb: "a cyberlimb", armor: "armor", optical: "an optical device", audio: "an audio device", weapon: "a weapon", melee: "a melee weapon",
 };
 
-const canHold = (host: GearItem, slot: GearSlot) => (slot === "weapon" ? host.category === "weapon" : host.holds === slot);
+/** Close-combat weapons: a weapon focus can only be one of these (p. 155). */
+export const isMelee = (g: GearItem) =>
+  g.category === "weapon" && (g.skill === "close-combat" || (g.skill === "exotic-weapons" && !!g.ar && g.ar[0] != null && g.ar.slice(1).every((v) => v == null)));
+
+const canHold = (host: GearItem, slot: GearSlot) =>
+  slot === "weapon" ? host.category === "weapon" : slot === "melee" ? isMelee(host) : host.holds === slot;
 
 /** Items this one could go into. */
 export function hostsFor(c: Gear, g: GearItem): GearItem[] {
@@ -32,6 +37,7 @@ export const capacityUsed = (c: Gear, host: GearItem): number => installedIn(c, 
 /** Room left in a host for one more `g`; Infinity for weapons, which use mounts instead. */
 export function roomFor(c: Gear, host: GearItem, g: GearItem): boolean {
   if (g.fits === "weapon") return true;
+  if (g.fits === "melee") return !installedIn(c, host).some((k) => k.fits === "melee" && k.id !== g.id); // one focus per weapon
   return capacityUsed(c, host) - (g.inId === host.id ? (g.capCost ?? 0) * (g.qty || 1) : 0) + (g.capCost ?? 0) * (g.qty || 1) <= (host.capacity ?? 0);
 }
 
@@ -81,10 +87,11 @@ export function loadoutIssues(c: Gear): LoadoutIssue[] {
     const kids = installedIn(c, h);
     if (!kids.length) continue;
     if (h.category === "weapon") {
+      if (kids.filter((k) => k.fits === "melee").length > 1) out.push({ level: "error", text: `${h.name}: a weapon can be only one weapon focus.` });
       // one accessory per mount; "top or under" takes whichever is free
       const taken = { top: 0, under: 0, barrel: 0 };
       let flex = 0;
-      for (const k of kids) { if (k.mount === "top-under") flex += k.qty || 1; else if (k.mount) taken[k.mount] += k.qty || 1; }
+      for (const k of kids.filter((x) => x.fits === "weapon")) { if (k.mount === "top-under") flex += k.qty || 1; else if (k.mount) taken[k.mount] += k.qty || 1; }
       if (taken.barrel > 1) out.push({ level: "error", text: `${h.name}: only one accessory fits the barrel mount.` });
       if (taken.top > 1 || taken.under > 1 || Math.min(taken.top, 1) + Math.min(taken.under, 1) + flex > 2)
         out.push({ level: "error", text: `${h.name}: the top and underbarrel mounts hold one accessory each.` });
@@ -95,6 +102,7 @@ export function loadoutIssues(c: Gear): LoadoutIssue[] {
   }
   // things that only work inside something else
   for (const g of c.gear) {
+    if (g.fits === "melee" && !hostOf(c, g)) { out.push({ level: "warn", text: `${g.name} is not part of a weapon: choose the melee weapon it is, or it gives no bonus.` }); continue; }
     if (!g.fits || g.fits === "weapon" || hostOf(c, g)) continue;
     const needsHost = !g.essence; // eyeware and earware can also be implanted on their own, for Essence
     if (needsHost) out.push({ level: "warn", text: `${g.name} is not installed: put it in ${SLOT_LABEL[g.fits]}.` });
