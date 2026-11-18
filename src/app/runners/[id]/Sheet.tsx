@@ -19,7 +19,7 @@ import {
   ATTRIBUTES, ATTR_ABBR, ATTR_LABEL, METATYPES, MAGIC_TYPE_LABEL, SKILLS, SKILL_BY_ID, LIFESTYLES,
   type AttrKey,
 } from "@/lib/sr6/data";
-import { runnerToFoundry } from "@/lib/foundry";
+import { runnerToEden } from "@/lib/foundry";
 import { getExt, sustainPenalty } from "@/lib/sr6/ext";
 import type { RollOpts, SheetCtx } from "./tabs/ctx";
 import { MatrixTab } from "./tabs/MatrixTab";
@@ -155,6 +155,7 @@ export function Sheet({ id }: { id: string }) {
   const [soak, setSoak] = useState({ dv: 6, net: 0, type: "P" as "P" | "S", rollId: null as string | null });
   const [builder, setBuilder] = useState<{ skill: string; attr: AttrKey | "magic" | "resonance"; spec: boolean }>({ skill: "firearms", attr: "agility", spec: false });
   const [target, setTarget] = useState({ dr: 4, range: 1 });
+  const [foundryNote, setFoundryNote] = useState<string[] | null>(null);
   const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [notes, setNotes] = useState(c?.notes ?? "");
 
@@ -230,11 +231,14 @@ export function Sheet({ id }: { id: string }) {
     a.href = url; a.download = `${who.replace(/\W+/g, "-")}.json`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
+  // a shadowrun6-eden Player actor, named the way Foundry names its own exports
   const exportFoundry = () => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(runnerToFoundry(c, d), null, 2)], { type: "application/json" }));
+    const { actor, skipped } = runnerToEden(raw);
+    const url = URL.createObjectURL(new Blob([JSON.stringify(actor, null, 2)], { type: "application/json" }));
     const a = document.createElement("a");
-    a.href = url; a.download = `${who.replace(/\W+/g, "-")}.foundry.json`; a.click();
+    a.href = url; a.download = `fvtt-Actor-${who.toLowerCase().replace(/\W+/g, "-")}.json`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setFoundryNote(skipped);
   };
   const shareToChat = () => {
     send({
@@ -275,10 +279,20 @@ export function Sheet({ id }: { id: string }) {
           <Link href={`/forge?edit=${c.id}`} className="btn small"><Icon name="forge" size={14} /> Edit build</Link>
           <Link href={`/runners/${c.id}/print`} className="btn small" title="Printable sheet: Expanded or Minimal"><Icon name="print" size={14} /> Print</Link>
           <button className="btn small" onClick={exportJson}><Icon name="download" size={14} /> Export</button>
-          <button className="btn small" onClick={exportFoundry}><Icon name="link" size={14} /> For Foundry</button>
+          <button className="btn small" onClick={exportFoundry} title="Actor file for the shadowrun6-eden system: in Foundry, right-click an actor and choose Import Data"><Icon name="link" size={14} /> For Foundry</button>
           <button className="btn small" disabled={commsStatus === "off"} onClick={shareToChat}><Icon name="comms" size={14} /> Share</button>
         </div>
       </header>
+
+      {foundryNote && (
+        <div className="mb-5 flex gap-3 border-l-2 border-accent bg-accent/10 px-4 py-2.5 text-sm" role="status">
+          <div className="flex-1">
+            <b>Foundry actor saved.</b> In Foundry (shadowrun6-eden system), create a Player actor or open an existing one, right-click it in the Actors list, choose <b>Import Data</b> and pick the file. With the SixthDeck Bridge module you can use <b>Import SixthDeck runner</b> instead.
+            {foundryNote.length > 0 && <div className="mt-1 text-dim">The system has no field for: {foundryNote.join("; ")}. They are in the actor&apos;s notes.</div>}
+          </div>
+          <button className="btn small ghost" onClick={() => setFoundryNote(null)} aria-label="Close">×</button>
+        </div>
+      )}
 
       {(d.dead || d.unconscious || penalty > 0) && (
         <div className={clsx("mb-5 border-l-2 px-4 py-2.5 text-sm", d.dead ? "border-danger bg-danger/15" : d.unconscious ? "border-danger bg-danger/10" : "border-accent bg-accent/10")} role="status">

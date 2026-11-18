@@ -17,7 +17,7 @@ const steps = [
   },
   {
     t: "Send a runner to Foundry",
-    d: "Open a runner sheet and press For Foundry to save an actor file. In Foundry, open the Actors tab and press Import SixthDeck runner. The full build is kept on the actor, and skills and gear become items.",
+    d: "Open a runner sheet and press For Foundry to save an actor file for the shadowrun6-eden system. In Foundry, right-click a Player actor in the Actors tab and choose Import Data, or press Import SixthDeck runner if the bridge is installed. Attributes, skills, qualities, spells, powers, foci, gear, contacts, SINs and lifestyle land on the sheet; the full SixthDeck build rides along on the actor.",
   },
 ];
 

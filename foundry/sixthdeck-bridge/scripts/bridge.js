@@ -102,15 +102,18 @@ async function importFile(file) {
   const sd = data?.flags?.sixthdeck;
   if (!sd?.character) return ui.notifications.error(game.i18n.localize("SIXTHDECK.BadFile"));
   const types = game.system.documentTypes?.Actor ?? Object.keys(CONFIG.Actor.dataModels ?? {});
+  // Exports for shadowrun6-eden are complete actors: create them as they are, items included.
+  if (data.type && types.includes(data.type) && (!sd.system || sd.system === game.system.id)) {
+    const { _id, _stats, ownership, folder, ...doc } = data;
+    const actor = await Actor.create(doc);
+    return ui.notifications.info(game.i18n.format("SIXTHDECK.Imported", { name: actor.name }));
+  }
+  // Any other system: a bare actor with the build kept in flags.sixthdeck for system adapters.
+  if (sd.system && sd.system !== game.system.id) ui.notifications.warn(game.i18n.format("SIXTHDECK.OtherSystem", { system: sd.system }));
   const type = types.includes("character") ? "character" : types.find((t) => t !== "base") ?? types[0];
-  const items = Array.isArray(data.items) ? data.items : [];
   const actor = await Actor.create({ name: data.name, type, img: data.img, flags: data.flags, system: {} });
-  // Only generic notes go on the actor; the full build stays in flags.sixthdeck for system adapters.
-  const html = data.system?.biography?.value;
+  const html = data.system?.description ?? data.system?.biography?.value;
   if (html) await actor.setFlag(ID, "biography", html);
-  const itemTypes = game.system.documentTypes?.Item ?? [];
-  const mapped = items.map((i) => ({ name: i.name, type: itemTypes.includes(i.type) ? i.type : itemTypes.find((t) => t !== "base"), flags: { [ID]: i.system } })).filter((i) => i.type);
-  if (mapped.length) await actor.createEmbeddedDocuments("Item", mapped);
   ui.notifications.info(game.i18n.format("SIXTHDECK.Imported", { name: actor.name }));
 }
 

@@ -1,0 +1,687 @@
+{
+ "name": "Ruhn Daanan",
+ "type": "Player",
+ "img": "systems/shadowrun6-eden/icons/compendium/default/Default_Clothing.svg",
+ "system": {
+  "attributes": {
+   "bod": {
+    "base": 2,
+    "mod": 0,
+    "modString": "",
+    "augment": 0,
+    "pool": 2
+   },
+   "agi": {
+    "base": 2,
+    "mod": 0,
+    "modString": "",
+    "augment": 0,
+    "pool": 2
+   },
+   "rea": {
+    "base": 2,
+    "mod": 0,
+    "modString": "",
+    "augment": 0,
+    "pool": 2
+   },
+   "str": {
+    "base": 2,
+    "mod": 0,
+    "modString": "",
+    "augment": 0,
+    "pool": 2
+   },
+   "wil": {
+    "base": 2,
+    "mod": 0,
+    "modString": "",
+    "augment": 0,
+    "pool": 2
+   },
+   "log": {
+    "base": 2,
+    "mod": 0,
+    "modString": "",
+    "augment": 0,
+    "pool": 2
+   },
+   "int": {
+    "base": 2,
+    "mod": 0,
+    "modString": "",
+    "augment": 0,
+    "pool": 2
+   },
+   "cha": {
+    "base": 2,
+    "mod": 0,
+    "modString": "",
+    "augment": 0,
+    "pool": 2
+   },
+   "mag": {
+    "base": 0,
+    "mod": 0,
+    "pool": 0,
+    "min": 0,
+    "initiation": 0
+   },
+   "res": {
+    "base": 0,
+    "mod": 0,
+    "pool": 0,
+    "submersion": 0
+   },
+   "edg": {
+    "current": 0,
+    "max": 1
+   },
+   "essence": {
+    "base": 6,
+    "mod": 0,
+    "pool": 6
+   }
+  },
+  "type": "mundane",
+  "gender": "",
+  "physical": {
+   "base": 9,
+   "mod": 0,
+   "modString": "",
+   "value": 9,
+   "dmg": 0,
+   "max": 18
+  },
+  "stun": {
+   "base": 9,
+   "mod": 0,
+   "modString": "",
+   "value": 9,
+   "dmg": 0,
+   "max": 18
+  },
+  "overflow": {
+   "mod": 0,
+   "modString": "",
+   "value": 0,
+   "dmg": 0,
+   "max": 32
+  },
+  "edge": {
+   "value": 0,
+   "max": 1
+  },
+  "derived": {
+   "composure": {
+    "mod": 0
+   },
+   "judge_intentions": {
+    "mod": 0
+   },
+   "memory": {
+    "mod": 0
+   },
+   "lift_carry": {
+    "mod": 0
+   },
+   "matrix_perception": {
+    "mod": 0
+   }
+  },
+  "defenserating": {
+   "physical": {
+    "mod": 0
+   },
+   "matrix": {
+    "mod": 0
+   },
+   "vehicle": {
+    "mod": 0
+   },
+   "astral": {
+    "mod": 0
+   },
+   "social": {
+    "mod": 0
+   }
+  },
+  "defensepool": {
+   "physical": {
+    "mod": 0
+   },
+   "astral": {
+    "mod": 0
+   },
+   "spells_direct": {
+    "mod": 0
+   },
+   "spells_indirect": {
+    "mod": 0
+   },
+   "spells_other": {
+    "mod": 0
+   },
+   "vehicle": {
+    "mod": 0
+   },
+   "toxin": {
+    "mod": 0
+   },
+   "damage_physical": {
+    "mod": 0
+   },
+   "damage_astral": {
+    "mod": 0
+   }
+  },
+  "initiative": {
+   "astral": {
+    "mod": 0,
+    "dice": 2,
+    "diceMod": 0
+   },
+   "matrix": {
+    "mod": 0,
+    "dice": 1,
+    "diceMod": 0
+   },
+   "physical": {
+    "mod": 0,
+    "dice": 1,
+    "diceMod": 0
+   },
+   "actions": 0
+  },
+  "walk": 5,
+  "sprint": 10,
+  "perHit": 1,
+  "skills": {
+   "astral": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "athletics": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "biotech": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "close_combat": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "con": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "conjuring": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "cracking": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "electronics": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0
+   },
+   "enchanting": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "engineering": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "exotic_weapons": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "firearms": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "influence": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "outdoors": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "perception": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "piloting": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "sorcery": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "stealth": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   },
+   "tasking": {
+    "points": 0,
+    "specialization": "",
+    "expertise": "",
+    "modifier": 0,
+    "augment": 0,
+    "expandedSpecializations": []
+   }
+  },
+  "tradition": {
+   "genesisID": "",
+   "name": "",
+   "attribute": "log"
+  },
+  "persona": {
+   "device": {
+    "mod": {
+     "a": 0,
+     "s": 0,
+     "d": 0,
+     "f": 0
+    }
+   },
+   "living": {
+    "mod": {
+     "a": 0,
+     "s": 0,
+     "d": 0,
+     "f": 0
+    }
+   },
+   "used": {
+    "a": 0,
+    "s": 0,
+    "d": 0,
+    "f": 0
+   },
+   "runningSilent": false,
+   "description": "",
+   "img": ""
+  },
+  "name": "",
+  "metatype": "human",
+  "mortype": "mundane",
+  "matrixIni": "vrcold",
+  "nuyen": 0,
+  "overwatch": 0,
+  "description": "",
+  "notes": "",
+  "karma": 0,
+  "karma_total": 0,
+  "heat": 0,
+  "reputation": 0
+ },
+ "prototypeToken": {
+  "name": "Ruhn Daanan",
+  "displayName": 30,
+  "actorLink": true,
+  "width": 1,
+  "height": 1,
+  "depth": 1,
+  "texture": {
+   "src": "systems/shadowrun6-eden/icons/compendium/default/Default_Clothing.svg",
+   "anchorX": 0.5,
+   "anchorY": 0.5,
+   "fit": "contain",
+   "scaleX": 1,
+   "scaleY": 1,
+   "tint": "#ffffff",
+   "alphaThreshold": 0.75
+  },
+  "lockRotation": false,
+  "rotation": 0,
+  "alpha": 1,
+  "disposition": 1,
+  "displayBars": 20,
+  "bar1": {
+   "attribute": "physical"
+  },
+  "bar2": {
+   "attribute": "stun"
+  },
+  "light": {
+   "negative": false,
+   "priority": 0,
+   "alpha": 0.5,
+   "angle": 360,
+   "bright": 0,
+   "color": null,
+   "coloration": 1,
+   "dim": 0,
+   "attenuation": 0.5,
+   "luminosity": 0.5,
+   "saturation": 0,
+   "contrast": 0,
+   "shadows": 0,
+   "animation": {
+    "type": null,
+    "speed": 5,
+    "intensity": 5,
+    "reverse": false
+   },
+   "darkness": {
+    "min": 0,
+    "max": 1
+   }
+  },
+  "sight": {
+   "enabled": true,
+   "range": 0,
+   "angle": 360,
+   "visionMode": "basic",
+   "color": null,
+   "attenuation": 0.1,
+   "brightness": 0,
+   "saturation": 0,
+   "contrast": 0
+  },
+  "detectionModes": {},
+  "occludable": {
+   "radius": 0
+  },
+  "ring": {
+   "enabled": false,
+   "colors": {
+    "ring": null,
+    "background": null
+   },
+   "effects": 1,
+   "subject": {
+    "scale": 1,
+    "texture": null
+   }
+  },
+  "turnMarker": {
+   "mode": 1,
+   "animation": null,
+   "src": null,
+   "disposition": false
+  },
+  "movementAction": null,
+  "flags": {},
+  "randomImg": false,
+  "appendNumber": false,
+  "prependAdjective": false
+ },
+ "items": [
+  {
+   "name": "Unarmed",
+   "type": "gear",
+   "system": {
+    "genesisID": "unarmed",
+    "description": "",
+    "product": "",
+    "page": 0,
+    "modifier": 0,
+    "wild": false,
+    "pool": 0,
+    "isElectronicMatrixDevice": false,
+    "matrix": {
+     "deviceRating": 2,
+     "hasWirelessInterface": true,
+     "hasDataCableInterface": false,
+     "wirelessActive": true,
+     "matrixCM": {
+      "value": null
+     }
+    },
+    "type": "WEAPON_CLOSE_COMBAT",
+    "subtype": "UNARMED",
+    "count": 0,
+    "countable": false,
+    "availDef": "",
+    "avail": 0,
+    "ammocap": 0,
+    "ammocount": 0,
+    "ammoLoaded": "regular",
+    "priceDef": "",
+    "price": 0,
+    "customName": "",
+    "usedForPool": false,
+    "notes": "",
+    "accessories": "",
+    "needsRating": false,
+    "rating": 0,
+    "skill": "close_combat",
+    "skillSpec": "unarmed",
+    "dmg": 2,
+    "stun": true,
+    "dmgDef": "",
+    "attackRating": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "modes": {
+     "BF": false,
+     "FA": false,
+     "SA": false,
+     "SS": false
+    },
+    "defense": 0,
+    "social": 0,
+    "essence": 0,
+    "capacity": 0,
+    "natural": false,
+    "a": 0,
+    "s": 0,
+    "d": 0,
+    "f": 0,
+    "progSlots": 0,
+    "handlOn": 0,
+    "handlOff": 0,
+    "accOn": 0,
+    "accOff": 0,
+    "spdiOn": 0,
+    "spdiOff": 0,
+    "tspd": 0,
+    "bod": 0,
+    "arm": 0,
+    "pil": 0,
+    "sen": 0,
+    "sea": 0,
+    "vtype": "",
+    "vehicle": {
+     "opMode": "manual"
+    },
+    "strWeapon": false,
+    "dualHand": false
+   },
+   "_id": "5T1faG1H9yizpJMU",
+   "img": "systems/shadowrun6-eden/icons/compendium/gear/tech_bag.svg",
+   "effects": [],
+   "folder": null,
+   "sort": 0,
+   "ownership": {
+    "default": 0
+   },
+   "flags": {}
+  },
+  {
+   "name": "Unarmed",
+   "type": "gear",
+   "system": {
+    "genesisID": "unarmed",
+    "description": "",
+    "product": "",
+    "page": 0,
+    "modifier": 0,
+    "wild": false,
+    "pool": 0,
+    "isElectronicMatrixDevice": false,
+    "matrix": {
+     "deviceRating": 2,
+     "hasWirelessInterface": true,
+     "hasDataCableInterface": false,
+     "wirelessActive": true,
+     "matrixCM": {
+      "value": null
+     }
+    },
+    "type": "WEAPON_CLOSE_COMBAT",
+    "subtype": "UNARMED",
+    "count": 0,
+    "countable": false,
+    "availDef": "",
+    "avail": 0,
+    "ammocap": 0,
+    "ammocount": 0,
+    "ammoLoaded": "regular",
+    "priceDef": "",
+    "price": 0,
+    "customName": "",
+    "usedForPool": false,
+    "notes": "",
+    "accessories": "",
+    "needsRating": false,
+    "rating": 0,
+    "skill": "close_combat",
+    "skillSpec": "unarmed",
+    "dmg": 2,
+    "stun": true,
+    "dmgDef": "",
+    "attackRating": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "modes": {
+     "BF": false,
+     "FA": false,
+     "SA": false,
+     "SS": false
+    },
+    "defense": 0,
+    "social": 0,
+    "essence": 0,
+    "capacity": 0,
+    "natural": false,
+    "a": 0,
+    "s": 0,
+    "d": 0,
+    "f": 0,
+    "progSlots": 0,
+    "handlOn": 0,
+    "handlOff": 0,
+    "accOn": 0,
+    "accOff": 0,
+    "spdiOn": 0,
+    "spdiOff": 0,
+    "tspd": 0,
+    "bod": 0,
+    "arm": 0,
+    "pil": 0,
+    "sen": 0,
+    "sea": 0,
+    "vtype": "",
+    "vehicle": {
+     "opMode": "manual"
+    },
+    "strWeapon": false,
+    "dualHand": false
+   },
+   "_id": "JEVFN5cZVazTtjv7",
+   "img": "systems/shadowrun6-eden/icons/compendium/gear/tech_bag.svg",
+   "effects": [],
+   "folder": null,
+   "sort": 0,
+   "ownership": {
+    "default": 0
+   },
+   "flags": {}
+  }
+ ],
+ "effects": [],
+ "folder": null,
+ "ownership": {
+  "default": 0
+ },
+ "flags": {}
+}
