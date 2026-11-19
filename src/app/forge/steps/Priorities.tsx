@@ -2,7 +2,7 @@
 import clsx from "clsx";
 import { PRIORITY_COLUMNS, PRIORITY_LEVELS, PRIORITY_TABLE, METATYPES, type PriorityColumn, type PriorityLevel } from "@/lib/sr6/data";
 import { reconcile } from "@/lib/sr6/derive";
-import { Note, StepHeader, type StepProps } from "../ui";
+import { Note, type StepProps } from "../ui";
 
 const PRESETS: { name: string; blurb: string; set: Record<PriorityColumn, PriorityLevel> }[] = [
   { name: "Mage", blurb: "Book example: Magic A, Attributes B, Skills C", set: { magic: "A", attributes: "B", skills: "C", metatype: "D", resources: "E" } },
@@ -46,11 +46,7 @@ export function Priorities({ c, patch }: StepProps) {
 
   return (
     <div>
-      <StepHeader
-        title="Set your priorities"
-        lead="Give each of the five categories one letter, A to E, and use every letter once. Picking a letter someone else holds swaps the two. Nothing is final: change it any time before you finish."
-        rule={/^Select Character Priorities$/i}
-      />
+      <p className="mb-3 max-w-2xl text-sm text-dim">Use every letter once. Picking a letter another row holds swaps the two. Nothing is final until you finish.</p>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <span className="text-sm text-dim">Start from:</span>
         {PRESETS.map((p) => (
@@ -135,7 +131,7 @@ export function Priorities({ c, patch }: StepProps) {
         </table>
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <Note>Lower runner? Take values from one row lower than your pick. Prime runner? Double the customization Karma from 50 to 100 in the Karma step.</Note>
+        <Note>Lower runner? Take values from one row lower than your pick. Prime runner? Double the customization Karma from 50 to 100 with the house rules in Settings.</Note>
         <Note tone="warn">Humans cannot take Metatype A or B, and elves cannot take Metatype A. Magic or Resonance at E means mundane.</Note>
       </div>
     </div>

@@ -1,7 +1,4 @@
 "use client";
-import { useMemo, useState } from "react";
-import { useRulebook } from "@/lib/store/rulebook";
-import { adeptPowerList, complexFormList, spellList, type BookEntry } from "@/lib/sr6/bookLists";
 import { budget, derive } from "@/lib/sr6/derive";
 import { POWER_POINT } from "@/lib/sr6/advance";
 import { rules } from "@/lib/house/rules";
@@ -9,64 +6,7 @@ import { TRADITIONS, TRADITION_ATTRS, bondKarma, gradeChoices } from "@/lib/sr6/
 import clsx from "clsx";
 import { MetaPick } from "@/components/MetaPick";
 import { editExt } from "@/lib/sr6/ext";
-import { Budget, Note, Stepper, StepHeader, type StepProps } from "../ui";
-
-function Picker({ label, entries, picked, onAdd, onRemove, limit, allowFree = true }: {
-  label: string; entries: BookEntry[]; picked: string[]; onAdd: (name: string) => void; onRemove: (name: string) => void; limit: number; allowFree?: boolean;
-}) {
-  const [q, setQ] = useState("");
-  const [group, setGroup] = useState("");
-  const groups = useMemo(() => Array.from(new Set(entries.map((e) => e.group))), [entries]);
-  const shown = entries.filter((e) => (!q || e.name.toLowerCase().includes(q.toLowerCase())) && (!group || e.group === group)).slice(0, 80);
-  // the starting allowance is the limit: new spells and forms cannot be bought during creation (p. 68)
-  const full = picked.length >= limit;
-  const why = limit === 0 ? `No free ${label.toLowerCase()} with this build` : `All ${limit} starting ${label.toLowerCase()} are picked. More can be learned in play, not bought at creation.`;
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div>
-        <div className="mb-2 flex flex-wrap gap-2">
-          <input className="field min-w-40 flex-1" placeholder={`Search ${label.toLowerCase()}`} value={q} onChange={(e) => setQ(e.target.value)} aria-label={`Search ${label}`} />
-          {groups.length > 1 && (
-            <select className="field w-40" value={group} onChange={(e) => setGroup(e.target.value)} aria-label="Category">
-              <option value="">All types</option>
-              {groups.map((g) => <option key={g}>{g}</option>)}
-            </select>
-          )}
-        </div>
-        {entries.length === 0 && <Note>Mount your rulebook to browse the list. You can still type names in by hand below.</Note>}
-        <ul className="max-h-[26rem] divide-y divide-line overflow-auto border border-line">
-          {shown.map((e) => {
-            const on = picked.includes(e.name);
-            return (
-              <li key={e.id} className="flex items-start gap-3 p-2.5">
-                <div className="min-w-0 flex-1">
-                  <div className="font-display font-semibold">{e.name} <span className="text-xs font-normal text-faint">{e.group} · p.{e.page}</span></div>
-                  <div className="line-clamp-2 text-xs text-dim">{e.summary}</div>
-                </div>
-                <button className="btn small" disabled={on || full} title={full && !on ? why : undefined} onClick={() => onAdd(e.name)}>{on ? "Added" : "Add"}</button>
-              </li>
-            );
-          })}
-        </ul>
-        {allowFree && (
-          <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget).get("free") as string; if (f?.trim()) { onAdd(f.trim()); e.currentTarget.reset(); } }}>
-            <input name="free" className="field" placeholder="Or type a name" aria-label="Custom name" />
-            <button className="btn" type="submit" disabled={full} title={full ? why : undefined}>Add</button>
-          </form>
-        )}
-      </div>
-      <div>
-        <div className="mb-2 font-display font-semibold">Your {label.toLowerCase()} ({picked.length} / {limit} free){picked.length > limit && <span className="ml-1 text-xs font-normal text-accent">{(picked.length - limit) * 5} Karma for the extra {picked.length - limit}</span>}</div>
-        {picked.length === 0 && <p className="text-sm text-dim">Nothing chosen yet.</p>}
-        <ul className="flex flex-wrap gap-2">
-          {picked.map((n) => (
-            <li key={n} className="chip on">{n}<button className="ml-1 hover:text-danger" onClick={() => onRemove(n)} aria-label={`Remove ${n}`}>×</button></li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
+import { Stepper, type StepProps } from "../ui";
 
 /** Karma for grade g, as on the advancement table (house rules can scale it). */
 const gradeCost = (g: number) => Math.max(1, Math.round(((10 + g) * rules().karmaCostPct) / 100));
@@ -76,7 +16,7 @@ const gradeCost = (g: number) => Math.max(1, Math.round(((10 + g) * rules().karm
  * the new grade, raises the Magic or Resonance ceiling by one and brings a metamagic or echo; adepts
  * and mystic adepts may take a Power Point instead.
  */
-function Initiation({ c, patch }: StepProps) {
+export function Initiation({ c, patch }: StepProps) {
   const techno = c.magicType === "technomancer";
   const grade = c.startGrade ?? 0;
   const meta = c.startMeta ?? [];
@@ -125,7 +65,7 @@ function Initiation({ c, patch }: StepProps) {
 const ATTR_NAME: Record<string, string> = { logic: "Logic", charisma: "Charisma", intuition: "Intuition", willpower: "Willpower" };
 
 /** Hermetic or shamanic, the two traditions in the core book, or one from another book with its own attribute. */
-function Tradition({ c, patch }: StepProps) {
+export function Tradition({ c, patch }: StepProps) {
   const d = derive(c);
   const attr = (c.tradition || "logic") as (typeof TRADITION_ATTRS)[number];
   const custom = c.traditionName != null;
@@ -167,7 +107,7 @@ function Tradition({ c, patch }: StepProps) {
 }
 
 /** Foci bought on the gear step. Bonding one costs Karma: Force times the type's cost on the Magical Goods table. */
-function Foci({ c, patch }: StepProps) {
+export function Foci({ c, patch }: StepProps) {
   const d = derive(c);
   const foci = c.ext?.foci ?? [];
   if (!foci.length) return null;
@@ -210,7 +150,7 @@ function Foci({ c, patch }: StepProps) {
  * Mystic adepts split the Magic rating from the Priority table: each point is one Power Point or two
  * starting spells (pp. 66, 158). Adjustment points and Karma raise final Magic, not this pool.
  */
-function MysticSplit({ c, patch }: StepProps) {
+export function MysticSplit({ c, patch }: StepProps) {
   const d = derive(c);
   const sl = d.slots;
   const toSpells = sl.mysticMagic - sl.mysticPP;
@@ -254,7 +194,7 @@ function MysticSplit({ c, patch }: StepProps) {
 }
 
 /** Allocated, spent and left Power Points, with extras from initiation and Karma shown apart. */
-function PowerPoints({ c }: { c: StepProps["c"] }) {
+export function PowerPoints({ c }: { c: StepProps["c"] }) {
   const sl = derive(c).slots;
   const cell = (label: string, v: number, tone = "") => (
     <div className="min-w-20"><div className="text-xs uppercase tracking-wide text-dim">{label}</div><div className={`num text-lg font-semibold ${tone}`}>{+v.toFixed(2)}</div></div>
@@ -265,99 +205,6 @@ function PowerPoints({ c }: { c: StepProps["c"] }) {
       {sl.ppExtra > 0 && cell("Initiation", sl.ppExtra)}
       {cell("Spent", sl.ppSpent)}
       {cell("Left", sl.ppLeft, sl.ppLeft < 0 ? "text-danger" : sl.ppLeft > 0 ? "text-ok" : "")}
-    </div>
-  );
-}
-
-export function MagicStep({ c, patch }: StepProps) {
-  const book = useRulebook((s) => s.book);
-  const d = derive(c);
-  const spells = useMemo(() => spellList(book), [book]);
-  const forms = useMemo(() => complexFormList(book), [book]);
-  const powers = useMemo(() => adeptPowerList(book), [book]);
-  const spent = c.adeptPowers.reduce((s, p) => s + p.cost, 0);
-  const [pq, setPq] = useState("");
-
-  return (
-    <div>
-      <StepHeader title="Spells, powers and forms" lead="Your free picks come from the Magic or Resonance priority. They use the rating on the priority table, not what you raise it to with Karma." rule={/^Magic Basics$/i} />
-
-      {(c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic") && <Tradition c={c} patch={patch} />}
-
-      {c.magicType === "mystic" && <MysticSplit c={c} patch={patch} />}
-
-      {(c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic") && (
-        <section className="mb-10">
-          <h3 className="mb-1 text-xl font-semibold">Spells and rituals</h3>
-          {c.magicType === "aspected" && <div className="mb-3"><Note>Aspected magicians use only one branch of magic. Pick spells only if your aspect is sorcery; note your aspect in your concept.</Note></div>}
-          <div className="mb-3 max-w-sm"><Budget label="Starting spells left" left={d.slots.spells - c.spells.length} total={d.slots.spells} /></div>
-          <p className="mb-3 max-w-2xl text-sm text-dim">{c.magicType === "mystic" ? "Two spells for each Magic point given to spellcasting." : "Twice your Magic from the Priority table."} New spells cannot be bought with Karma during creation; after creation they are learned for 5 Karma each on the Advance tab.</p>
-          <Picker label="Spells" entries={spells} picked={c.spells} limit={d.slots.spells} onAdd={(n) => patch((x) => { x.spells.push(n); })} onRemove={(n) => patch((x) => { x.spells = x.spells.filter((s) => s !== n); })} />
-        </section>
-      )}
-
-      {(c.magicType === "adept" || c.magicType === "mystic") && (
-        <section className="mb-10">
-          <h3 className="mb-1 text-xl font-semibold">Adept powers</h3>
-          <PowerPoints c={c} />
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div>
-              <input className="field mb-2" placeholder="Search powers" value={pq} onChange={(e) => setPq(e.target.value)} aria-label="Search powers" />
-              <ul className="max-h-[26rem] divide-y divide-line overflow-auto border border-line">
-                {powers.filter((p) => !pq || p.name.toLowerCase().includes(pq.toLowerCase())).map((p) => {
-                  const have = c.adeptPowers.find((x) => x.name === p.name);
-                  return (
-                    <li key={p.id} className="flex items-start gap-3 p-2.5">
-                      <div className="min-w-0 flex-1">
-                        <div className="font-display font-semibold">{p.name} <span className="num text-xs font-normal text-accent">{p.pp} PP{p.perLevel ? " / level" : ""}</span></div>
-                        <div className="line-clamp-2 text-xs text-dim">{p.summary}</div>
-                      </div>
-                      <button className="btn small" disabled={!!have && !p.perLevel || spent + (p.pp ?? 0) > d.slots.powerPoints + 1e-9 || (have?.level ?? 0) >= (p.maxLevel ?? 1)}
-                        title={spent + (p.pp ?? 0) > d.slots.powerPoints + 1e-9 ? `Needs ${p.pp} PP; you have ${+(d.slots.powerPoints - spent).toFixed(2)} left${c.magicType === "mystic" ? ". Give another Magic point to adept powers above" : ""}.` : (have?.level ?? 0) >= (p.maxLevel ?? 1) && p.perLevel ? "At its highest level" : undefined}
-                        onClick={() => patch((x) => {
-                          const cur = x.adeptPowers.find((y) => y.name === p.name);
-                          if (cur) { cur.level = (cur.level ?? 1) + 1; cur.cost = +(cur.cost + (p.pp ?? 0)).toFixed(2); }
-                          else x.adeptPowers.push({ name: p.name, cost: p.pp ?? 0, level: 1, effect: p.effect });
-                        })}>
-                        {have ? (p.perLevel ? "Level up" : "Added") : "Add"}
-                      </button>
-                    </li>
-                  );
-                })}
-                {powers.length === 0 && <li className="p-3 text-sm text-dim">Mount your rulebook to browse the power list.</li>}
-              </ul>
-            </div>
-            <div>
-              <div className="mb-2 font-display font-semibold">Your powers</div>
-              <ul className="space-y-1.5">
-                {c.adeptPowers.map((p) => (
-                  <li key={p.name} className="flex items-center justify-between gap-2 border border-line px-3 py-1.5">
-                    <span>{p.name}{(p.level ?? 1) > 1 || powers.find((x) => x.name === p.name)?.perLevel ? ` ${p.level ?? 1}` : ""} <span className="num text-xs text-dim">{p.cost} PP</span></span>
-                    <button className="hover:text-danger" onClick={() => patch((x) => { x.adeptPowers = x.adeptPowers.filter((y) => y.name !== p.name); })} aria-label={`Remove ${p.name}`}>×</button>
-                  </li>
-                ))}
-                {c.adeptPowers.length === 0 && <p className="text-sm text-dim">No powers yet.</p>}
-              </ul>
-              {c.adeptPowers.some((p) => p.effect) && <p className="mt-2 text-xs text-ok">Improved Reflexes is applied to your Reaction and Initiative automatically.</p>}
-            </div>
-          </div>
-
-        </section>
-      )}
-
-      {c.magicType === "technomancer" && (
-        <section className="mb-10">
-          <h3 className="mb-1 text-xl font-semibold">Complex forms</h3>
-          <div className="mb-3 max-w-sm"><Budget label="Starting forms left" left={d.slots.complexForms - c.complexForms.length} total={d.slots.complexForms} /></div>
-          <p className="mb-3 max-w-2xl text-sm text-dim">Twice your Resonance from the Priority table. New forms cannot be bought with Karma during creation.</p>
-          <Picker label="Complex forms" entries={forms} picked={c.complexForms} limit={d.slots.complexForms} onAdd={(n) => patch((x) => { x.complexForms.push(n); })} onRemove={(n) => patch((x) => { x.complexForms = x.complexForms.filter((s) => s !== n); })} />
-        </section>
-      )}
-
-      {c.magicType !== "mundane" && c.magicType !== "technomancer" && <Foci c={c} patch={patch} />}
-      {c.magicType !== "mundane" && <Initiation c={c} patch={patch} />}
-
-      {c.magicType === "mundane" && <Note>Your runner is mundane, so there is nothing to choose here. Skip ahead to qualities.</Note>}
     </div>
   );
 }

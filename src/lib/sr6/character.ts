@@ -95,6 +95,21 @@ export interface GearItem {
   legal?: "L" | "I";
   /** Availability from the catalog, checked against the creation limit. */
   avail?: number;
+  /** Fake SINs and licenses: the rating bought. */
+  rating?: number;
+  /** Licenses: the SIN (a fake SIN's gear id, or "real" for a SINner's own) it is registered to. */
+  sinId?: string;
+}
+
+/** Physical description, filled on the Name page. Free text: the book gives averages, not rules. */
+export interface Bio {
+  gender?: string;
+  age?: string;
+  height?: string;
+  weight?: string;
+  hair?: string;
+  eyes?: string;
+  skin?: string;
 }
 
 export type GearSlot = "eyes" | "ears" | "limb" | "armor" | "optical" | "audio" | "weapon" | "melee";
@@ -155,12 +170,17 @@ export interface Character {
   knowledge: KnowledgeSkill[];
   qualities: QualityPick[];
   spells: string[];
+  /** Rituals learned at creation. They share the starting allowance with spells (p. 65). */
+  rituals?: string[];
   complexForms: string[];
   adeptPowers: { name: string; cost: number; level?: number; effect?: QualityEffect }[];
   gear: GearItem[];
   contacts: Contact[];
   lifestyle: string;
   lifestyleMonths: number;
+  /** The SIN the lifestyle is rented under: a fake SIN's gear id, or "real". */
+  lifestyleSin?: string;
+  bio?: Bio;
   karmaToNuyen: number; // Karma points converted to nuyen
   // play
   damage: Damage;
@@ -188,6 +208,8 @@ export interface Character {
   edgeBurned: number;
   /** Attribute added to Willpower for Drain resistance (logic, charisma, intuition...). */
   tradition: string;
+  /** Aspected magicians: the one branch of magic they use. */
+  aspect?: "sorcery" | "conjuring" | "enchanting";
   /** Name of a tradition from another book; empty means the core tradition that goes with the attribute. */
   traditionName?: string;
   statuses: string[];

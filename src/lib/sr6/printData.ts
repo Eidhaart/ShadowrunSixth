@@ -5,7 +5,7 @@
  */
 import type { Rulebook } from "@/lib/rules/types";
 import { advSpent, withAdv } from "./advance";
-import { adeptPowerList, complexFormList, spellList, type BookEntry } from "./bookLists";
+import { adeptPowerList, complexFormList, spellList, type BookEntry, ritualList } from "./bookLists";
 import type { Character, GearItem, QualityPick } from "./character";
 import { ATTRIBUTES, ATTR_ABBR, ATTR_LABEL, LIFESTYLES, MAGIC_TYPE_LABEL, METATYPES, SKILL_BY_ID, traditionName, type AttrKey } from "./data";
 import { derive, type Derived } from "./derive";
@@ -28,7 +28,7 @@ export interface PrintWeapon {
   extras: string[];
 }
 
-export interface PrintSpell { name: string; def?: SpellDef; book?: BookEntry; sustained: boolean }
+export interface PrintSpell { name: string; def?: SpellDef; book?: BookEntry; sustained: boolean; ritual?: boolean }
 export interface PrintPower { name: string; level?: number; cost: number; book?: BookEntry }
 export interface PrintQuality { q: QualityPick; def?: QualityDef; target: string }
 
@@ -165,7 +165,10 @@ export function printData(raw: Character, book: Rulebook | null): PrintData {
       type: MAGIC_TYPE_LABEL[c.magicType],
       tradition: caster ? `${traditionName(c)} (${ATTR_LABEL[tradAttr] ?? tradAttr})` : undefined,
       drain: caster ? { pool: d.attrs.willpower + (d.attrs[tradAttr] ?? 0), why: `Willpower ${d.attrs.willpower} + ${ATTR_LABEL[tradAttr] ?? tradAttr} ${d.attrs[tradAttr] ?? 0}` } : undefined,
-      spells: c.spells.map((name) => ({ name, def: SPELL_BY_NAME[name.toLowerCase()], book: byName(spellBook, name), sustained: e.sustained.includes(name) })),
+      spells: [
+        ...c.spells.map((name) => ({ name, def: SPELL_BY_NAME[name.toLowerCase()], book: byName(spellBook, name), sustained: e.sustained.includes(name) })),
+        ...(c.rituals ?? []).map((name) => ({ name, book: byName(ritualList(book), name), sustained: false, ritual: true })),
+      ],
       powers: c.adeptPowers.map((p) => ({ name: p.name, level: p.level, cost: p.cost, book: byName(powerBook, p.name.replace(/\s*\(.*\)$/, "")) })),
       pp: c.magicType === "adept" || c.magicType === "mystic"
         ? { start: d.slots.ppStart, extra: d.slots.ppExtra, spent: d.slots.ppSpent, left: d.slots.ppLeft, split: c.magicType === "mystic" ? `${d.slots.mysticPP} of ${d.slots.mysticMagic} priority Magic to powers, ${d.slots.mysticMagic - d.slots.mysticPP} to spells` : undefined }

@@ -258,13 +258,13 @@ export function PrintSheet({ p, mode, marks, paper }: { p: PrintData; mode: Prin
       </div>
       {m.spells.length > 0 && (
         <>
-          <h3>Spells <span className="faint">({m.spells.length})</span></h3>
+          <h3>{m.spells.some((s) => s.ritual) ? "Spells and rituals" : "Spells"} <span className="faint">({m.spells.length})</span></h3>
           <table>
             <thead><tr><th>Spell</th><th>Cat</th><th>Type</th><th>Range</th><th>Dur</th><th className="r">DV</th></tr></thead>
             <tbody>
               {m.spells.flatMap((s) => [
                 <tr key={s.name} className={x && s.book ? "sub-row" : undefined}>
-                  <td><span className="name">{s.name}</span>{s.sustained && <span className="tag hot">sustained</span>}{!x && s.book ? <span className="faint"> p.{s.book.page}</span> : null}</td>
+                  <td><span className="name">{s.name}</span>{s.sustained && <span className="tag hot">sustained</span>}{s.ritual && <span className="tag">ritual</span>}{!x && s.book ? <span className="faint"> p.{s.book.page}</span> : null}</td>
                   <td>{s.def?.cat ?? s.book?.group ?? ""}</td>
                   <td>{s.def ? `${s.def.type}${s.def.kind ? `, ${s.def.kind === "direct" ? "D" : "I"}` : ""}` : ""}</td>
                   <td>{s.def?.range ?? ""}</td>

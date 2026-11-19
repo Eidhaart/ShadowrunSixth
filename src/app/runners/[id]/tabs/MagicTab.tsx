@@ -166,6 +166,16 @@ export function MagicTab({ ctx }: { ctx: SheetCtx }) {
             })}
             {c.spells.length === 0 && <li className="py-2"><Empty>No spells yet. Learn one below.</Empty></li>}
           </ul>
+          {(c.rituals?.length ?? 0) > 0 && (
+            <div className="mt-3">
+              <div className="text-xs uppercase tracking-wider text-dim">Rituals</div>
+              <ul className="mt-1 flex flex-wrap gap-2">
+                {c.rituals!.map((r) => (
+                  <li key={r} className="chip">{r}<button className="no-print ml-1 hover:text-danger" aria-label={`Forget ${r}`} onClick={() => upd((x) => { x.rituals = (x.rituals ?? []).filter((y) => y !== r); })}>×</button></li>
+                ))}
+              </ul>
+            </div>
+          )}
           <form className="no-print mt-3 flex gap-2" onSubmit={(ev) => { ev.preventDefault(); const n = newSpell.trim(); if (!n || karmaAvail < KARMA.spell) return; upd((x) => { advance(x, { k: "spell", name: n }, `Learned ${n}`, ADV_COST.spell); }); setNewSpell(""); }}>
             <input className="field flex-1" list="spell-names" value={newSpell} onChange={(ev) => setNewSpell(ev.target.value)} placeholder={`Learn a spell (${KARMA.spell} Karma)`} aria-label="New spell name" />
             <datalist id="spell-names">{suggestions.slice(0, 250).map((n) => <option key={n} value={n} />)}</datalist>

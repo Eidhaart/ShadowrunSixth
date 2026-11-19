@@ -1,7 +1,8 @@
 "use client";
 import { ATTRIBUTES, ATTR_LABEL, METATYPES, SKILL_BY_ID, MAGIC_TYPE_LABEL } from "@/lib/sr6/data";
 import { budget, derive, validate } from "@/lib/sr6/derive";
-import { Note, StepHeader, type StepProps } from "../ui";
+import { Note, type StepProps } from "../ui";
+import { issuePage, PAGE_LABEL, useGo } from "../wizard/nav";
 import { useMemo } from "react";
 import { useRulebook } from "@/lib/store/rulebook";
 import { parseQualities } from "@/lib/sr6/qualities";
@@ -15,21 +16,27 @@ export function Review({ c }: StepProps) {
   const issues = validate(c);
   const errors = issues.filter((i) => i.level === "error");
   const warns = issues.filter((i) => i.level === "warn");
+  const go = useGo();
+  const where = (i: (typeof issues)[number]) => {
+    const id = issuePage(i);
+    if (id === "review") return <b>{i.where}:</b>;
+    const label = PAGE_LABEL[id] ?? i.where;
+    return <button type="button" className="font-bold underline decoration-dotted underline-offset-2 hover:text-accent" onClick={() => go(id)}>{label}:</button>;
+  };
 
   return (
     <div>
-      <StepHeader title="Review and finish" lead="Every rule is checked against the book. Fix the red items before you save. Amber items are worth a look but will not stop you." />
       {errors.length === 0 && <div className="mb-4"><Note>Everything checks out. Saving creates a live character sheet with all your numbers automated.</Note></div>}
       {errors.length > 0 && (
         <section className="mb-4" aria-label="Problems">
           <h3 className="mb-2 text-lg font-semibold text-danger">Fix these</h3>
-          <ul className="space-y-1.5">{errors.map((i, k) => <li key={k}><Note tone="error"><b>{i.where}:</b> {i.text}</Note></li>)}</ul>
+          <ul className="space-y-1.5">{errors.map((i, k) => <li key={k}><Note tone="error">{where(i)} {i.text}</Note></li>)}</ul>
         </section>
       )}
       {warns.length > 0 && (
         <section className="mb-6" aria-label="Warnings">
           <h3 className="mb-2 text-lg font-semibold">Worth a look</h3>
-          <ul className="space-y-1.5">{warns.map((i, k) => <li key={k}><Note tone="warn"><b>{i.where}:</b> {i.text}</Note></li>)}</ul>
+          <ul className="space-y-1.5">{warns.map((i, k) => <li key={k}><Note tone="warn">{where(i)} {i.text}</Note></li>)}</ul>
         </section>
       )}
 

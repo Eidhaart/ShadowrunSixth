@@ -32,7 +32,7 @@ export function complexFormList(book: Rulebook | null): BookEntry[] {
   if (!book) return [];
   return book.sections
     .filter((s) => s.level === 3 && s.parent === "Complex Forms" && /^[A-Z]/.test(s.title) && !JUNK.test(s.title))
-    .map((s) => ({ id: s.id, name: s.title.replace(/\s*\(.*\)$/, ""), page: s.page, group: "Complex form", summary: brief(s.text) }));
+    .map((s) => ({ id: s.id, name: s.title.replace(/\s*\(.*\)$/, ""), page: s.page, group: "Complex form", summary: brief(s.text.replace(/^\s*FADE VALUE\s+DURATION\s+\S+\s+[ISP]\s+/i, "")) }));
 }
 
 export function adeptPowerList(book: Rulebook | null): BookEntry[] {
@@ -62,4 +62,31 @@ export function adeptPowerList(book: Rulebook | null): BookEntry[] {
     out.push(entry);
   }
   return out;
+}
+
+/** Rituals: the second-level entries under "Rituals" (pp. 145-147). They count as starting spells. */
+export function ritualList(book: Rulebook | null): BookEntry[] {
+  if (!book) return [];
+  return book.sections
+    .filter((s) => s.level === 2 && s.parent === "Rituals" && /^[A-Z]/.test(s.title) && !JUNK.test(s.title))
+    .map((s) => {
+      const tags = /^\(([^)]+)\)/.exec(s.text.trim());
+      return { id: s.id, name: s.title, page: s.page, group: tags ? tags[1].replace(/\s+/g, " ") : "Ritual", summary: brief(s.text.replace(/^\([^)]+\)\s*Threshold:\s*\d+\s*/, "")) };
+    });
+}
+
+const META_SECTION: Record<string, RegExp> = {
+  human: /^Humans \(/, elf: /^Elves \(/, dwarf: /^Dwarfs \(/, ork: /^Orks \(/, troll: /^Trolls \(/,
+};
+
+/** The metatype's write-up in Character Metatypes (pp. 54-57). */
+export function metatypeSection(book: Rulebook | null, id: string) {
+  const re = META_SECTION[id];
+  return re ? book?.sections.find((s) => s.parent === "Character Metatypes" && re.test(s.title)) : undefined;
+}
+
+/** A section by exact title, optionally under a given parent. */
+export function sectionByTitle(book: Rulebook | null, title: string, parent?: string | RegExp) {
+  const t = title.trim().toLowerCase();
+  return book?.sections.find((s) => s.title.trim().toLowerCase() === t && (parent == null || (typeof parent === "string" ? s.parent === parent : parent.test(s.parent ?? ""))));
 }

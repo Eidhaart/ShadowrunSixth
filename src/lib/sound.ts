@@ -72,3 +72,16 @@ export function sfxBlip() {
   if (!c) return;
   tone(c, c.currentTime, 880, 0.05, "square", 0.04);
 }
+
+/** Interface cues for the Forge: short and quiet, off with the sound setting. */
+export function sfxUi(kind: "add" | "remove" | "page" | "deny" | "done") {
+  if (!enabled()) return;
+  const c = ac();
+  if (!c) return;
+  const t = c.currentTime;
+  if (kind === "add") { tone(c, t, 740, 0.05, "square", 0.03); tone(c, t + 0.05, 1110, 0.07, "square", 0.025); }
+  else if (kind === "remove") { tone(c, t, 520, 0.05, "square", 0.03); tone(c, t + 0.05, 330, 0.08, "square", 0.025); }
+  else if (kind === "page") noiseBurst(c, t, 0.08, 2600, 0.05);
+  else if (kind === "deny") tone(c, t, 150, 0.14, "sawtooth", 0.05);
+  else { tone(c, t, 523, 0.1, "triangle", 0.08); tone(c, t + 0.08, 784, 0.12, "triangle", 0.07); tone(c, t + 0.16, 1046, 0.2, "triangle", 0.06); }
+}

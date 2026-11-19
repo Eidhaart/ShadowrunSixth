@@ -187,6 +187,7 @@ export function runnerToEden(raw: Character): FoundryExport {
       combatSpellType: s?.kind === "direct" ? "spells_direct" : "spells_indirect",
     });
   }
+  if (c.rituals?.length) skipped.push(`rituals (the system has no ritual item; listed in notes): ${c.rituals.join(", ")}`);
   for (const p of c.adeptPowers) {
     push(p.name, "adeptpower", { genesisID: "", description: "", product: "SR6", page: 0, hasLevel: (p.level ?? 1) > 1, level: p.level ?? 1, choice: "", cost: p.cost, activation: "passive" });
   }
@@ -292,6 +293,8 @@ export function runnerToEden(raw: Character): FoundryExport {
   if (awakened && c.magicType !== "adept" && !tradAttr) skipped.push(`tradition attribute ${c.tradition} (the system offers Body, Logic, Charisma or Intuition; Logic is set)`);
   const extra = [
     lostSpecs.length ? `Specializations: ${lostSpecs.join(", ")}` : "",
+    c.rituals?.length ? `Rituals: ${c.rituals.join(", ")}` : "",
+    c.aspect ? `Aspect: ${c.aspect}` : "",
     e.spirits.length ? `Spirits: ${e.spirits.map((s) => `${s.type} Force ${s.force}, ${s.services} services${s.bound ? ", bound" : ""}${s.note ? ` (${s.note})` : ""}`).join("; ")}` : "",
     e.sprites.length ? `Sprites: ${e.sprites.map((s) => `${s.type} level ${s.level}, ${s.tasks} tasks${s.registered ? ", registered" : ""}`).join("; ")}` : "",
     c.magicType === "mystic" ? `Mystic adept split: ${d.slots.mysticPP} of ${d.slots.mysticMagic} priority Magic to adept powers.` : "",

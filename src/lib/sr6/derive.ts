@@ -231,7 +231,9 @@ export function derive(c: Character): Derived {
   // Adjustment points and Karma raise the final Magic, not the pool that is split.
   const mysticMagic = c.magicType === "mystic" ? Math.max(0, mpr - essenceMagicLoss) : 0;
   const mysticPP = c.magicType === "mystic" ? Math.min(mysticMagic, mysticSplit(c)) : 0;
-  const spells = awakened && c.magicType !== "adept" ? (c.magicType === "mystic" ? mysticMagic - mysticPP : mpr) * 2 : 0;
+  // aspected conjurers and enchanters start without spells: only sorcerers pick them (p. 65)
+  const aspectNoSpells = c.magicType === "aspected" && !!c.aspect && c.aspect !== "sorcery";
+  const spells = awakened && c.magicType !== "adept" && !aspectNoSpells ? (c.magicType === "mystic" ? mysticMagic - mysticPP : mpr) * 2 : 0;
   // a grade taken at creation can be a Power Point instead of a metamagic
   const startPP = c.magicType === "adept" || c.magicType === "mystic" ? (c.startMeta ?? []).filter((m) => /^power point$/i.test(m.trim())).length : 0;
   const ppStart = c.magicType === "adept" ? magic : mysticPP;
@@ -492,7 +494,9 @@ export function validate(c: Character): Issue[] {
     if (FREE_SPEC_SKILLS.includes(id) && rank > 0 && !e.spec) issues.push({ level: "error", where: "Skills", text: `${def.name}: name the weapon as its free specialization.` });
     if (!skillAvailable(def, c.magicType, c.adeptPowers) && rank > 0) issues.push({ level: "error", where: "Skills", text: `${def.name} is not available to your magic type.` });
   }
-  if (c.magicType === "aspected" && ASPECT_SKILLS.filter((id) => (c.skills[id]?.pts ?? 0) + (c.skills[id]?.kar ?? 0) > 0).length > 1)
+  if (c.magicType === "aspected" && c.aspect && ASPECT_SKILLS.some((id) => id !== c.aspect && (c.skills[id]?.pts ?? 0) + (c.skills[id]?.kar ?? 0) > 0))
+    issues.push({ level: "error", where: "Skills", text: `Your aspect is ${c.aspect}: the other two magic skills are closed to you.` });
+  else if (c.magicType === "aspected" && ASPECT_SKILLS.filter((id) => (c.skills[id]?.pts ?? 0) + (c.skills[id]?.kar ?? 0) > 0).length > 1)
     issues.push({ level: "error", where: "Skills", text: "An aspected magician uses only one of Sorcery, Conjuring or Enchanting." });
   if (skillsAtMax > 1) issues.push({ level: "error", where: "Skills", text: "Only one skill may be at the creation maximum." });
   if (b.skills.left < 0) issues.push({ level: "error", where: "Skills", text: `${-b.skills.left} skill point(s) over budget.` });
@@ -509,7 +513,7 @@ export function validate(c: Character): Issue[] {
   // spells and forms
   if (c.knowledge.filter((k) => k.kind === "language" && k.native).length > 1)
     issues.push({ level: "error", where: "Knowledge", text: "Only one language can be native." });
-  if (c.spells.length && !d.slots.spells && c.magicType !== "full" && c.magicType !== "aspected" && c.magicType !== "mystic")
+  if ((c.spells.length || c.rituals?.length) && !d.slots.spells && c.magicType !== "full" && c.magicType !== "aspected" && c.magicType !== "mystic")
     issues.push({ level: "error", where: "Magic", text: "Only magicians and mystic adepts learn spells." });
   if (c.complexForms.length && c.magicType !== "technomancer") issues.push({ level: "error", where: "Magic", text: "Only technomancers learn complex forms." });
   const sl = d.slots;
@@ -520,8 +524,10 @@ export function validate(c: Character): Issue[] {
   if (c.magicType === "mystic" && c.mysticPP != null && c.mysticPP > sl.mysticMagic)
     issues.push({ level: "error", where: "Magic", text: `${c.mysticPP} points are given to adept powers, but your priority Magic is ${sl.mysticMagic}.` });
   // starting spells and forms are a hard limit: more can only be learned in play
-  if (c.spells.length > sl.spells && sl.spells + c.spells.length > 0 && (c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic"))
-    issues.push({ level: "error", where: "Magic", text: `${c.spells.length} spells, but you start with ${sl.spells}${c.magicType === "mystic" ? ` (2 for each of the ${sl.mysticMagic - sl.mysticPP} priority Magic points given to spellcasting)` : " (priority Magic x 2)"}. New spells cannot be bought with Karma during creation; learn them in play.` });
+  const known = c.spells.length + (c.rituals?.length ?? 0);
+  const knownText = c.rituals?.length ? `${c.spells.length} spells and ${c.rituals.length} ${c.rituals.length === 1 ? "ritual" : "rituals"}` : `${c.spells.length} spells`;
+  if (known > sl.spells && sl.spells + known > 0 && (c.magicType === "full" || c.magicType === "aspected" || c.magicType === "mystic"))
+    issues.push({ level: "error", where: "Magic", text: `${knownText}, but you start with ${sl.spells}${c.magicType === "mystic" ? ` (2 for each of the ${sl.mysticMagic - sl.mysticPP} priority Magic points given to spellcasting)` : " (priority Magic x 2)"}. New spells cannot be bought with Karma during creation; learn them in play.` });
   if (c.complexForms.length > sl.complexForms && c.magicType === "technomancer")
     issues.push({ level: "error", where: "Magic", text: `${c.complexForms.length} complex forms, but you start with ${sl.complexForms} (priority Resonance x 2). New forms cannot be bought with Karma during creation; learn them in play.` });
 
@@ -608,6 +614,8 @@ export function changeMagicType(c: Character, t: MagicType): string[] {
     if (c.karMagic > karCap) { lost.push(`${c.karMagic - karCap} Karma ${c.karMagic - karCap === 1 ? "rank" : "ranks"} of Magic over 6`); c.karMagic = karCap; }
   }
   if (!CASTERS.includes(t) && c.spells.length) { lost.push(`${c.spells.length} ${c.spells.length === 1 ? "spell" : "spells"}`); c.spells = []; }
+  if (t !== "aspected") delete c.aspect;
+  if (!CASTERS.includes(t) && c.rituals?.length) { lost.push(`${c.rituals.length} ${c.rituals.length === 1 ? "ritual" : "rituals"}`); c.rituals = []; }
   if (!POWER_USERS.includes(t) && c.adeptPowers.length) { lost.push(`${c.adeptPowers.length} adept ${c.adeptPowers.length === 1 ? "power" : "powers"}`); c.adeptPowers = []; }
   if (t !== "technomancer" && c.complexForms.length) { lost.push(`${c.complexForms.length} complex ${c.complexForms.length === 1 ? "form" : "forms"}`); c.complexForms = []; }
   for (const [id, users] of Object.entries(SKILL_USERS)) {
