@@ -181,6 +181,28 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
     return out;
   }, [list, q, cat, group, legalOnly, afford, nuyen, sort]);
 
+  // one row per rated family ("Goggles, capacity 1" to 6), with the rating picked on the row, the way
+  // Commlink 6 asks for a rating when you choose the item
+  const [pick, setPick] = useState<Record<string, string>>({});
+  const rows = useMemo(() => {
+    type Row = { item: CompItem; key?: string; base?: string; kind?: string; family?: { i: CompItem; n: number }[] };
+    const out: Row[] = [];
+    const fam = new Map<string, Row>();
+    for (const i of shown) {
+      const m = /^(.*?),\s*(rating|capacity|force)\s+(\d+)$/i.exec(i.name);
+      if (!m) { out.push({ item: i }); continue; }
+      const key = `${i.cat}|${i.group}|${m[1]}`;
+      let r = fam.get(key);
+      if (!r) { r = { item: i, key, base: m[1], kind: m[2].toLowerCase(), family: [] }; fam.set(key, r); out.push(r); }
+      r.family!.push({ i, n: Number(m[3]) });
+    }
+    for (const r of fam.values()) {
+      r.family!.sort((a, b) => a.n - b.n);
+      r.item = r.family!.find((f) => f.i.id === pick[r.key!])?.i ?? r.family![0].i;
+    }
+    return out;
+  }, [shown, pick]);
+
   const cap = rules().creationAvail;
   const blockedFor = (i: CompItem) => (creation && (i.avail ?? 0) > cap ? `Availability ${cap + 1} or more: not allowed at creation` : undefined);
 
@@ -218,16 +240,18 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
         </select>
         <label className="flex items-center gap-1.5"><input type="checkbox" className="accent-[var(--accent)]" checked={legalOnly} onChange={(e) => setLegalOnly(e.target.checked)} /> No license needed</label>
         {nuyen != null && <label className="flex items-center gap-1.5"><input type="checkbox" className="accent-[var(--accent)]" checked={afford} onChange={(e) => setAfford(e.target.checked)} /> Within {nuyen.toLocaleString("en-US")}¥</label>}
-        <span className="num ml-auto text-faint">{shown.length} listed</span>
+        <span className="num ml-auto text-faint">{rows.length} listed</span>
       </div>
       {hint && <p className="text-xs text-faint">{hint}</p>}
       <ul className={clsx("min-h-0 divide-y divide-line overflow-y-auto border-y border-line", compact && "flex-1")}>
-        {shown.map((i, n) => {
+        {rows.map((row, n) => {
+          const i = row.item;
           const isOpen = open === i.id;
           const blocked = blockedFor(i);
-          const head = sort === "type" && (n === 0 || shown[n - 1].group !== i.group || shown[n - 1].cat !== i.cat) ? i.group || "Other" : null;
+          const prev = rows[n - 1]?.item;
+          const head = sort === "type" && (n === 0 || prev.group !== i.group || prev.cat !== i.cat) ? i.group || "Other" : null;
           return (
-            <Fragment key={i.id}>
+            <Fragment key={row.key ?? i.id}>
             {head && <li className="gear-type-head sticky top-0 z-[1] px-1 py-1 text-[11px] font-semibold text-accent" aria-hidden="true">{head}</li>}
             <li
               key={i.id}
@@ -240,7 +264,7 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
                 {onAdd && <Icon name="grip" size={16} className="mt-1 shrink-0 text-faint opacity-50 group-hover:opacity-100 max-md:hidden" />}
                 <button className="min-w-0 flex-1 text-left" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : i.id)}>
                   <div className="flex items-baseline gap-2">
-                    <span className={clsx("font-display font-semibold group-hover:text-accent", !compact && "truncate")}>{i.name}</span>
+                    <span className={clsx("font-display font-semibold group-hover:text-accent", !compact && "truncate")}>{row.base ?? i.name}</span>
                     {i.source === "imported" && i.wireless && <Icon name="wifi" size={12} className="shrink-0 text-cyan" />}
                     {i.source === "house" && <span className="house-badge shrink-0" title="From the GM's house rules">House</span>}
                     {i.source === "mine" && <span className="house-badge shrink-0" title="An item you made">Mine</span>}
@@ -251,6 +275,12 @@ export function GearBrowser({ onAdd, addLabel = "Add", creation, nuyen, compact,
                   </div>
                 </button>
                 <div className="flex shrink-0 items-center gap-2 pt-0.5">
+                  {row.family && (
+                    <select className="field !min-h-0 !w-auto !py-0 text-xs" value={i.id} aria-label={`${row.base}: ${row.kind}`}
+                      onChange={(e) => setPick({ ...pick, [row.key!]: e.target.value })}>
+                      {row.family.map((f) => <option key={f.i.id} value={f.i.id}>{row.kind === "capacity" ? "Capacity" : row.kind === "force" ? "Force" : "Rating"} {f.n}</option>)}
+                    </select>
+                  )}
                   <span className="num text-sm">{yen(i.cost)}{i.per && <span className="block text-right text-[10px] text-faint">{i.per}</span>}</span>
                   <AvailBadge item={i} />
                   {onAdd && (

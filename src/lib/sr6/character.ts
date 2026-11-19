@@ -99,6 +99,12 @@ export interface GearItem {
   rating?: number;
   /** Licenses: the SIN (a fake SIN's gear id, or "real" for a SINner's own) it is registered to. */
   sinId?: string;
+  /** Commlink 6 template id: decides the item's mounts and Capacity slots. */
+  c6?: string;
+  /** The mount or slot of its host it sits in (Commlink 6 hook, e.g. "TOP" or "CYBEREYE_IMPLANT"). */
+  slot?: string;
+  /** Came with its host (a pistol's built-in smartgun): free, and removed with the host. */
+  included?: boolean;
 }
 
 /** Physical description, filled on the Name page. Free text: the book gives averages, not rules. */

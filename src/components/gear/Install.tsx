@@ -1,7 +1,7 @@
 "use client";
 import clsx from "clsx";
 import type { Character, GearItem } from "@/lib/sr6/character";
-import { capacityUsed, hostOf, hostsFor, installedIn, roomFor, weaponAR } from "@/lib/sr6/loadout";
+import { capacityUsed, hostOf, hostsFor, installedIn, roomFor, slotsFor, weaponAR } from "@/lib/sr6/loadout";
 
 const MOUNT: Record<NonNullable<GearItem["mount"]>, string> = { top: "top", under: "underbarrel", barrel: "barrel", "top-under": "top or underbarrel" };
 
@@ -34,6 +34,8 @@ export function HostNote({ c, g }: { c: Pick<Character, "gear">; g: GearItem }) 
   if (g.category === "weapon") {
     if (!kids.length && !g.smartgun) return null;
     const { ar, why } = weaponAR(c, g);
+    // the mounts list below shows what is fitted; here only what it does to the Attack Ratings
+    if (slotsFor(g).length) return why ? <div className="text-xs text-ok">AR {ar.map((v) => v ?? "–").join("/")} with {why}.</div> : null;
     return (
       <div className="text-xs text-dim">
         {g.smartgun && <span>Smartgun built in. </span>}
@@ -42,7 +44,7 @@ export function HostNote({ c, g }: { c: Pick<Character, "gear">; g: GearItem }) 
       </div>
     );
   }
-  if (!g.capacity) return null;
+  if (!g.capacity || slotsFor(g).length) return null;
   const used = capacityUsed(c, g);
   return <div className={clsx("num text-xs", used > g.capacity ? "text-danger" : "text-dim")}>Capacity {used} / {g.capacity}{kids.length ? ` · ${kids.map((k) => k.name).join(", ")}` : ""}</div>;
 }

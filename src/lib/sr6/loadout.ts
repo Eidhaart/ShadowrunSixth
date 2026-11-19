@@ -3,6 +3,7 @@
  * enhancements in goggles and microphones, accessories on weapons. Pure functions over the gear list.
  */
 import type { Character, GearItem, GearSlot } from "./character";
+import { C6_BY_ID, LEGACY_SLOT, MOUNT_OF, WEAPON_HOOKS, c6For, ratingIn, slotsOf, type C6Item, type Slot } from "./c6";
 
 type Gear = Pick<Character, "gear">;
 
@@ -25,7 +26,10 @@ export function hostsFor(c: Gear, g: GearItem): GearItem[] {
 
 /** The item it is installed in, if that item is still there. */
 export function hostOf(c: Gear, g: GearItem): GearItem | undefined {
-  if (!g.inId || !g.fits) return undefined;
+  if (!g.inId) return undefined;
+  // put in a named mount or slot from the item's own editor: the host is whatever it was put in
+  if (g.slot) return c.gear.find((x) => x.id === g.inId);
+  if (!g.fits) return undefined;
   const h = c.gear.find((x) => x.id === g.inId);
   return h && canHold(h, g.fits) ? h : undefined;
 }
@@ -33,6 +37,55 @@ export function hostOf(c: Gear, g: GearItem): GearItem | undefined {
 export const installedIn = (c: Gear, host: GearItem): GearItem[] => c.gear.filter((g) => g.inId === host.id && hostOf(c, g) === host);
 
 export const capacityUsed = (c: Gear, host: GearItem): number => installedIn(c, host).reduce((n, g) => n + (g.capCost ?? 0) * (g.qty || 1), 0);
+
+// ---- Commlink 6 style mounts and slots ---------------------------------------------------------
+
+/** The Commlink 6 template behind a gear item. */
+export const templateOf = (g: GearItem): C6Item | undefined => (g.c6 ? C6_BY_ID.get(g.c6) : undefined) ?? c6For(g.name);
+export const ratingOf = (g: GearItem): number | undefined => g.rating ?? ratingIn(g.name);
+const REVERSE: Record<string, string> = Object.fromEntries(Object.entries(LEGACY_SLOT).map(([k, v]) => [v, k]));
+
+/**
+ * An item's mounts and Capacity slots. From its Commlink 6 template when there is one; otherwise a
+ * firearm gets the usual top, underbarrel and barrel mounts and a Capacity item its one slot.
+ */
+export function slotsFor(g: GearItem): Slot[] {
+  const t = templateOf(g);
+  let out = slotsOf(t, ratingOf(g));
+  if (!t) {
+    if (g.category === "weapon" && (g.skill ?? "firearms") === "firearms") out = [{ hook: "TOP", label: "Top mount", capacity: null }, { hook: "UNDER", label: "Underbarrel mount", capacity: null }, { hook: "BARREL", label: "Barrel mount", capacity: null }];
+    else if (g.capacity && g.holds && REVERSE[g.holds]) out = [{ hook: REVERSE[g.holds], label: g.holds === "armor" ? "Armor modifications" : `${g.holds[0].toUpperCase()}${g.holds.slice(1)} enhancements`, capacity: g.capacity }];
+  }
+  // the sheet's own Capacity (from the rulebook table) wins over the template's for a single Capacity slot
+  const caps = out.filter((s) => s.capacity != null && s.capacity !== Infinity);
+  if (caps.length === 1 && g.capacity) caps[0].capacity = g.capacity;
+  return out;
+}
+
+/** What sits in one slot of a host. Legacy installs (no slot recorded) count toward the matching slot. */
+export function inSlot(c: Gear, host: GearItem, s: Slot): GearItem[] {
+  return installedIn(c, host).filter((k) => k.fits !== "melee" && (k.slot ? k.slot === s.hook : (MOUNT_OF[s.hook] && k.mount === MOUNT_OF[s.hook]) || (!MOUNT_OF[s.hook] && LEGACY_SLOT[s.hook] && k.fits === LEGACY_SLOT[s.hook])));
+}
+
+export const slotUsed = (c: Gear, host: GearItem, s: Slot) => inSlot(c, host, s).reduce((n, k) => n + (k.capCost ?? 0) * (k.qty || 1), 0);
+
+/** Room in a slot for something of the given size: a mount holds one thing, a Capacity slot adds up. */
+export function slotRoom(c: Gear, host: GearItem, s: Slot, size: number, except?: string): boolean {
+  const kids = inSlot(c, host, s).filter((k) => k.id !== except);
+  if (s.capacity == null) return kids.length === 0;
+  if (s.capacity === Infinity) return true;
+  return kids.reduce((n, k) => n + (k.capCost ?? 0) * (k.qty || 1), 0) + size <= s.capacity;
+}
+
+/** Put `g` into a slot of `host`, filling in the fields the older checks read. */
+export function putInSlot(host: GearItem, g: GearItem, hook: string, size: number): void {
+  g.inId = host.id;
+  g.slot = hook;
+  if (WEAPON_HOOKS.has(hook)) { g.fits = "weapon"; const m = MOUNT_OF[hook]; if (m) g.mount = m; else delete g.mount; }
+  else if (LEGACY_SLOT[hook]) g.fits = LEGACY_SLOT[hook];
+  g.capCost = size || undefined;
+  if (!g.capCost) delete g.capCost;
+}
 
 /** Room left in a host for one more `g`; Infinity for weapons, which use mounts instead. */
 export function roomFor(c: Gear, host: GearItem, g: GearItem): boolean {
@@ -95,6 +148,12 @@ export function loadoutIssues(c: Gear): LoadoutIssue[] {
       if (taken.barrel > 1) out.push({ level: "error", text: `${h.name}: only one accessory fits the barrel mount.` });
       if (taken.top > 1 || taken.under > 1 || Math.min(taken.top, 1) + Math.min(taken.under, 1) + flex > 2)
         out.push({ level: "error", text: `${h.name}: the top and underbarrel mounts hold one accessory each.` });
+    } else if (kids.some((k) => k.slot)) {
+      const capSlots = slotsFor(h).filter((sl) => sl.capacity != null && sl.capacity !== Infinity);
+      for (const sl of capSlots) {
+        const used = slotUsed(c, h, sl);
+        if (used > sl.capacity!) out.push({ level: "error", text: `${h.name}: ${capSlots.length > 1 ? `${sl.label.toLowerCase()} use` : "modifications use"} ${used} Capacity and it has ${sl.capacity}.` });
+      }
     } else {
       const used = capacityUsed(c, h);
       if (used > (h.capacity ?? 0)) out.push({ level: "error", text: `${h.name}: modifications use ${used} Capacity and it has ${h.capacity ?? 0}.` });

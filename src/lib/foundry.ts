@@ -7,6 +7,8 @@
  * SixthDeck number differs from what it would work out (qualities, implants, Essence), the difference is
  * written to the matching "mod" field so the sheet ends up with the same numbers.
  */
+import { C6_BY_ID } from "@/lib/sr6/c6";
+import EDEN_TYPES from "@/data/eden-gear-types.json";
 import { BUILT_IN_ITEMS, GRADES } from "@/lib/compendium/catalog";
 import { EDEN_GEAR, EDEN_SPECS, EDEN_WEAPON_SPEC } from "@/data/eden";
 import { withAdv } from "@/lib/sr6/advance";
@@ -216,7 +218,10 @@ export function runnerToEden(raw: Character): FoundryExport {
   const deckName = e.matrix.deck?.name.toLowerCase();
   const linkName = e.matrix.link?.name.toLowerCase();
   for (const g of c.gear) {
-    const [type, subtype] = gearType(g);
+    // a Commlink 6 template gives the exact type and the genesisID the system's importer knows
+    const t6 = g.c6 ? C6_BY_ID.get(g.c6) : undefined;
+    const known = (EDEN_TYPES as Record<string, string[]>)[t6?.t ?? ""]?.includes(t6?.s ?? "");
+    const [type, subtype] = t6 && known ? [t6.t, t6.s] : gearType(g);
     const qty = g.qty || 1;
     const accessories = installedIn(c, g).filter((k) => k.fits !== "melee").map((k) => k.name).join(", ");
     const notes = [g.notes ?? "", g.inId ? `Installed in ${c.gear.find((x) => x.id === g.inId)?.name ?? "another item"}.` : ""].filter(Boolean).join(" ");
@@ -224,6 +229,7 @@ export function runnerToEden(raw: Character): FoundryExport {
       type, subtype, price: g.cost, avail: g.avail ?? 0, availDef: g.avail != null ? `${g.avail}${g.legal ?? ""}` : "",
       count: qty, countable: qty > 1 || type === "AMMUNITION", notes, accessories, essence: g.essence ? +(g.essence).toFixed(3) : 0,
       capacity: g.capacity ?? g.capCost ?? 0, product: "SR6", description: html(g.notes ?? ""),
+      ...(t6 ? { genesisID: t6.id, product: "core", page: t6.p ?? 0 } : {}),
     };
     const rating = Number(/(?:rating|force|capacity) (\d+)/i.exec(g.name)?.[1] ?? 0);
     if (rating) Object.assign(sys, { needsRating: true, rating });

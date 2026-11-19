@@ -9,8 +9,9 @@ import { Icon } from "@/components/Icon";
 import { uid, type GearItem } from "@/lib/sr6/character";
 import { LIFESTYLES, SKILLS } from "@/lib/sr6/data";
 import { Box, Empty, Num, Stepper } from "./ui";
-import { ordered } from "@/lib/sr6/loadout";
+import { ordered, slotsFor } from "@/lib/sr6/loadout";
 import { HostNote, InstallSelect } from "@/components/gear/Install";
+import { Fittings, dropGear } from "@/components/gear/Fittings";
 import { WeaponFocusControl } from "@/components/gear/WeaponFocus";
 import { editExt } from "@/lib/sr6/ext";
 import { budget } from "@/lib/sr6/derive";
@@ -32,15 +33,19 @@ function ItemRow({ ctx, g, nested }: { ctx: SheetCtx; g: GearItem; nested?: bool
         {g.category === "armor" && (
           <button className={clsx("btn small", g.worn !== false && "primary")} aria-pressed={g.worn !== false} onClick={() => set((t) => { t.worn = t.worn === false; })}>{g.worn !== false ? "Worn" : "Stowed"}</button>
         )}
-        <button className="btn ghost small" aria-label={`Remove ${g.name}`} onClick={() => ctx.upd((x) => {
-          x.gear = x.gear.filter((q) => q.id !== g.id);
+        {g.included ? <span className="text-xs text-faint">built in</span> : <button className="btn ghost small" aria-label={`Remove ${g.name}`} onClick={() => ctx.upd((x) => {
+          dropGear(x, g.id);
           // a focus that is gone is gone from the Magic tab too; Karma spent bonding it stays spent
           if (g.category === "magic") editExt(x, (ex) => { ex.foci = ex.foci.filter((f) => f.gearId !== g.id); });
-        })}>×</button>
+        })}>×</button>}
       </div>
       <div className="mt-1 space-y-1">
         <HostNote c={ctx.c} g={g} />
-        <InstallSelect c={ctx.c} g={g} onChange={(id) => set((t) => { t.inId = id; })} />
+        {!g.slot && <InstallSelect c={ctx.c} g={g} onChange={(id) => set((t) => { t.inId = id; })} />}
+        {!g.inId && slotsFor(g).length > 0 && <details className="no-print">
+          <summary className="cursor-pointer text-xs text-dim">Mounts and slots</summary>
+          <div className="mt-2"><Fittings c={ctx.c} g={g} patch={ctx.upd} creation={ctx.c.stage !== "complete"} pay={ctx.c.stage === "complete"} /></div>
+        </details>}
         <WeaponFocusControl c={ctx.c} w={g} budget={ctx.c.stage === "complete" ? ctx.c.nuyen : budget(ctx.c).nuyen.left} creation={ctx.c.stage !== "complete"} apply={ctx.upd} />
       </div>
       <details className="mt-1">

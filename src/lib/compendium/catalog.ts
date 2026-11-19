@@ -6,7 +6,8 @@ import core from "@/data/gear-core.json";
 import { RATED, withBookFix } from "@/data/book-fixes";
 import { COMMLINKS, CYBERDECKS, CYBERJACKS, RCCS } from "@/lib/sr6/rules6";
 import { editExt, newVehicle } from "@/lib/sr6/ext";
-import { hostsFor, roomFor } from "@/lib/sr6/loadout";
+import { hostsFor, putInSlot, roomFor } from "@/lib/sr6/loadout";
+import { C6_BY_ID, c6For, type C6Item } from "@/lib/sr6/c6";
 import { uid, type Character, type GearItem } from "@/lib/sr6/character";
 import { fixCat, type CompItem } from "./types";
 import { ARMOR, BIOWARE, CYBERWARE, DRONES, FOCI, FORMULAS, VEHICLES, av, type AugRow, type VehRow } from "@/data/core-gear";
@@ -248,7 +249,39 @@ const coreOnly = (items: CoreItem[]) => rated(items.filter((i) => !i.book || i.b
 const FROM_LIST = coreOnly(core as unknown as CoreItem[]);
 const BUILT_IN: CoreItem[] = foldParts([...FROM_LIST, ...MATRIX, ...coreTables(), ...moreTables(FROM_LIST.filter((i) => i.cat === "ammo" && i.group === "Regular ammo"))]);
 /** The bundled catalog, for tests and scripts. */
+// link each item to its Commlink 6 template: mounts, Capacity slots and built-in accessories come from there
+for (const i of BUILT_IN) { const t = c6For(i.name); if (t) { i.c6 = t.id; i.gear.c6 = t.id; } }
 export const BUILT_IN_ITEMS: readonly CompItem[] = BUILT_IN;
+
+/** Sheet category for a Commlink 6 item type. */
+export function categoryOfC6(t: C6Item): GearItem["category"] {
+  if (t.t.startsWith("WEAPON")) return "weapon";
+  if (t.t === "ARMOR") return "armor";
+  if (t.t === "CYBERWARE") return "cyberware";
+  if (t.t === "BIOWARE") return "bioware";
+  if (t.t === "AMMUNITION") return "ammo";
+  if (t.t === "MAGICAL") return "magic";
+  if (t.t === "VEHICLES" || t.t.startsWith("DRONE")) return "vehicle";
+  if (t.s === "COMMLINK" || t.s === "CYBERDECK" || t.s === "RIGGER_CONSOLE") return "commlink";
+  return "misc";
+}
+
+/** The accessories a template says come built in, as free items already sitting in their slot. */
+export function addIncluded(c: Character, host: GearItem): string[] {
+  const t = host.c6 ? C6_BY_ID.get(host.c6) : undefined;
+  const names: string[] = [];
+  for (const [ref, hook, variant] of t?.inc ?? []) {
+    const it = C6_BY_ID.get(ref);
+    if (!it) continue;
+    if (c.gear.some((g) => g.inId === host.id && g.c6 === ref)) continue;
+    const v = variant ? it.var?.find((x) => x.id.toUpperCase() === variant.toUpperCase()) : undefined;
+    const kid: GearItem = { id: uid("g"), name: it.n + (v?.n && v.n !== it.n ? `, ${v.n.toLowerCase()}` : ""), category: categoryOfC6(it), cost: 0, qty: 1, c6: ref, included: true };
+    putInSlot(host, kid, hook, 0);
+    c.gear.push(kid);
+    names.push(kid.name);
+  }
+  return names;
+}
 
 interface GearListState {
   imported: CompItem[] | null;
@@ -355,7 +388,7 @@ export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; 
   if (opts.pay && price > c.nuyen) return { ok: false, msg: `${item.name} costs ${price.toLocaleString("en-US")}¥; ${c.alias || c.name || "the runner"} has ${c.nuyen.toLocaleString("en-US")}¥.` };
   const same = c.gear.find((g) => g.name === item.gear.name && g.category === item.gear.category && g.cost === item.gear.cost);
   let added: GearItem | undefined;
-  if (same && item.cat !== "cyberware" && item.cat !== "bioware" && !item.vehicle && !item.gear.fits && !item.gear.holds) same.qty += qty;
+  if (same && item.cat !== "cyberware" && item.cat !== "bioware" && !item.vehicle && !item.gear.fits && !item.gear.holds && !(item.c6 && C6_BY_ID.get(item.c6)?.hooks)) same.qty += qty;
   else {
     added = {
       ...(JSON.parse(JSON.stringify(item.gear)) as Omit<GearItem, "id">), id: uid("g"), qty,
@@ -370,6 +403,7 @@ export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; 
     if (host && hostsFor(c, added).includes(host) && roomFor(c, host, added)) added.inId = host.id;
   }
   backfillGear(c.gear);
+  const builtIn = added ? addIncluded(c, added) : [];
   // a modification goes straight into the one thing that can take it; with a choice, the player picks
   let installed = "";
   if (added?.fits && added.fits !== "weapon" && added.fits !== "melee") {
@@ -408,5 +442,5 @@ export function addToRunner(c: Character, item: CompItem, opts: { pay: boolean; 
   const paid = opts.pay && price ? ` for ${price.toLocaleString("en-US")}¥` : "";
   const onWeapon = added?.fits === "melee" && added.inId ? c.gear.find((g) => g.id === added!.inId)?.name : "";
   const where = onWeapon ? ` Your ${onWeapon} is now the focus; bond it on the Magic tab.` : installed ? ` Installed in the ${installed}.` : added?.fits === "melee" ? ` Choose the melee weapon it is in your gear list, then bond it on the Magic tab.` : added?.fits ? ` Choose what it goes ${added.fits === "weapon" ? "on" : "in"} from your gear list.` : equipped === "focus" ? ` It is on the Magic tab; bond it there.` : equipped === "rig" ? ` It is on the Rigging tab.` : equipped ? ` Equipped as the ${equipped} on the ${equipped === "console" ? "Rigging" : "Matrix"} tab.` : "";
-  return { ok: true, msg: `${item.name} added${paid}.${where}` };
+  return { ok: true, msg: `${item.name} added${paid}.${where}${builtIn.length ? ` Comes with ${builtIn.join(", ")}.` : ""}` };
 }

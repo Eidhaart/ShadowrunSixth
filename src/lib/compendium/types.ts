@@ -59,6 +59,8 @@ export interface CompItem {
   /** Built-in parts sold only with this item (an underbarrel launcher); they come along when it is added. */
   parts?: Omit<GearItem, "id">[];
   source: "built-in" | "imported" | "house" | "mine";
+  /** Commlink 6 template id, when the item is in Commlink 6's core data. */
+  c6?: string;
 }
 
 export const RANGE_NAMES = ["Close", "Near", "Medium", "Far", "Extreme"] as const;

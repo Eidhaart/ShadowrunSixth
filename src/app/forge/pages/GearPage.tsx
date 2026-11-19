@@ -13,6 +13,7 @@ import type { CompItem } from "@/lib/compendium/types";
 import { editExt } from "@/lib/sr6/ext";
 import { essenceOf, ordered } from "@/lib/sr6/loadout";
 import { HostNote, InstallSelect } from "@/components/gear/Install";
+import { Fittings, dropGear } from "@/components/gear/Fittings";
 import { WeaponFocusControl } from "@/components/gear/WeaponFocus";
 import { sfxUi } from "@/lib/sound";
 import { BookText } from "../wizard/BookText";
@@ -28,7 +29,7 @@ const catLabel = (id: GearItem["category"]) => CATS.find((k) => k.id === id)?.la
 const yen = (n: number) => `${n.toLocaleString("en-US")}¥`;
 
 function stats(c: StepProps["c"], g: GearItem, host?: GearItem): string[] {
-  const out: string[] = [catLabel(g.category), yen(g.cost * g.qty)];
+  const out: string[] = [catLabel(g.category), g.included ? "built in" : yen(g.cost * g.qty)];
   if (g.qty > 1) out.push(`×${g.qty}`);
   if (g.armor) out.push(`Armor ${g.armor}`);
   if (g.dv) out.push(`DV ${g.dv}`);
@@ -53,10 +54,7 @@ function useGearSection(name?: string) {
 }
 
 function removeGear(x: StepProps["c"], id: string) {
-  const i = x.gear.findIndex((g) => g.id === id);
-  if (i < 0) return;
-  const [gone] = x.gear.splice(i, 1);
-  for (const g of x.gear) if (g.inId === id) delete g.inId;
+  const gone = dropGear(x, id);
   if (gone?.category === "magic") editExt(x, (ex) => { const f = ex.foci.find((q) => q.gearId === gone.id) ?? ex.foci.find((q) => !q.gearId && q.name === gone.name); if (f) ex.foci = ex.foci.filter((q) => q !== f); });
 }
 
@@ -92,12 +90,13 @@ export function GearPage({ c, patch }: StepProps) {
       <p className="num mt-1 text-sm text-dim">{stats(c, sel, selHost).join(" · ")}</p>
       <div className="mt-3 space-y-3">
         <HostNote c={c} g={sel} />
-        <InstallSelect c={c} g={sel} onChange={(id) => patch((x) => { const g = x.gear.find((y) => y.id === sel.id); if (g) g.inId = id; })} />
+        <Fittings c={c} g={sel} patch={patch} creation onMessage={(t, bad) => setToast({ t, bad, n: Date.now() })} />
+        {!sel.slot && <InstallSelect c={c} g={sel} onChange={(id) => patch((x) => { const g = x.gear.find((y) => y.id === sel.id); if (g) g.inId = id; })} />}
         <WeaponFocusControl c={c} w={sel} creation budget={b.nuyen.left} apply={patch} />
         <div className="flex flex-wrap items-center gap-3">
           {sel.category === "armor" && <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" className="accent-[var(--accent)]" checked={sel.worn !== false} onChange={(e) => patch((x) => { const g = x.gear.find((y) => y.id === sel.id); if (g) g.worn = e.target.checked; })} /> Worn</label>}
-          {!/ focus, Force \d/i.test(sel.name) && <span className="flex items-center gap-2 text-sm text-dim">Quantity <Stepper size="sm" label={`${sel.name} quantity`} value={sel.qty} min={1} onChange={(v) => patch((x) => { const g = x.gear.find((y) => y.id === sel.id); if (g) g.qty = v; })} /></span>}
-          <button className="btn small danger" onClick={() => { patch((x) => removeGear(x, sel.id)); setFocus(null); setSheet(false); sfxUi("remove"); }}><Icon name="trash" size={14} /> Remove</button>
+          {!/ focus, Force \d/i.test(sel.name) && !sel.included && !sel.slot && <span className="flex items-center gap-2 text-sm text-dim">Quantity <Stepper size="sm" label={`${sel.name} quantity`} value={sel.qty} min={1} onChange={(v) => patch((x) => { const g = x.gear.find((y) => y.id === sel.id); if (g) g.qty = v; })} /></span>}
+          {sel.included ? <span className="text-xs text-faint">Built into the {selHost?.name ?? "item"}: it goes when that goes.</span> : <button className="btn small danger" onClick={() => { patch((x) => removeGear(x, sel.id)); setFocus(null); setSheet(false); sfxUi("remove"); }}><Icon name="trash" size={14} /> Remove</button>}
         </div>
         <Field label="Notes"><input className="field text-sm" value={sel.notes ?? ""} onChange={(e) => patch((x) => { const g = x.gear.find((y) => y.id === sel.id); if (g) g.notes = e.target.value || undefined; })} placeholder="Where it is kept, what it is for" /></Field>
       </div>
@@ -140,13 +139,13 @@ export function GearPage({ c, patch }: StepProps) {
             {items.map(({ g, host }) => (
               <li key={g.id} data-row tabIndex={0} role="option" aria-selected={focus === g.id} onClick={() => open(g.id)}
                 className={clsx("sel-row", host && "!pl-6", fresh === g.id && "sel-in")}
-                onKeyDown={(e) => { if (e.key === "Delete") { patch((x) => removeGear(x, g.id)); sfxUi("remove"); } }}>
+                onKeyDown={(e) => { if (e.key === "Delete" && !g.included) { patch((x) => removeGear(x, g.id)); sfxUi("remove"); } }}>
                 {host && <span className="absolute left-2.5 top-3 text-faint" aria-hidden>└</span>}
                 <div className="min-w-0 flex-1">
                   <div className="font-display font-semibold leading-tight">{g.name}{g.qty > 1 && <span className="num ml-1 text-xs text-dim">×{g.qty}</span>}</div>
                   <div className="num mt-0.5 truncate text-xs text-dim">{stats(c, g, host).slice(1).join(" · ")}</div>
                 </div>
-                <button className="btn small ghost !min-h-8 !px-2 shrink-0 hover:text-danger" aria-label={`Remove ${g.name}`} onClick={(e) => { e.stopPropagation(); patch((x) => removeGear(x, g.id)); if (focus === g.id) setFocus(null); sfxUi("remove"); }}><Icon name="x" size={14} /></button>
+                {g.included ? null : <button className="btn small ghost !min-h-8 !px-2 shrink-0 hover:text-danger" aria-label={`Remove ${g.name}`} onClick={(e) => { e.stopPropagation(); patch((x) => removeGear(x, g.id)); if (focus === g.id) setFocus(null); sfxUi("remove"); }}><Icon name="x" size={14} /></button>}
               </li>
             ))}
             {c.gear.length === 0 && <li className="p-4 text-sm text-dim">Nothing bought yet. <span className="max-lg:hidden">Drag from the shop or press Buy.</span></li>}
